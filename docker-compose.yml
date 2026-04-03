@@ -1,0 +1,11 @@
+services:
+  drispi:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    volumes:
+      - ./gurobi.lic:/opt/gurobi/gurobi.lic:ro
+      - ./data:/data
+    environment:
+      GRB_LICENSE_FILE: /opt/gurobi/gurobi.lic
+    command: python scripts/run_benchmark.py

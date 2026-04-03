@@ -1,0 +1,55 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "drispi"
+version = "0.1.0"
+description = "Vehicle routing research framework (DRISPI)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "pyvrp>=0.8.0",
+  "scikit-learn>=1.4.0",
+  "scikit-learn-extra>=0.3.0",
+  "gurobipy>=11.0.0",
+  "numpy>=1.26.0",
+  "pyyaml>=6.0",
+  "typer>=0.12.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff", "mypy", "pre-commit"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["drispi"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["drispi", "scripts", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "TCH"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["drispi"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unused_configs = true
+warn_return_any = true
+disallow_untyped_defs = true
+disallow_any_generics = true
+no_implicit_optional = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = [
+  "pyvrp.*",
+  "gurobipy.*",
+  "sklearn.*",
+  "sklearn_extra.*",
+]
+ignore_missing_imports = true

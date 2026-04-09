@@ -15,14 +15,14 @@ class Route:
     cost: float
 
     def is_feasible(self, instance: CVRPInstance) -> bool:
-        """Return whether the route respects capacity and visit rules."""
-        # TODO: check capacity vs demands, node membership, depot handling
-        raise NotImplementedError
+        """Return whether the route respects capacity and customer membership."""
+        if any(customer not in instance.customers for customer in self.customers):
+            return False
+        return self.total_demand(instance) <= instance.capacity
 
     def total_demand(self, instance: CVRPInstance) -> int:
         """Sum demands of customers on this route."""
-        # TODO: sum instance.demands[c] for c in self.customers
-        raise NotImplementedError
+        return sum(instance.demands[c] for c in self.customers)
 
 
 @dataclass
@@ -35,10 +35,31 @@ class Solution:
 
     def is_feasible(self, instance: CVRPInstance) -> bool:
         """Return whether all routes are feasible and customers are covered correctly."""
-        # TODO: aggregate route checks + coverage constraints
-        raise NotImplementedError
+        if any(not route.is_feasible(instance) for route in self.routes):
+            return False
+
+        visited: list[int] = [customer for route in self.routes for customer in route.customers]
+        expected = set(instance.customers)
+        visited_set = set(visited)
+        if visited_set != expected:
+            return False
+        if len(visited) != len(visited_set):
+            return False
+        return True
 
     def n_routes(self) -> int:
         """Number of routes (vehicles) used."""
-        # TODO: len(self.routes)
-        raise NotImplementedError
+        return len(self.routes)
+
+    def recompute_cost(self, instance: CVRPInstance) -> Solution:
+        """Return a new solution with route costs recomputed from instance geometry."""
+        _ = instance.distance_matrix
+        new_routes: list[Route] = []
+        for route in self.routes:
+            new_cost = instance.route_cost(route.customers)
+            new_routes.append(Route(customers=route.customers, cost=new_cost))
+        return Solution(
+            routes=new_routes,
+            total_cost=sum(route.cost for route in new_routes),
+            instance_name=self.instance_name,
+        )

@@ -1,16 +1,39 @@
+# Python
 __pycache__/
-*.pyc
-.env
-.venv
-gurobi.lic
-*.lic
-results/
+*.py[cod]
+*.pyo
+.venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
 .mypy_cache/
 .ruff_cache/
-dist/
-*.egg-info/
-vendor/filo/
-vendor/filo2/
+
+# Submodule build artifacts
+# These live inside submodule repos which have their own gitignore,
+# but the main repo should also ignore them in case they surface
+# Don't commit locally built binaries
+ext/filo/build/
+ext/filo2/build/
+ext/cobra/build/
+# JAR is fine to commit but build/ classes are not
+ext/ails2/build/classes/
+ext/ails2/sources.txt
+
+# IDE
+.cursor/
+.vscode/
+*.swp
+
+# Runtime output
+*.log
+*.sol
+*.vrp
+runs/
+results/
 tmp/
-tmp
-vendor/ails2/
+
+# OS
+.DS_Store
+Thumbs.db

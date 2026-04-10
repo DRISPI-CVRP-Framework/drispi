@@ -1,24 +1,51 @@
-"""AILS2 external solver stub (subprocess or API TBD)."""
+"""AILS-II (Java JAR) solver integration."""
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
-from drispi.core.instance import CVRPInstance
-from drispi.core.types import RoutePool
-from drispi.solvers.base import BaseSolver, register_solver
+from drispi.solvers._subprocess_base import _SubprocessSolver
 
-
-def _resolve_ails2_executable() -> Path:
-    """Locate AILS2 binary under ``vendor/ails2``."""
-    # TODO: walk vendor/ails2
-    raise NotImplementedError
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
-@register_solver("ails2")
-class Ails2Solver(BaseSolver):
-    """AILS2 integration placeholder."""
+class Ails2Solver(_SubprocessSolver):
+    """Subprocess wrapper around the AILS-II ``AILSII.jar``."""
 
-    def solve(self, instance: CVRPInstance, customers: list[int], time_limit: float) -> RoutePool:
-        # TODO: mirror filo-style subprocess or native bindings
-        raise NotImplementedError
+    _ENV_VAR = "AILS2_JAR"
+    _DEFAULT_REL_PATH = "ext/ails2/build/AILSII.jar"
+    name = "ails2"
+
+    def _build_cmd(
+        self,
+        vrp_path: Path,
+        sol_path: Path,
+        time_limit: float,
+        seed: int,
+    ) -> list[str]:
+        """
+        Invoke AILS-II as::
+
+            java -jar <jar> -file <vrp> -stoppingCriterion Time -limit <sec>
+                -rounded true -outpath <sol_path>
+
+        The ``seed`` argument is ignored (no seed flag in AILS-II). ``sol_path``
+        is the direct output file path.
+        """
+        _ = seed  # AILS-II has no RNG seed flag; ignored by design.
+        return [
+            "java",
+            "-jar",
+            str(self.binary),
+            "-file",
+            str(vrp_path),
+            "-stoppingCriterion",
+            "Time",
+            "-limit",
+            str(float(time_limit)),
+            "-rounded",
+            "true",
+            "-outpath",
+            str(sol_path),
+        ]

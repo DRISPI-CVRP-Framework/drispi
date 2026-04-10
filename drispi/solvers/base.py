@@ -1,33 +1,42 @@
-"""Abstract solver interface and registry."""
+"""Abstract solver interface for full-instance routing."""
 
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable
-from typing import TypeVar
+from typing import TYPE_CHECKING
 
-from drispi.core.instance import CVRPInstance
-from drispi.core.types import RoutePool
-
-SOLVER_REGISTRY: dict[str, type[BaseSolver]] = {}
-
-S = TypeVar("S", bound="BaseSolver")
-
-
-def register_solver(name: str) -> Callable[[type[S]], type[S]]:
-    """Decorator to register a solver implementation under ``name``."""
-
-    def _decorator(cls: type[S]) -> type[S]:
-        SOLVER_REGISTRY[name] = cls
-        return cls
-
-    return _decorator
+if TYPE_CHECKING:
+    from drispi.core.instance import CVRPInstance
+    from drispi.core.types import RoutePool
 
 
 class BaseSolver(ABC):
-    """Base class for routing solvers on a customer subset."""
+    """Abstract base class for CVRP solvers operating on a full instance."""
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Short identifier for this solver (e.g. ``\"pyvrp\"``)."""
+        ...
 
     @abstractmethod
-    def solve(self, instance: CVRPInstance, customers: list[int], time_limit: float) -> RoutePool:
-        """Return a pool of routes visiting ``customers`` within ``time_limit`` seconds."""
-        raise NotImplementedError
+    def solve(
+        self,
+        instance: CVRPInstance,
+        time_limit: float,
+        seed: int = 42,
+    ) -> RoutePool:
+        """
+        Solve ``instance`` within ``time_limit`` seconds.
+
+        Returns:
+            ``RoutePool`` of :class:`~drispi.core.solution.Route` objects (depot
+            excluded; customer IDs use internal 1-based VRPLIB node indexing).
+
+        Raises:
+            RuntimeError: If the solver fails to produce a valid solution.
+        """
+        ...
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(name={self.name!r})"

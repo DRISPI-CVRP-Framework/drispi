@@ -136,7 +136,9 @@ def read_sol(path: Path) -> tuple[list[list[int]], float]:
                 raise ValueError("Missing cost value")
             cost = float(payload)
             continue
-        raise ValueError(f"Invalid line in .sol file: {line}")
+        # Some solution files include trailing metadata (e.g., "Clustering: ...",
+        # "Runtime: ...", "Gap: ..."). Ignore unknown non-route, non-cost lines.
+        continue
 
     if cost is None:
         raise ValueError("Missing Cost line in .sol file")

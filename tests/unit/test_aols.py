@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from drispi.aols.hierarchy import HierarchicalAOLS
+from drispi.haos.hierarchy import HierarchicalAOLS
 
 
 def test_hierarchical_aols_init() -> None:

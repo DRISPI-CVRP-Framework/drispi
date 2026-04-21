@@ -7,8 +7,7 @@ from typing import TypeAlias
 
 import numpy as np
 
-from drispi.core.solution import Route
-
+Route: TypeAlias = list[int]
 RoutePool: TypeAlias = list[Route]
 Cluster: TypeAlias = list[int]
 WeightVector: TypeAlias = np.ndarray

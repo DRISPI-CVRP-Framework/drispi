@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from drispi.aols.reward.base import BaseReward
+from drispi.haos.reward.base import BaseReward
 
 
 class FeasibilityReward(BaseReward):

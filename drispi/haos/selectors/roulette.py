@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from drispi.aols.selectors.base import BaseSelector
+from drispi.haos.selectors.base import BaseSelector
 from drispi.core.types import WeightVector
 
 

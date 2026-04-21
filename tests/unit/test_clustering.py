@@ -1,11 +1,10 @@
-"""Tests for clustering registry and imports."""
+"""Tests for clustering package exports."""
 
 from __future__ import annotations
 
-import drispi.clustering.vertex.kmeans  # noqa: F401 — registration side effect
-from drispi.clustering.base import CLUSTERING_REGISTRY
+import drispi.clustering as clustering
 
 
-def test_vertex_kmeans_registered() -> None:
-    """Vertex k-means is registered under a namespaced key."""
-    assert "vertex:kmeans" in CLUSTERING_REGISTRY
+def test_cluster_instance_exported() -> None:
+    """Unified entrypoint is exported from package root."""
+    assert callable(clustering.cluster_instance)

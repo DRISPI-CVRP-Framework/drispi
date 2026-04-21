@@ -1,1 +1,3 @@
-"""Route-based clustering: similarity and structural groupings."""
+"""Route-based clustering methods."""
+
+__all__ = ["agglomerative", "kmeans"]

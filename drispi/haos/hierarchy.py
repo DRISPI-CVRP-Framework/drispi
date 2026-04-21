@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from drispi.aols.conditional import ConditionalWeightModel
-from drispi.aols.weight_model import DiscreteWeightModel
+from drispi.haos.conditional import ConditionalWeightModel
+from drispi.haos.weight_model import DiscreteWeightModel
 from drispi.core.types import AOLSDecision
 
 

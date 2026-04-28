@@ -71,7 +71,7 @@ def test_partition_solution_unique_assignment(
     assert all(counts[c] == 1 for c in sp_instance.customers)
 
 
-def test_lp_weights_differ_between_sc_and_sp(
+def test_lp_weights_respect_formulation_constraints(
     requires_gurobi: None,
     sp_instance: CVRPInstance,
 ) -> None:
@@ -96,4 +96,8 @@ def test_lp_weights_differ_between_sc_and_sp(
         mip_gap=0.01,
     )
 
-    assert lp_sc != lp_sp
+    for customer in sp_instance.customers:
+        sc_cover = sum(weight for key, weight in lp_sc.items() if customer in key)
+        sp_cover = sum(weight for key, weight in lp_sp.items() if customer in key)
+        assert sc_cover >= 1.0 - 1e-6
+        assert sp_cover == pytest.approx(1.0)

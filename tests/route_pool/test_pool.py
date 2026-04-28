@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from drispi.haos.tag import HAOSTag
 from drispi.route_pool.pool import RoutePool
 
 
@@ -98,3 +99,12 @@ def test_contains_accepts_permuted_customer_order() -> None:
     pool = RoutePool()
     pool.add([2, 3, 4], 10.0)
     assert [4, 2, 3] in pool
+
+
+def test_add_stores_and_replaces_haos_tag() -> None:
+    pool = RoutePool()
+    old_tag = HAOSTag(1, 0.2, "vertex", "kmeans", "pyvrp", 1)
+    new_tag = HAOSTag(2, 0.4, "route", "agglomerative_avg", "filo", 2)
+    pool.add([2, 3, 4], 10.0, haos_tag=old_tag)
+    pool.add([4, 3, 2], 9.0, haos_tag=new_tag)
+    assert pool.routes()[0].haos_tag == new_tag

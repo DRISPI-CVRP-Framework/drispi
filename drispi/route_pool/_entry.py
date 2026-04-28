@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from statistics import mean
 
 from drispi.core.types import Route
+from drispi.haos.tag import HAOSTag
 
 
 @dataclass
@@ -17,6 +18,7 @@ class RouteEntry:
     cost: float
     customer_set: frozenset[int]
     is_elite: bool = False
+    haos_tag: HAOSTag | None = None
     quality_scores: deque[float] = field(default_factory=lambda: deque(maxlen=3))
     diversity_scores: deque[float] = field(default_factory=lambda: deque(maxlen=3))
 

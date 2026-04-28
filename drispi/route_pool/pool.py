@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 
 from drispi.core.types import Route
+from drispi.haos.tag import HAOSTag
 from drispi.route_pool._entry import RouteEntry
 from drispi.route_pool.diversity import mean_jaccard_diversity
 
@@ -21,7 +22,12 @@ class RoutePool:
         self._entries: dict[frozenset[int], RouteEntry] = {}
         self._elite_keys: set[frozenset[int]] = set()
 
-    def add(self, route: Route, cost: float) -> bool:
+    def add(
+        self,
+        route: Route,
+        cost: float,
+        haos_tag: HAOSTag | None = None,
+    ) -> bool:
         """Add one route if it is new; update existing when cheaper."""
         key = frozenset(route)
         existing = self._entries.get(key)
@@ -32,13 +38,19 @@ class RoutePool:
                     cost=cost,
                     customer_set=key,
                     is_elite=existing.is_elite,
+                    haos_tag=haos_tag,
                     quality_scores=existing.quality_scores,
                     diversity_scores=existing.diversity_scores,
                 )
                 self._entries[key] = replacement
             return False
 
-        self._entries[key] = RouteEntry(route=list(route), cost=cost, customer_set=key)
+        self._entries[key] = RouteEntry(
+            route=list(route),
+            cost=cost,
+            customer_set=key,
+            haos_tag=haos_tag,
+        )
         return True
 
     def remove(self, route: Route) -> bool:

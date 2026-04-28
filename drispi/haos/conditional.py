@@ -1,4 +1,4 @@
-"""Conditional weight model for method selection given upstream AOLS choices."""
+"""Conditional weight model for method selection given upstream HAOS choices."""
 
 from __future__ import annotations
 

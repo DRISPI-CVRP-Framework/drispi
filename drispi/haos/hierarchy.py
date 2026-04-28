@@ -1,15 +1,15 @@
-"""Five-level hierarchical AOLS controller."""
+"""Five-level hierarchical HAOS controller."""
 
 from __future__ import annotations
 
 from typing import Any
 
+from drispi.core.types import HAOSDecision
 from drispi.haos.conditional import ConditionalWeightModel
 from drispi.haos.weight_model import DiscreteWeightModel
-from drispi.core.types import AOLSDecision
 
 
-class HierarchicalAOLS:
+class HierarchicalHAOS:
     """Chains discrete models for k, dissimilarity, decomposition, method, and solver."""
 
     def __init__(self, k_max: int, solver_ids: list[str]) -> None:
@@ -19,12 +19,12 @@ class HierarchicalAOLS:
         self.level_method = ConditionalWeightModel()
         self.level_solver = DiscreteWeightModel(list(solver_ids))
 
-    def select(self) -> AOLSDecision:
+    def select(self) -> HAOSDecision:
         """Sample or UCB-select a full hierarchical decision."""
         # TODO: call subordinate models in order, pass context downward
         raise NotImplementedError
 
-    def update(self, decision: AOLSDecision, reward: float) -> None:
+    def update(self, decision: HAOSDecision, reward: float) -> None:
         """Propagate ``reward`` to each level according to ``decision``."""
         # TODO: update each DiscreteWeightModel and ConditionalWeightModel arm
         raise NotImplementedError

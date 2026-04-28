@@ -1,1 +1,1 @@
-"""Selection policies for AOLS arms (roulette, UCB, etc.)."""
+"""Selection policies for HAOS arms (roulette, UCB, etc.)."""

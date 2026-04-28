@@ -1,4 +1,4 @@
-"""Shared type aliases and AOLS decision record."""
+"""Shared type aliases and HAOS decision record."""
 
 from __future__ import annotations
 
@@ -15,8 +15,8 @@ OperatorID: TypeAlias = str
 
 
 @dataclass
-class AOLSDecision:
-    """One hierarchical AOLS choice for a pipeline segment."""
+class HAOSDecision:
+    """One hierarchical HAOS choice for a pipeline segment."""
 
     k: int
     dissimilarity: str

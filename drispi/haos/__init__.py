@@ -1,1 +1,1 @@
-"""Adaptive operator learning (AOLS): weights, hierarchy, selectors, rewards."""
+"""Hierarchical adaptive operator selection (HAOS): weights, hierarchy, selectors, rewards."""

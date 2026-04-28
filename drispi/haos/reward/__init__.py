@@ -1,1 +1,1 @@
-"""Reward signals for AOLS updates (gap, feasibility, composites)."""
+"""Reward signals for HAOS updates (gap, feasibility, composites)."""

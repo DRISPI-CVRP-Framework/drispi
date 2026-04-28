@@ -1,4 +1,4 @@
-"""Discrete operator weighting for AOLS."""
+"""Discrete operator weighting for HAOS."""
 
 from __future__ import annotations
 

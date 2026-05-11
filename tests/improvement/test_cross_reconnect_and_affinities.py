@@ -1,0 +1,105 @@
+"""Cross-reconnect, boundary affinities, and perturb_routes invariants."""
+
+from __future__ import annotations
+
+import numpy as np
+
+from drispi.core.instance import CVRPInstance
+from drispi.core.solution import Route
+from drispi.improvement import bg_ails
+
+
+def _square_instance() -> CVRPInstance:
+    return CVRPInstance(
+        name="toy",
+        n_customers=6,
+        capacity=50,
+        depot=(0.0, 0.0),
+        customers=[2, 3, 4, 5, 6, 7],
+        coordinates={
+            1: (0.0, 0.0),
+            2: (0.0, 1.0),
+            3: (1.0, 1.0),
+            4: (1.0, 0.0),
+            5: (2.0, 0.0),
+            6: (2.0, 1.0),
+            7: (3.0, 0.5),
+        },
+        demands={1: 0, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5, 7: 5},
+    )
+
+
+def test_compute_route_boundary_affinities_shape_and_row_stochastic() -> None:
+    customers = [2, 3, 4, 5]
+    partition = [[2, 3], [4, 5]]
+    cid = {c: i for i, c in enumerate(customers)}
+    d = np.array(
+        [
+            [0.0, 1.0, 10.0, 10.0],
+            [1.0, 0.0, 10.0, 10.0],
+            [10.0, 10.0, 0.0, 2.0],
+            [10.0, 10.0, 2.0, 0.0],
+        ],
+        dtype=np.float64,
+    )
+    seqs = [[2, 3], [4, 5]]
+    rc = bg_ails._route_cluster_ids(seqs, partition)
+    aff = bg_ails.compute_route_boundary_affinities(seqs, rc, partition, d, cid)
+    assert aff.shape == (2, 2)
+    assert aff[0, 0] == 0.0 and aff[1, 1] == 0.0
+    assert np.allclose(aff.sum(axis=1), 1.0)
+
+
+def test_cross_reconnect_preserves_combined_multiset() -> None:
+    rng = np.random.default_rng(0)
+    a = [1, 2, 3, 4]
+    b = [10, 20, 30, 40]
+    na, nb = bg_ails._cross_reconnect(a, b, rng)
+    assert sorted(na + nb) == sorted(a + b)
+
+
+def test_cross_reconnect_short_routes_unchanged() -> None:
+    rng = np.random.default_rng(0)
+    na, nb = bg_ails._cross_reconnect([1], [2, 3], rng)
+    assert na == [1] and nb == [2, 3]
+
+
+def test_pick_route_pair_by_affinity_distinct_when_two_routes() -> None:
+    seqs = [[2, 3], [4, 5]]
+    partition = [[2, 3], [4, 5]]
+    rc = bg_ails._route_cluster_ids(seqs, partition)
+    cid = {c: i for i, c in enumerate([2, 3, 4, 5])}
+    d = np.ones((4, 4), dtype=np.float64)
+    np.fill_diagonal(d, 0.0)
+    aff = bg_ails.compute_route_boundary_affinities(seqs, rc, partition, d, cid)
+    w = np.array([1.0, 1.0], dtype=np.float64)
+    rng = np.random.default_rng(12345)
+    for _ in range(30):
+        i, j = bg_ails._pick_route_pair_by_affinity(seqs, rc, w, aff, rng)
+        assert i != j
+
+
+def test_perturb_routes_preserves_all_customers() -> None:
+    inst = _square_instance()
+    partition = [[2, 3, 4], [5, 6, 7]]
+    cid = {c: i for i, c in enumerate(inst.customers)}
+    n = len(inst.customers)
+    d = np.ones((n, n), dtype=np.float64) * 2.0
+    np.fill_diagonal(d, 0.0)
+    routes = [
+        Route(customers=[2, 3, 4], cost=0.0),
+        Route(customers=[5, 6, 7], cost=0.0),
+    ]
+    ranks = np.ones(n, dtype=np.float64)
+    rng = np.random.default_rng(1)
+    out = bg_ails.perturb_routes(
+        routes,
+        inst,
+        ranks,
+        partition,
+        d,
+        rng,
+        n_chains=2,
+    )
+    flat = sorted(c for r in out for c in r.customers)
+    assert flat == sorted(inst.customers)

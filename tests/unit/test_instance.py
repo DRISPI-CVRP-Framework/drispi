@@ -34,17 +34,33 @@ def test_route_cost_empty_returns_zero(small_instance: CVRPInstance) -> None:
     assert small_instance.route_cost([]) == 0.0
 
 
+def test_route_cost_uses_tsplib_euc_2d_rounding_per_leg() -> None:
+    """Each arc uses ``round`` of Euclidean length (VRPLIB ``EUC_2D``), not raw floats."""
+    inst = CVRPInstance(
+        name="euc_round_tiny",
+        n_customers=1,
+        capacity=10,
+        depot=(0.0, 0.0),
+        customers=[2],
+        coordinates={1: (0.0, 0.0), 2: (0.4, 0.4)},
+        demands={1: 0, 2: 1},
+    )
+    leg = round(math.hypot(0.4, 0.4))
+    assert leg == 1
+    assert inst.route_cost([2]) == 2 * leg
+
+
 def test_route_cost_matches_manual_euclidean(small_instance: CVRPInstance) -> None:
     route = [small_instance.customers[0], small_instance.customers[1]]
     c1, c2 = route
     x1, y1 = small_instance.coordinates[1]
     x2, y2 = small_instance.coordinates[c1]
     x3, y3 = small_instance.coordinates[c2]
-    expected = (
-        math.hypot(x2 - x1, y2 - y1)
-        + math.hypot(x3 - x2, y3 - y2)
-        + math.hypot(x1 - x3, y1 - y3)
-    )
+
+    def leg(ax: float, ay: float, bx: float, by: float) -> float:
+        return float(round(math.hypot(ax - bx, ay - by)))
+
+    expected = leg(x1, y1, x2, y2) + leg(x2, y2, x3, y3) + leg(x1, y1, x3, y3)
     assert small_instance.route_cost(route) == expected
 
 

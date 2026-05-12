@@ -89,7 +89,12 @@ def reindex_depot_one_to_zero(instance: CVRPInstance) -> CVRPInstance:
 
 
 def write_sol(routes: list[list[int]], cost: float, path: Path) -> None:
-    """Write .sol routes/cost converting internal IDs (depot=1) to depot=0 indexing."""
+    """Write .sol routes/cost converting internal IDs (depot=1) to depot=0 indexing.
+
+    ``cost`` should match ``sum(instance.route_cost(r) for r in routes)`` under
+    VRPLIB ``EUC_2D`` (integer-rounded legs). The ``Cost`` line is written as an
+    integer (nearest whole number) for compatibility with standard solution files.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
 
     lines: list[str] = []
@@ -97,11 +102,7 @@ def write_sol(routes: list[list[int]], cost: float, path: Path) -> None:
         shifted = [str(customer - 1) for customer in route]
         lines.append(f"Route #{idx}: {' '.join(shifted)}")
     lines.append("")
-    cost_value = float(cost)
-    if cost_value.is_integer():
-        cost_out = str(int(cost_value))
-    else:
-        cost_out = str(int(round(cost_value)))
+    cost_out = str(int(round(float(cost))))
     lines.append(f"Cost: {cost_out}")
 
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")

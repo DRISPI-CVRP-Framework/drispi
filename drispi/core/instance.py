@@ -9,12 +9,16 @@ from pathlib import Path
 
 import numpy as np
 import vrplib
-from scipy.spatial.distance import cdist
 
 
 @dataclass(frozen=True)
 class CVRPInstance:
-    """Capacitated vehicle routing problem instance (Euclidean, single depot)."""
+    """Capacitated vehicle routing problem instance (Euclidean, single depot).
+
+    Distances follow VRPLIB ``EUC_2D``: each edge length is the Euclidean distance
+    rounded to the nearest integer (TSPLIB), including for :meth:`route_cost` and
+    :attr:`distance_matrix`.
+    """
 
     name: str
     n_customers: int
@@ -46,10 +50,10 @@ class CVRPInstance:
             raise ValueError("All demands must be non-negative")
 
     def euclidean_distance(self, i: int, j: int) -> float:
-        """Euclidean distance between internal node IDs ``i`` and ``j``."""
+        """TSPLIB ``EUC_2D`` edge length: Euclidean rounded to nearest integer."""
         xi, yi = self.coordinates[i]
         xj, yj = self.coordinates[j]
-        return math.hypot(xi - xj, yi - yj)
+        return float(round(math.hypot(xi - xj, yi - yj)))
 
     def route_cost(self, customers: list[int]) -> float:
         """Route cost for customer order, with transient depot bookends."""
@@ -61,13 +65,20 @@ class CVRPInstance:
 
     @cached_property
     def distance_matrix(self) -> np.ndarray:
-        """Full pairwise Euclidean distance matrix indexed directly by node ID."""
+        """
+        Full pairwise distances indexed by node ID (``1`` = depot).
+
+        Uses TSPLIB ``EUC_2D`` rounding: each leg is ``round(sqrt(dx^2 + dy^2))``,
+        matching VRPLIB / CVRPLib conventions and external solvers.
+        """
         size = self.n_customers + 2
-        coords = np.zeros((size, 2), dtype=float)
+        coords = np.zeros((size, 2), dtype=np.float64)
         for node_id, (x, y) in self.coordinates.items():
             coords[node_id, 0] = x
             coords[node_id, 1] = y
-        return cdist(coords, coords, metric="euclidean")
+        diff = coords[:, np.newaxis, :] - coords[np.newaxis, :, :]
+        raw = np.sqrt(np.sum(diff * diff, axis=-1))
+        return np.round(raw).astype(np.float64)
 
     @classmethod
     def from_vrplib(cls, instance_name: str) -> CVRPInstance:

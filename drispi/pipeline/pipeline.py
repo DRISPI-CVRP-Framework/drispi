@@ -313,11 +313,11 @@ class DRISPIPipeline:
                     iteration,
                     selection,
                 )
-            self._update_best(final_seqs, final_cost, iteration)
+            self._update_best(final_seqs, iteration)
             self._last_cost = final_cost
         else:
             # No SP/SC this iteration: global tracking follows BG-AILS only.
-            self._update_best(bg_seqs, bg_cost, iteration)
+            self._update_best(bg_seqs, iteration)
             self._last_cost = bg_cost
 
         # ------------------------------------------------------------------
@@ -333,14 +333,15 @@ class DRISPIPipeline:
                 tags.append(tag)
         return tags
 
-    def _update_best(self, solution: list[Route], cost: float, iteration: int) -> None:
+    def _update_best(self, solution: list[Route], iteration: int) -> None:
         """Track global best S*, elite pool rows, stagnation, and a simple progress line."""
-        if self._initial_cost is None and math.isfinite(cost):
-            self._initial_cost = cost
+        recomputed = float(sum(self._instance.route_cost(list(r)) for r in solution))
+        if self._initial_cost is None and math.isfinite(recomputed):
+            self._initial_cost = recomputed
 
-        if cost < self._best_cost:
+        if recomputed < self._best_cost:
             self._best_solution = [list(r) for r in solution]
-            self._best_cost = cost
+            self._best_cost = recomputed
             self._no_improve_count = 0
             for r in self._best_solution:
                 self._pool.add(r, self._instance.route_cost(r))
@@ -369,7 +370,10 @@ class DRISPIPipeline:
             self._iterations_completed,
         )
         if self._best_solution is not None:
-            write_sol(self._best_solution, self._best_cost, out / f"{self._instance.name}.sol")
+            written_cost = float(
+                sum(self._instance.route_cost(r) for r in self._best_solution)
+            )
+            write_sol(self._best_solution, written_cost, out / f"{self._instance.name}.sol")
         elapsed = time.perf_counter() - self._start_time
         print(
             f"Finished {self._iterations_completed} iterations in {elapsed:.1f}s; "

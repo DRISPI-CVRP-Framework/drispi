@@ -150,10 +150,10 @@ def test_update_best_resets_no_improve(instance_12: CVRPInstance, tmp_path: Path
     pipe = DRISPIPipeline(instance_12, cfg)
     sol = [[2, 3], [4, 5, 6]]
     cost = sum(instance_12.route_cost(r) for r in sol)
-    pipe._update_best(sol, cost, iteration=0)
+    pipe._update_best(sol, iteration=0)
     assert pipe._best_cost == cost
     assert pipe._no_improve_count == 0
-    pipe._update_best(sol, cost + 1.0, iteration=1)
+    pipe._update_best(sol, iteration=1)
     assert pipe._no_improve_count == 1
 
 

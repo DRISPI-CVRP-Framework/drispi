@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 
 from drispi.clustering._utils import ensure_partition, groups_from_labels
@@ -16,7 +18,9 @@ def cluster(
 ) -> list[list[int]]:
     """Cluster customers using K-medoids with precomputed distances."""
     try:
-        from sklearn_extra.cluster import KMedoids
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            from sklearn_extra.cluster import KMedoids
     except Exception as exc:  # pragma: no cover - environment dependent
         raise ImportError(
             "kmedoids requires a working 'scikit-learn-extra' installation. "

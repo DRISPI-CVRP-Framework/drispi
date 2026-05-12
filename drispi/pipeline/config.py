@@ -12,7 +12,7 @@ from drispi.haos.config import HAOSConfig
 class DRISPIConfig:
     """Full configuration for the DRISPI pipeline."""
 
-    time_limit: float = 7200.0
+    time_limit: float = 3600.0
     max_no_improve: int = 100
 
     n_workers: int = 4

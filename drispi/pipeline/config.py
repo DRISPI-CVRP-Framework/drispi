@@ -19,7 +19,7 @@ class DRISPIConfig:
 
     warmup_iterations: int = 10
     sp_interval: int = 3
-    min_coverage: int = 1
+    min_coverage: int = 5
     sp_time_limit: float = 300.0
     mip_gap: float = 0.001
 

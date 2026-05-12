@@ -26,7 +26,7 @@ from drispi.route_pool.coverage import coverage_counts
 from drispi.route_pool.manager import RoutePoolManager
 from drispi.route_pool.pool import RoutePool
 from drispi.route_pool.post_sp_improvement import add_post_standard_improvement_routes_to_pool
-from drispi.sp.policy import should_run_sp_sc, should_use_sp
+from drispi.sp.policy import should_run_sp_sc
 from drispi.sp.solver import run_sp_sc
 from drispi.utils.io import write_sol
 
@@ -70,12 +70,11 @@ class DRISPIPipeline:
         self._iterations_completed = 0
 
     def _sp_sc_coverage_summary(self) -> str:
-        """Pool coverage vs ``min_coverage`` (SP needs every customer >= req)."""
+        """Minimum pool-route multiplicity vs ``min_coverage`` (SP gate), as ``x/y``."""
         req = self._config.min_coverage
         counts = coverage_counts(self._pool, self._instance)
         min_obs = min(counts.values()) if counts else 0
-        gap = max(0, req - min_obs)
-        return f"min_coverage_req={req} min_cover_obs={min_obs} gap_to_SP={gap}"
+        return f"current_coverage={min_obs}/{req}"
 
     def run(self) -> list[Route]:
         """
@@ -239,18 +238,8 @@ class DRISPIPipeline:
             self._config.warmup_iterations,
             self._config.sp_interval,
         ):
-            print(
-                f"[it {iteration}] step sp_sc skipped "
-                f"(warmup={self._config.warmup_iterations}, interval={self._config.sp_interval}) "
-                f"pool_size={self._pool.size()} {self._sp_sc_coverage_summary()}",
-                flush=True,
-            )
             sp_result, used_sp = None, False
         else:
-            use_sp = should_use_sp(
-                self._pool, self._instance, self._config.min_coverage
-            )
-            mode = "SP" if use_sp else "SC"
             _t0 = time.perf_counter()
             sp_result, used_sp = run_sp_sc(
                 self._pool,
@@ -268,9 +257,9 @@ class DRISPIPipeline:
             mode_done = "SP" if used_sp else "SC"
             print(
                 f"[it {iteration}] step sp_sc_done={elapsed:.2f}s mode={mode_done} "
-                f"pool_size={self._pool.size()} routes_out={len(sp_result) if sp_result else 0} "
-                f"time_limit={self._config.sp_time_limit:.1f}s "
-                f"{self._sp_sc_coverage_summary()}",
+                f"pool_size={self._pool.size()} {self._sp_sc_coverage_summary()} "
+                f"routes_out={len(sp_result) if sp_result else 0} "
+                f"time_limit={self._config.sp_time_limit:.1f}s",
                 flush=True,
             )
 

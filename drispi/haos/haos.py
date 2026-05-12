@@ -27,7 +27,7 @@ class HAOSSelection:
     method_index: int
     solver_index: int
 
-    def to_tag(self, iteration: int) -> HAOSTag:
+    def to_tag(self, iteration: int, *, is_improvement_route: bool = False) -> HAOSTag:
         return HAOSTag(
             k=self.k,
             lambda_demand=self.lambda_demand,
@@ -35,6 +35,7 @@ class HAOSSelection:
             method=self.method,
             solver=self.solver,
             iteration=iteration,
+            is_improvement_route=is_improvement_route,
         )
 
 
@@ -96,6 +97,29 @@ class HAOS:
             solver_index=solver_index,
         )
 
+    def format_operator_roll(self, iteration: int, selection: HAOSSelection) -> str:
+        """Human-readable HAOS draw: chosen operators and per-level roulette probabilities."""
+        method_wheel = (
+            self.wheel_4a_vertex_method
+            if selection.paradigm == "vertex"
+            else self.wheel_4b_route_method
+        )
+        p_k = self.wheel_1_k.probabilities()[selection.k_index]
+        p_l = self.wheel_2_lambda.probabilities()[selection.lambda_index]
+        p_p = self.wheel_3_paradigm.probabilities()[selection.paradigm_index]
+        p_m = method_wheel.probabilities()[selection.method_index]
+        p_s = self.wheel_5_solver.probabilities()[selection.solver_index]
+        p_joint = p_k * p_l * p_p * p_m * p_s
+        return (
+            f"[it {iteration}] HAOS Roll: "
+            f"k={selection.k} (p={p_k:.4f}); "
+            f"λ={selection.lambda_demand:.3f} (p={p_l:.4f}); "
+            f"paradigm={selection.paradigm} (p={p_p:.4f}); "
+            f"method={selection.method} (p={p_m:.4f}); "
+            f"solver={selection.solver} (p={p_s:.4f}); "
+            f"P≈{p_joint:.6f}"
+        )
+
     def update_immediate(self, selection: HAOSSelection, iteration: int, reward: float) -> None:
         del selection
         if iteration < self.config.haos_warmup:
@@ -111,7 +135,8 @@ class HAOS:
         if iteration < self.config.haos_warmup:
             return
         tags_for_iteration = self._deferred_rewards.setdefault(iteration, {})
-        for tag in set(contributing_tags):
+        filtered = (t for t in contributing_tags if not t.is_improvement_route)
+        for tag in set(filtered):
             tags_for_iteration[tag] = tags_for_iteration.get(tag, 0.0) + deferred_reward
 
     def _try_reverse_index(self, wheel: RouletteWheel, value: object, level_name: str) -> int | None:

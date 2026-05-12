@@ -102,6 +102,11 @@ class RoutePool:
         """Number of routes currently stored."""
         return len(self._entries)
 
+    def get_haos_tag(self, route: Route) -> HAOSTag | None:
+        """Return the HAOS tag for this customer set if the route is in the pool."""
+        entry = self._entries.get(frozenset(route))
+        return None if entry is None else entry.haos_tag
+
     def reset_to(self, routes: list[Route], costs: list[float]) -> None:
         """Reset pool to provided routes/costs, then mark all as elite."""
         if len(routes) != len(costs):

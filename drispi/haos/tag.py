@@ -12,6 +12,11 @@ class HAOSTag:
 
     All fields use string/float/int values matching the choice labels
     defined in HAOSConfig - no internal indices stored here.
+
+    When ``is_improvement_route`` is True, the route was produced by the
+    post-SP/SC standard AILS step; k/lambda/paradigm/method/solver/iteration
+    still mirror the iteration's HAOS selection for traceability. Such tags
+    must not participate in deferred HAOS reward attribution.
     """
 
     k: int
@@ -20,3 +25,4 @@ class HAOSTag:
     method: str
     solver: str
     iteration: int
+    is_improvement_route: bool = False

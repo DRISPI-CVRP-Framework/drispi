@@ -49,7 +49,7 @@ class HAOSConfig:
             "agglomerative_single",
             "kmedoids",
             "fcm",
-            "spectral",
+            # "spectral",  # disabled in HAOS roll: too slow on large n with default sklearn settings
         ]
     )
     min_weight_vertex_method: float = 0.05
@@ -74,9 +74,16 @@ class HAOSConfig:
         instance: CVRPInstance,
         candidates: list[int] | None = None,
     ) -> list[int]:
-        """Compute sorted valid k values for a concrete instance."""
+        """
+        Sorted ``k_candidates`` entries that do not exceed minimum-feasible fleet
+        size ``ceil(sum(demand) / capacity)``.
+
+        Values in ``k_candidates`` larger than that bound are dropped; nothing
+        else (e.g. benchmark fleet ``k``) is appended. At least one candidate must
+        be ``<=`` that bound or HAOS cannot build the k wheel.
+        """
         if candidates is None:
             candidates = [1, 2, 3, 4, 6, 8, 10, 12, 14, 16]
         total_demand = sum(instance.demands[c] for c in instance.customers)
         k_max = math.ceil(total_demand / instance.capacity)
-        return sorted(set([k for k in candidates if k <= k_max] + [1, k_max]))
+        return sorted({k for k in candidates if k <= k_max})

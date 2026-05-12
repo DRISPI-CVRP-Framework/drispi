@@ -7,6 +7,7 @@ import pytest
 from drispi.core.instance import CVRPInstance
 from drispi.haos.config import HAOSConfig, HAOSRewardConfig
 from drispi.haos.haos import HAOS
+from drispi.haos.tag import HAOSTag
 
 
 def make_instance_20() -> CVRPInstance:
@@ -87,6 +88,10 @@ def test_to_tag_from_selection() -> None:
     assert tag.method == selection.method
     assert tag.solver == selection.solver
     assert tag.iteration == 3
+    assert tag.is_improvement_route is False
+    imp = selection.to_tag(iteration=3, is_improvement_route=True)
+    assert imp.is_improvement_route is True
+    assert imp.k == selection.k and imp.solver == selection.solver
 
 
 def test_update_final_after_warmup_updates_selected_weights() -> None:
@@ -133,12 +138,15 @@ def test_load_state_dict_choice_mismatch_raises() -> None:
         haos.load_state_dict(state)
 
 
-def test_compute_k_values_includes_one_and_kmax() -> None:
+def test_compute_k_values_crops_candidates_by_minimum_feasible_fleet() -> None:
+    """k_max=4 for synthetic20; only candidates <= 4 remain (no extra 1/k_max injection)."""
     instance = make_instance_20()
     values = HAOSConfig.compute_k_values(instance, candidates=[2, 8, 12])
-    assert 1 in values
-    assert 4 in values
+    assert values == [2]
     assert all(value <= 4 for value in values)
+
+    default = [1, 2, 3, 4, 6, 8, 10, 12, 14, 16]
+    assert HAOSConfig.compute_k_values(instance, candidates=default) == [1, 2, 3, 4]
 
 
 def test_historical_deferred_updates_all_reverse_mapped_levels() -> None:
@@ -155,3 +163,26 @@ def test_historical_deferred_updates_all_reverse_mapped_levels() -> None:
     assert after["level_2_lambda_demand"]["raw_weights"] != before["level_2_lambda_demand"]["raw_weights"]
     assert after["level_3_paradigm"]["raw_weights"] != before["level_3_paradigm"]["raw_weights"]
     assert after["level_5_solver"]["raw_weights"] != before["level_5_solver"]["raw_weights"]
+
+
+def test_update_deferred_ignores_improvement_route_tags() -> None:
+    """Improvement-tagged HAOSTags must not receive deferred credit."""
+    config = HAOSConfig(haos_warmup=0, decay=0.8)
+    haos_only_immediate = HAOS(config=config, instance=make_instance_20())
+    haos_with_filtered_deferred = HAOS(config=config, instance=make_instance_20())
+    rng = random.Random(99)
+    sel_a = haos_only_immediate.select(iteration=2, rng=rng)
+    rng = random.Random(99)
+    sel_b = haos_with_filtered_deferred.select(iteration=2, rng=rng)
+    assert sel_a.k_index == sel_b.k_index
+
+    haos_only_immediate.update_immediate(sel_a, iteration=2, reward=3.0)
+    haos_only_immediate.update_final(sel_a, iteration=2)
+    baseline = haos_only_immediate.state_dict()
+
+    imp = sel_b.to_tag(iteration=2, is_improvement_route=True)
+    haos_with_filtered_deferred.update_immediate(sel_b, iteration=2, reward=3.0)
+    haos_with_filtered_deferred.update_deferred([imp], iteration=2, deferred_reward=999.0)
+    haos_with_filtered_deferred.update_final(sel_b, iteration=2)
+
+    assert haos_with_filtered_deferred.state_dict() == baseline

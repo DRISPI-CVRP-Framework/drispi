@@ -103,8 +103,17 @@ def test_contains_accepts_permuted_customer_order() -> None:
 
 def test_add_stores_and_replaces_haos_tag() -> None:
     pool = RoutePool()
-    old_tag = HAOSTag(1, 0.2, "vertex", "kmeans", "pyvrp", 1)
-    new_tag = HAOSTag(2, 0.4, "route", "agglomerative_avg", "filo", 2)
+    old_tag = HAOSTag(1, 0.2, "vertex", "kmeans", "pyvrp", 1, False)
+    new_tag = HAOSTag(2, 0.4, "route", "agglomerative_avg", "filo", 2, False)
     pool.add([2, 3, 4], 10.0, haos_tag=old_tag)
     pool.add([4, 3, 2], 9.0, haos_tag=new_tag)
     assert pool.routes()[0].haos_tag == new_tag
+
+
+def test_get_haos_tag_returns_stored_tag_or_none() -> None:
+    pool = RoutePool()
+    tag = HAOSTag(1, 0.0, "vertex", "kmeans", "pyvrp", 0, False)
+    pool.add([2, 3, 4], 10.0, haos_tag=tag)
+    assert pool.get_haos_tag([2, 3, 4]) == tag
+    assert pool.get_haos_tag([4, 2, 3]) == tag
+    assert pool.get_haos_tag([5, 6]) is None

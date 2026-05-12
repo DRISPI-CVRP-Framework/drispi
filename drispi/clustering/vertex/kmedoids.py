@@ -7,6 +7,7 @@ import numpy as np
 from drispi.clustering._utils import ensure_partition, groups_from_labels
 from drispi.core.instance import CVRPInstance
 
+
 def cluster(
     instance: CVRPInstance,
     k: int,

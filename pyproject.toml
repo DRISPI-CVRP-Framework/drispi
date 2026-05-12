@@ -15,7 +15,8 @@ dependencies = [
   "scikit-learn-extra>=0.3.0",
   "scikit-fuzzy>=0.4.2",
   "gurobipy>=12.0.0",
-  "numpy>=1.26.0",
+  # scikit-learn-extra 0.3.0 wheels are built against NumPy 1.x; NumPy 2 ABI breaks imports.
+  "numpy>=1.26.4,<2",
   "scipy",
   "pyyaml>=6.0",
   "typer>=0.12.0",
@@ -58,6 +59,11 @@ module = [
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
+addopts = "-m \"not slow and not integration\""
 markers = [
   "slow: tests that allocate large matrices or run for a long time",
+  "integration: tests that hit large instances or full toolchains; exclude with -m \"not integration\"",
 ]
+
+[project.scripts]
+drispi-pipeline = "drispi.pipeline.runner:main"

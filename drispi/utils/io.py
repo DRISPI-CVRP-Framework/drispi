@@ -34,16 +34,14 @@ def write_vrp(
     lines.append("EDGE_WEIGHT_TYPE : EUC_2D")
     lines.append(f"CAPACITY : {instance.capacity}")
     lines.append("NODE_COORD_SECTION")
-    lines.append("")
+    # No blank line here: AILS-II reads DIMENSION lines immediately (Instance.readCoord).
     depot_x, depot_y = instance.depot
     lines.append(f"1 {round(depot_x)} {round(depot_y)}")
     for global_id in customers:
         local_id = global_to_local[global_id]
         x, y = instance.coordinates[global_id]
         lines.append(f"{local_id} {round(x)} {round(y)}")
-    lines.append("")
     lines.append("DEMAND_SECTION")
-    lines.append("")
     lines.append("1 0")
     for global_id in customers:
         local_id = global_to_local[global_id]

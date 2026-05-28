@@ -62,6 +62,71 @@ def _fake_standard_improvement(
     return solution
 
 
+def test_bg_ails_improvement_kept_on_sp_sc_iteration(
+    instance_12: CVRPInstance, tmp_path: Path
+) -> None:
+    """When bg_ails improves S* but standard_ails regresses, S* stays at bg cost."""
+    cfg = DRISPIConfig(
+        time_limit=1e9,
+        max_no_improve=1000,
+        output_dir=tmp_path,
+        warmup_iterations=0,
+        sp_interval=1,
+        min_coverage=1,
+    )
+    pipe = DRISPIPipeline(instance_12, cfg, bks_cost=None)
+    pipe._best_cost = 1e9
+    pipe._best_solution = None
+
+    cheap_seqs = [[2, 3], [4, 5, 6]]
+    cheap_cost = float(sum(instance_12.route_cost(r) for r in cheap_seqs))
+    expensive_seqs = [[2, 3, 4, 5], [6, 7, 8, 9], [10, 11, 12, 13]]
+    expensive_cost = float(sum(instance_12.route_cost(r) for r in expensive_seqs))
+    assert cheap_cost < expensive_cost
+
+    def fake_bg(
+        instance: CVRPInstance,
+        solution: list[SolutionRoute],
+        *args: object,
+        **kwargs: object,
+    ) -> list[SolutionRoute]:
+        del instance, solution, args, kwargs
+        return [
+            SolutionRoute(customers=list(s), cost=instance_12.route_cost(s)) for s in cheap_seqs
+        ]
+
+    def fake_sp(*args: object, **kwargs: object):
+        del args, kwargs
+        return cheap_seqs, False
+
+    def fake_std(
+        instance: CVRPInstance,
+        solution: list[SolutionRoute],
+        *args: object,
+        **kwargs: object,
+    ) -> list[SolutionRoute]:
+        del instance, solution, args, kwargs
+        return [
+            SolutionRoute(customers=list(s), cost=instance_12.route_cost(s))
+            for s in expensive_seqs
+        ]
+
+    with (
+        patch("drispi.pipeline.pipeline.cluster_instance", side_effect=_fake_cluster_instance),
+        patch(
+            "drispi.pipeline.pipeline.solve_subclusters_parallel",
+            side_effect=_fake_cluster_routes,
+        ),
+        patch("drispi.pipeline.pipeline.run_bg_ails", side_effect=fake_bg),
+        patch("drispi.pipeline.pipeline.run_sp_sc", side_effect=fake_sp),
+        patch("drispi.pipeline.pipeline.run_standard_improvement", side_effect=fake_std),
+    ):
+        pipe._run_iteration(0)
+
+    assert pipe._best_cost == cheap_cost
+    assert pipe._best_cost < expensive_cost
+
+
 def test_pipeline_runs_five_iterations(instance_12: CVRPInstance, tmp_path: Path) -> None:
     cfg = DRISPIConfig(
         time_limit=1e9,

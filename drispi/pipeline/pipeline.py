@@ -21,8 +21,9 @@ from drispi.haos.tag import HAOSTag
 from drispi.haos.weights_io import save_weights
 from drispi.improvement.bg_ails import run_bg_ails, run_standard_improvement
 from drispi.pipeline.config import DRISPIConfig
+from drispi.pipeline.logger import PipelineLogger
 from drispi.pipeline.subproblem import solve_subclusters_parallel
-from drispi.route_pool.coverage import coverage_counts
+from drispi.route_pool.coverage import average_coverage
 from drispi.route_pool.manager import RoutePoolManager
 from drispi.route_pool.pool import RoutePool
 from drispi.route_pool.post_sp_improvement import add_post_standard_improvement_routes_to_pool
@@ -47,9 +48,15 @@ class DRISPIPipeline:
     BG-AILS, pool + SP/SC scheduling, standard AILS after MIP, and HAOS rewards.
     """
 
-    def __init__(self, instance: CVRPInstance, config: DRISPIConfig) -> None:
+    def __init__(
+        self,
+        instance: CVRPInstance,
+        config: DRISPIConfig,
+        bks_cost: float | None = None,
+    ) -> None:
         self._instance = instance
         self._config = config
+        self._bks_cost = bks_cost
         self._rng = random.Random(config.seed)
         self._haos = HAOS(config.haos_config, instance, rng=self._rng)
         self._pool = RoutePool()
@@ -68,27 +75,30 @@ class DRISPIPipeline:
         self._no_improve_count = 0
         self._start_time = 0.0
         self._iterations_completed = 0
+        self._stopped_by_time = False
+        self._stopped_by_no_improve = False
 
-    def _sp_sc_coverage_summary(self) -> str:
-        """Minimum pool-route multiplicity vs ``min_coverage`` (SP gate), as ``x/y``."""
-        req = self._config.min_coverage
-        counts = coverage_counts(self._pool, self._instance)
-        min_obs = min(counts.values()) if counts else 0
-        return f"current_coverage={min_obs}/{req}"
+        self._logger = PipelineLogger(
+            instance.name,
+            config.output_dir,
+            bks=bks_cost,
+        )
+        self._logger.log_init(config, instance)
 
     def run(self) -> list[Route]:
         """
         Run until wall time or stagnation limits, then persist HAOS weights and
         the best solution on disk.
         """
-        # --- Outer loop: each pass is one HAOS-guided decomposition iteration ---
         self._start_time = time.perf_counter()
         iteration = 0
         while True:
             elapsed = time.perf_counter() - self._start_time
             if iteration > 0 and elapsed >= self._config.time_limit:
+                self._stopped_by_time = True
                 break
             if iteration > 0 and self._no_improve_count >= self._config.max_no_improve:
+                self._stopped_by_no_improve = True
                 break
 
             self._run_iteration(iteration)
@@ -101,32 +111,28 @@ class DRISPIPipeline:
         return self._best_solution
 
     def _run_iteration(self, iteration: int) -> None:
-        # ------------------------------------------------------------------
-        # Step 1 — HAOS: pick operators for this iteration (k, λ, paradigm,
-        # clustering method, and subcluster solver). Same selection drives tags
-        # for pool entries and traceability for improvement-phase routes.
-        # ------------------------------------------------------------------
         selection = self._haos.select(iteration, self._rng)
-        print(self._haos.format_operator_roll(iteration, selection), flush=True)
+        is_spsc = should_run_sp_sc(
+            iteration,
+            self._config.warmup_iterations,
+            self._config.sp_interval,
+        )
+        total_phases = 5 if is_spsc else 3
+        self._logger.log_haos_roll(
+            iteration,
+            selection,
+            is_spsc,
+            self._haos.joint_probability(selection),
+        )
         angular_offset = self._rng.uniform(0.0, 2.0 * math.pi)
 
-        _t0 = time.perf_counter()
-
-        # ------------------------------------------------------------------
-        # Step 2 — Geometry + demand dissimilarity for clustering / BG-AILS.
-        # (cluster_instance recomputes internally; we keep D for boundary ranks.)
-        # ------------------------------------------------------------------
+        t0 = time.perf_counter()
         dissim = compute_dissimilarity_matrix(
             self._instance,
             selection.lambda_demand,
             angular_offset,
         )
 
-        # ------------------------------------------------------------------
-        # Step 3 — Partition customers. Route-based methods need pool routes;
-        # if the pool is still empty, fall back to vertex clustering for this
-        # call only (HAOS selection is unchanged for rewards).
-        # ------------------------------------------------------------------
         route_export = self._pool.as_route_pool()
         if selection.paradigm == "route" and len(route_export) == 0:
             paradigm_used = "vertex"
@@ -145,20 +151,26 @@ class DRISPIPipeline:
             angular_offset=angular_offset,
             seed=self._rng.randint(0, 2**31 - 1),
         )
-        print(
-            f"[it {iteration}] step dissim_cluster={time.perf_counter() - _t0:.2f}s",
-            flush=True,
+        self._logger.log_phase_done(
+            iteration,
+            1,
+            total_phases,
+            "decompose",
+            time.perf_counter() - t0,
+            None,
+            {
+                "lambda_demand": selection.lambda_demand,
+                "paradigm": paradigm_used,
+                "method": selection.method,
+            },
         )
 
-        # ------------------------------------------------------------------
-        # Step 4 — Independent CVRP solve per cluster (worker picks solver by name).
-        # ------------------------------------------------------------------
         cluster_sizes = [len(c) for c in partition]
         max_budget = max(
             (max(10.0, float(sz) * self._config.subcluster_time_per_customer) for sz in cluster_sizes),
             default=0.0,
         )
-        _t0 = time.perf_counter()
+        t0 = time.perf_counter()
         cluster_routes = solve_subclusters_parallel(
             self._instance,
             partition,
@@ -167,24 +179,20 @@ class DRISPIPipeline:
             self._config.n_workers,
             self._config.seed + iteration * 10007,
         )
-        print(
-            f"[it {iteration}] step subclusters_done={time.perf_counter() - _t0:.2f}s "
-            f"solver={selection.solver!r} k={selection.k} "
-            f"cluster_sizes={cluster_sizes} n_workers={self._config.n_workers} "
-            f"max_budget={max_budget:.1f}s",
-            flush=True,
+        self._logger.log_phase_done(
+            iteration,
+            2,
+            total_phases,
+            "route",
+            time.perf_counter() - t0,
+            max_budget,
+            {"solver": selection.solver, "k": selection.k},
         )
 
-        # ------------------------------------------------------------------
-        # Step 5 — Merge cluster routes into one multi-vehicle solution (parent IDs).
-        # ------------------------------------------------------------------
         combined_seqs = [seq for group in cluster_routes for seq in group]
         combined_sol = _seqs_to_solution_routes(self._instance, combined_seqs)
 
-        # ------------------------------------------------------------------
-        # Step 6 — Boundary-guided AILS on the full instance using partition + D.
-        # ------------------------------------------------------------------
-        _t0 = time.perf_counter()
+        t0 = time.perf_counter()
         bg_solution = run_bg_ails(
             self._instance,
             combined_sol,
@@ -195,17 +203,22 @@ class DRISPIPipeline:
             boundary_threshold=self._config.bg_ails_boundary_threshold,
             seed=self._rng.randint(0, 2**31 - 1),
         )
-        print(
-            f"[it {iteration}] step bg_ails_done={time.perf_counter() - _t0:.2f}s "
-            f"time_limit={self._config.bg_ails_time_limit:.1f}s",
-            flush=True,
-        )
+        bg_elapsed = time.perf_counter() - t0
         bg_seqs = _solution_routes_to_seqs(bg_solution)
         bg_cost = sum(self._instance.route_cost(r) for r in bg_seqs)
+        bg_improved = bg_cost < self._best_cost
 
-        # ------------------------------------------------------------------
-        # Step 7 — Immediate HAOS reward from BG-AILS cost vs global / last iter.
-        # ------------------------------------------------------------------
+        self._logger.log_phase_done(
+            iteration,
+            3,
+            total_phases,
+            "bg_ails",
+            bg_elapsed,
+            self._config.bg_ails_time_limit,
+        )
+        if bg_improved:
+            self._log_improvement(iteration, bg_cost, bg_seqs, "bg_ails")
+
         imm = self._haos.compute_reward(
             bg_cost,
             self._best_cost,
@@ -214,33 +227,19 @@ class DRISPIPipeline:
             is_deferred=False,
         )
         self._haos.update_immediate(selection, iteration, imm)
+        if bg_improved:
+            self._update_best(bg_seqs, iteration)
 
-        # ------------------------------------------------------------------
-        # Step 8 — Memorize BG routes in the pool with the iteration operator tag.
-        # ------------------------------------------------------------------
         op_tag = selection.to_tag(iteration)
         for seq in bg_seqs:
             self._pool.add(seq, self._instance.route_cost(seq), haos_tag=op_tag)
 
-        # ------------------------------------------------------------------
-        # Step 9 — Evict low-value routes if the pool exceeds max size / fitness.
-        # ------------------------------------------------------------------
         self._manager.maybe_evict(self._pool)
 
-        # ------------------------------------------------------------------
-        # Step 10–12 — Optional SP/SC + standard AILS on the MIP solution, then
-        # deferred HAOS credit to routes that actually appeared in the pool before
-        # SP. Post-improvement pool inserts only happen on a new global best
-        # (see route_pool.post_sp_improvement).
-        # ------------------------------------------------------------------
-        if not should_run_sp_sc(
-            iteration,
-            self._config.warmup_iterations,
-            self._config.sp_interval,
-        ):
-            sp_result, used_sp = None, False
-        else:
-            _t0 = time.perf_counter()
+        sp_result: list[Route] | None = None
+        used_sp = False
+        if is_spsc:
+            t0 = time.perf_counter()
             sp_result, used_sp = run_sp_sc(
                 self._pool,
                 self._instance,
@@ -253,32 +252,48 @@ class DRISPIPipeline:
                 warmup_iterations=self._config.warmup_iterations,
                 sp_interval=self._config.sp_interval,
             )
-            elapsed = time.perf_counter() - _t0
+            sp_elapsed = time.perf_counter() - t0
             mode_done = "SP" if used_sp else "SC"
-            print(
-                f"[it {iteration}] step sp_sc_done={elapsed:.2f}s mode={mode_done} "
-                f"pool_size={self._pool.size()} {self._sp_sc_coverage_summary()} "
-                f"routes_out={len(sp_result) if sp_result else 0} "
-                f"time_limit={self._config.sp_time_limit:.1f}s",
-                flush=True,
+            self._logger.log_phase_done(
+                iteration,
+                4,
+                total_phases,
+                "sp_sc",
+                sp_elapsed,
+                self._config.sp_time_limit,
+                {
+                    "sc_or_sp": mode_done,
+                    "pool_size": self._pool.size(),
+                    "avg_coverage": average_coverage(self._pool, self._instance),
+                    "min_coverage": self._config.min_coverage,
+                },
             )
 
+        iter_cost = bg_cost
         if sp_result is not None and len(sp_result) > 0:
             sp_input_sol = _seqs_to_solution_routes(self._instance, sp_result)
-            _t0 = time.perf_counter()
+            t0 = time.perf_counter()
             final_sol = run_standard_improvement(
                 self._instance,
                 sp_input_sol,
                 self._config.standard_improvement_time_limit,
                 seed=self._rng.randint(0, 2**31 - 1),
             )
-            print(
-                f"[it {iteration}] step standard_ails_done={time.perf_counter() - _t0:.2f}s "
-                f"time_limit={self._config.standard_improvement_time_limit:.1f}s",
-                flush=True,
-            )
+            std_elapsed = time.perf_counter() - t0
             final_seqs = _solution_routes_to_seqs(final_sol)
             final_cost = sum(self._instance.route_cost(r) for r in final_seqs)
+            iter_cost = final_cost
+
+            self._logger.log_phase_done(
+                iteration,
+                5,
+                total_phases,
+                "standard_ails",
+                std_elapsed,
+                self._config.standard_improvement_time_limit,
+            )
+            if final_cost < self._best_cost:
+                self._log_improvement(iteration, final_cost, final_seqs, "standard_ails")
 
             deferred = self._haos.compute_reward(
                 final_cost,
@@ -305,14 +320,36 @@ class DRISPIPipeline:
             self._update_best(final_seqs, iteration)
             self._last_cost = final_cost
         else:
-            # No SP/SC this iteration: global tracking follows BG-AILS only.
-            self._update_best(bg_seqs, iteration)
+            if not bg_improved:
+                self._update_best(bg_seqs, iteration)
             self._last_cost = bg_cost
 
-        # ------------------------------------------------------------------
-        # Step 13 — Fold immediate + deferred rewards into roulette weights.
-        # ------------------------------------------------------------------
         self._haos.update_final(selection, iteration)
+
+        self._logger.log_summary(
+            iteration,
+            iter_cost,
+            self._best_cost,
+            self._last_cost,
+            self._no_improve_count,
+        )
+
+    def _log_improvement(
+        self,
+        iteration: int,
+        cost: float,
+        routes: list[Route],
+        phase_name: str,
+    ) -> None:
+        self._logger.log_improve(iteration, cost, phase_name)
+        if self._logger.beats_bks(cost):
+            self._logger.log_new_bks(
+                iteration,
+                cost,
+                phase_name,
+                routes,
+                self._instance,
+            )
 
     def _contributing_tags_from_sp_routes(self, sp_routes: list[Route]) -> list[HAOSTag]:
         tags: list[HAOSTag] = []
@@ -323,7 +360,8 @@ class DRISPIPipeline:
         return tags
 
     def _update_best(self, solution: list[Route], iteration: int) -> None:
-        """Track global best S*, elite pool rows, stagnation, and a simple progress line."""
+        """Track global best S*, elite pool rows, and stagnation."""
+        del iteration
         recomputed = float(sum(self._instance.route_cost(list(r)) for r in solution))
         if self._initial_cost is None and math.isfinite(recomputed):
             self._initial_cost = recomputed
@@ -338,18 +376,8 @@ class DRISPIPipeline:
         else:
             self._no_improve_count += 1
 
-        gap_best = 0.0
-        if self._initial_cost is not None and self._initial_cost > 0:
-            if math.isfinite(self._best_cost):
-                gap_best = (self._best_cost - self._initial_cost) / self._initial_cost * 100.0
-        print(
-            f"[it {iteration}] best={self._best_cost:.4f} "
-            f"gap_vs_start={gap_best:.2f}% "
-            f"no_improve={self._no_improve_count}"
-        )
-
     def _finalize(self) -> None:
-        """Persist HAOS state and best .sol once the main loop terminates."""
+        """Persist HAOS state, best .sol, and final log block."""
         out = self._config.output_dir
         out.mkdir(parents=True, exist_ok=True)
         save_weights(
@@ -363,8 +391,15 @@ class DRISPIPipeline:
                 sum(self._instance.route_cost(r) for r in self._best_solution)
             )
             write_sol(self._best_solution, written_cost, out / f"{self._instance.name}.sol")
+
         elapsed = time.perf_counter() - self._start_time
-        print(
-            f"Finished {self._iterations_completed} iterations in {elapsed:.1f}s; "
-            f"best cost {self._best_cost}"
+        self._logger.log_final(
+            self._iterations_completed,
+            elapsed,
+            self._best_cost,
+            self._stopped_by_no_improve,
+            self._stopped_by_time,
+            self._best_solution or [],
+            self._pool,
+            self._instance,
         )

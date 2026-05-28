@@ -37,6 +37,14 @@ def coverage_satisfied(
     return all(count >= min_coverage for count in counts.values())
 
 
+def average_coverage(pool: RoutePool, instance: CVRPInstance) -> float:
+    """Mean route-pool multiplicity per customer (0 for uncovered customers)."""
+    counts = coverage_counts(pool, instance)
+    if not counts:
+        return 0.0
+    return sum(counts.values()) / len(counts)
+
+
 def routes_covering(pool: RoutePool, customer: int) -> list[Route]:
     """Return all routes in the pool that include ``customer``."""
     return [list(entry.route) for entry in pool if customer in entry.customer_set]

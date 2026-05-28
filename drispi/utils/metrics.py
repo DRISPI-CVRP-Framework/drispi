@@ -25,3 +25,21 @@ def gap_to_bks(cost: float, instance_name: str, bks: dict[str, float]) -> float:
         raise KeyError(f"Instance '{instance_name}' not found in BKS dictionary")
     bks_cost = bks[instance_name]
     return ((cost - bks_cost) / bks_cost) * 100.0
+
+
+def resolve_bks_cost(
+    instance_name: str,
+    *,
+    bks_override: float | None = None,
+    bks_file: Path | None = None,
+) -> float | None:
+    """Resolve known BKS cost: CLI override, else lookup in JSON table."""
+    if bks_override is not None:
+        return bks_override
+    if bks_file is None:
+        return None
+    try:
+        table = read_bks(bks_file)
+    except (FileNotFoundError, ValueError, OSError):
+        return None
+    return table.get(instance_name)

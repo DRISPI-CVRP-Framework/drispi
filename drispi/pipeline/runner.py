@@ -10,6 +10,9 @@ import vrplib
 from drispi.core.instance import CVRPInstance
 from drispi.pipeline.config import DRISPIConfig
 from drispi.pipeline.pipeline import DRISPIPipeline
+from drispi.utils.metrics import resolve_bks_cost
+
+DEFAULT_BKS_FILE = Path("data/bks/xl-bks.json")
 
 
 def load_instance_from_vrp_path(instance_path: Path) -> CVRPInstance:
@@ -59,19 +62,31 @@ def load_instance_from_vrp_path(instance_path: Path) -> CVRPInstance:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run the DRISPI pipeline on a CVRP instance.")
     parser.add_argument("instance", type=Path, help="Path to a .vrp instance file")
-    parser.add_argument("--time-limit", type=float, default=3600.0)
+    parser.add_argument("--time-limit", type=float, default=1800.0)
     parser.add_argument("--max-no-improve", type=int, default=100)
-    parser.add_argument("--n-workers", type=int, default=4)
-    parser.add_argument("--warmup", type=int, default=10)
+    parser.add_argument("--n-workers", type=int, default=6)
+    parser.add_argument("--warmup", type=int, default=8)
     parser.add_argument("--sp-interval", type=int, default=3)
-    parser.add_argument("--min-coverage", type=int, default=1)
+    parser.add_argument("--min-coverage", type=int, default=5)
     parser.add_argument("--sp-time-limit", type=float, default=300.0)
-    parser.add_argument("--mip-gap", type=float, default=0.01)
+    parser.add_argument("--mip-gap", type=float, default=0.001)
     parser.add_argument("--max-pool-size", type=int, default=10000)
     parser.add_argument("--bg-ails-omega", type=float, default=0.8)
     parser.add_argument("--decay", type=float, default=0.8)
     parser.add_argument("--output-dir", type=Path, default=Path("output"))
-    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--seed", type=int, default=111)
+    parser.add_argument("--bks", type=float, default=None, help="Known BKS cost (overrides file)")
+    parser.add_argument(
+        "--bks-file",
+        type=Path,
+        default=DEFAULT_BKS_FILE,
+        help="JSON table of instance name -> BKS cost",
+    )
+    parser.add_argument(
+        "--no-bks",
+        action="store_true",
+        help="Do not load BKS from file (gaps and NEW BKS events disabled)",
+    )
     args = parser.parse_args()
 
     from drispi.haos.config import HAOSConfig
@@ -94,7 +109,12 @@ def main() -> None:
     )
 
     inst = load_instance_from_vrp_path(args.instance)
-    DRISPIPipeline(inst, config).run()
+    bks_cost = None if args.no_bks else resolve_bks_cost(
+        inst.name,
+        bks_override=args.bks,
+        bks_file=args.bks_file,
+    )
+    DRISPIPipeline(inst, config, bks_cost=bks_cost).run()
 
 
 if __name__ == "__main__":

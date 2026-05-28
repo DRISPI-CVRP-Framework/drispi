@@ -97,6 +97,20 @@ class HAOS:
             solver_index=solver_index,
         )
 
+    def joint_probability(self, selection: HAOSSelection) -> float:
+        """Product of per-level roulette probabilities for the current selection."""
+        method_wheel = (
+            self.wheel_4a_vertex_method
+            if selection.paradigm == "vertex"
+            else self.wheel_4b_route_method
+        )
+        p_k = self.wheel_1_k.probabilities()[selection.k_index]
+        p_l = self.wheel_2_lambda.probabilities()[selection.lambda_index]
+        p_p = self.wheel_3_paradigm.probabilities()[selection.paradigm_index]
+        p_m = method_wheel.probabilities()[selection.method_index]
+        p_s = self.wheel_5_solver.probabilities()[selection.solver_index]
+        return p_k * p_l * p_p * p_m * p_s
+
     def format_operator_roll(self, iteration: int, selection: HAOSSelection) -> str:
         """Human-readable HAOS draw: chosen operators and per-level roulette probabilities."""
         method_wheel = (

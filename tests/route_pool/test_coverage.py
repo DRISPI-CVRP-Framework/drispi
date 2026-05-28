@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from drispi.route_pool.coverage import (
+    average_coverage,
     coverage_counts,
     coverage_satisfied,
     routes_covering,
@@ -43,6 +44,16 @@ def test_coverage_satisfied_false_for_min_two(grid_instance) -> None:
     pool.add([2, 3, 4, 5, 6], 10.0)
     pool.add([7, 8, 9, 10, 11], 10.0)
     assert coverage_satisfied(pool, grid_instance, min_coverage=2) is False
+
+
+def test_average_coverage_mean_per_customer(grid_instance) -> None:
+    pool = RoutePool()
+    pool.add([2, 3, 4], 1.0)
+    pool.add([5, 6, 7], 2.0)
+    pool.add([2, 3, 8], 3.0)
+    avg = average_coverage(pool, grid_instance)
+    counts = coverage_counts(pool, grid_instance)
+    assert avg == sum(counts.values()) / len(counts)
 
 
 def test_routes_covering_returns_expected_routes() -> None:

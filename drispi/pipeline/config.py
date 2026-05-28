@@ -24,10 +24,10 @@ class DRISPIConfig:
     mip_gap: float = 0.001
 
     subcluster_time_per_customer: float = 0.1
-    bg_ails_time_limit: float = 90.0
+    bg_ails_time_limit: float = 60.0
     bg_ails_initial_omega: float = 0.8
     bg_ails_boundary_threshold: float = 0.5
-    standard_improvement_time_limit: float = 180.0
+    standard_improvement_time_limit: float = 90.0
 
     max_pool_size: int = 10000
     pool_diversity_weight: float = 1.0
@@ -35,4 +35,4 @@ class DRISPIConfig:
     haos_config: HAOSConfig = field(default_factory=HAOSConfig)
 
     output_dir: Path = field(default_factory=lambda: Path("output"))
-    seed: int = 420
+    seed: int = 999

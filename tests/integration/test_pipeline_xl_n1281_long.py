@@ -31,15 +31,15 @@ def test_xl_n1281_pipeline_long_budget(xl_n1281: CVRPInstance) -> None:
     out.mkdir(parents=True, exist_ok=True)
 
     cfg = DRISPIConfig(
-        time_limit=7200.0,
-        max_no_improve=100,
-        n_workers=4,
+        time_limit=1800.0,
+        max_no_improve=50,
+        n_workers=6,
         output_dir=out,
         warmup_iterations=10,
         sp_interval=3,
         subcluster_time_per_customer=0.05,
-        bg_ails_time_limit=90.0,
-        standard_improvement_time_limit=150.0,
+        bg_ails_time_limit=60.0,
+        standard_improvement_time_limit=90.0,
         sp_time_limit=300.0,
     )
     routes = DRISPIPipeline(xl_n1281, cfg).run()

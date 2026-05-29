@@ -9,6 +9,8 @@ from drispi.improvement.bg_ails import (
     export_boundary_ranks_csv,
     perturb_routes,
     run_bg_ails,
+    run_bg_ails_improve,
+    run_bg_ails_perturb,
     run_standard_improvement,
 )
 __all__ = [
@@ -20,5 +22,7 @@ __all__ = [
     "export_boundary_ranks_csv",
     "perturb_routes",
     "run_bg_ails",
+    "run_bg_ails_improve",
+    "run_bg_ails_perturb",
     "run_standard_improvement",
 ]

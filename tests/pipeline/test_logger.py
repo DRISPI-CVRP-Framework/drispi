@@ -195,6 +195,23 @@ def test_tag_fields_are_nine_chars(instance_12: CVRPInstance, tmp_path: Path) ->
     assert len(match.group(1)) == 9
 
 
+def test_log_haos_roll_levels_jsonl_only(instance_12: CVRPInstance, tmp_path: Path) -> None:
+    stream = io.StringIO()
+    logger = PipelineLogger(instance_12.name, tmp_path, stream=stream)
+    levels = {"level_1_k": {"values": [1, 2], "probabilities": [0.5, 0.5], "raw_weights": [1.0, 1.0]}}
+    logger.log_haos_roll(0, _selection(), False, 0.001, levels=levels)
+    terminal = stream.getvalue()
+    assert "level_1_k" not in terminal
+    log_text = (logger.run_dir / "run.log").read_text(encoding="utf-8")
+    assert "level_1_k" not in log_text
+    events = [
+        json.loads(line)
+        for line in (logger.run_dir / "run.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert events[-1]["levels"] == levels
+
+
 def test_jsonl_valid_json_per_line(instance_12: CVRPInstance, tmp_path: Path) -> None:
     stream = io.StringIO()
     logger = PipelineLogger(instance_12.name, tmp_path, stream=stream)

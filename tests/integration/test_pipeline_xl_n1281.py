@@ -75,9 +75,20 @@ def test_xl_n1281_pipeline_smoke_short(xl_n1281: CVRPInstance) -> None:
         sp_time_limit=1.0,
     )
 
-    def fake_bg(inst: CVRPInstance, sol: list[SolutionRoute], *a, **k):
-        del a, k
-        return _seqs_to_solution_routes(inst, [list(inst.customers)])
+    def fake_bg_perturb(inst: CVRPInstance, sol: list[SolutionRoute], *a, **k):
+        del a, k, sol
+        routes = _seqs_to_solution_routes(inst, [list(inst.customers)])
+        return routes, []
+
+    def fake_bg_improve(
+        inst: CVRPInstance,
+        perturbed: list[SolutionRoute],
+        partition: object,
+        initial_omega: float,
+        **k: object,
+    ) -> list[SolutionRoute]:
+        del inst, partition, initial_omega, k
+        return perturbed
 
     with (
         patch("drispi.pipeline.pipeline.cluster_instance", side_effect=_fake_cluster_instance),
@@ -85,7 +96,8 @@ def test_xl_n1281_pipeline_smoke_short(xl_n1281: CVRPInstance) -> None:
             "drispi.pipeline.pipeline.solve_subclusters_parallel",
             side_effect=_fake_cluster_routes,
         ),
-        patch("drispi.pipeline.pipeline.run_bg_ails", side_effect=fake_bg),
+        patch("drispi.pipeline.pipeline.run_bg_ails_perturb", side_effect=fake_bg_perturb),
+        patch("drispi.pipeline.pipeline.run_bg_ails_improve", side_effect=fake_bg_improve),
         patch("drispi.pipeline.pipeline.run_sp_sc", return_value=(None, False)),
     ):
         routes = DRISPIPipeline(xl_n1281, cfg).run()

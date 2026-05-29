@@ -48,7 +48,7 @@ def test_run_bg_ails_single_cluster_delegates_to_standard(monkeypatch: pytest.Mo
         "drispi.improvement.bg_ails.run_standard_improvement",
         fake_std,
     )
-    out = run_bg_ails(
+    _pert, perturbed, out = run_bg_ails(
         inst,
         routes,
         d,
@@ -58,6 +58,7 @@ def test_run_bg_ails_single_cluster_delegates_to_standard(monkeypatch: pytest.Mo
     )
     assert called.get("std") is True
     assert out == routes
+    assert perturbed == []
 
 
 def test_run_standard_improvement_invokes_solver(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -107,12 +108,12 @@ def test_run_bg_ails_preserves_customer_multiset(monkeypatch: pytest.MonkeyPatch
     partition = [[2, 3], [4, 5]]
 
     def _pert_identity(*_a, **_k):
-        return routes
+        return routes, []
 
     monkeypatch.setattr("drispi.improvement.bg_ails.perturb_routes", _pert_identity)
     mock_solver = MagicMock(spec=Ails2Solver)
     mock_solver.run_improvement.return_value = routes
-    out = run_bg_ails(
+    _pert, _perturbed, out = run_bg_ails(
         inst,
         routes,
         d,

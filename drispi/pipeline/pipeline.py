@@ -10,6 +10,8 @@ from __future__ import annotations
 import math
 import random
 import time
+from datetime import datetime
+from pathlib import Path
 
 from drispi.clustering.dissimilarity import compute_dissimilarity_matrix
 from drispi.clustering.interface import cluster_instance
@@ -19,9 +21,15 @@ from drispi.core.types import Route
 from drispi.haos.haos import HAOS
 from drispi.haos.tag import HAOSTag
 from drispi.haos.weights_io import save_weights
-from drispi.improvement.bg_ails import run_bg_ails, run_standard_improvement
+from drispi.improvement.bg_ails import (
+    _route_cluster_ids,
+    run_bg_ails_improve,
+    run_bg_ails_perturb,
+    run_standard_improvement,
+)
 from drispi.pipeline.config import DRISPIConfig
 from drispi.pipeline.logger import PipelineLogger
+from drispi.pipeline.snapshot import SnapshotWriter
 from drispi.pipeline.subproblem import solve_subclusters_parallel
 from drispi.route_pool.coverage import average_coverage
 from drispi.route_pool.manager import RoutePoolManager
@@ -30,6 +38,20 @@ from drispi.route_pool.post_sp_improvement import add_post_standard_improvement_
 from drispi.sp.policy import should_run_sp_sc
 from drispi.sp.solver import run_sp_sc
 from drispi.utils.io import write_sol
+
+_PHASE_SNAPSHOT_NAMES: dict[int, str] = {
+    1: "dissim+cluster",
+    2: "subclusters",
+    3: "bg_ails",
+    4: "sp_sc",
+    5: "standard_ails",
+}
+
+
+def make_run_label(instance_name: str, *, now: datetime | None = None) -> str:
+    """Build timestamped run directory label: ``<instance>_<MMDD_HHMM>``."""
+    t = now or datetime.now()
+    return f"{instance_name}_{t.strftime('%m%d_%H%M')}"
 
 
 def _seqs_to_solution_routes(instance: CVRPInstance, seqs: list[list[int]]) -> list[SolutionRoute]:
@@ -40,6 +62,15 @@ def _seqs_to_solution_routes(instance: CVRPInstance, seqs: list[list[int]]) -> l
 def _solution_routes_to_seqs(routes: list[SolutionRoute]) -> list[list[int]]:
     """Flatten ``SolutionRoute`` objects back to customer ID lists for the pool / SP."""
     return [list(r.customers) for r in routes]
+
+
+def _partition_to_cluster_assignments(partition: list[list[int]]) -> dict[int, int]:
+    return {c: k for k, cluster in enumerate(partition) for c in cluster}
+
+
+def _changed_route_indices(before: list[Route], after: list[Route]) -> list[int]:
+    before_sets = {frozenset(r) for r in before}
+    return [i for i, r in enumerate(after) if frozenset(r) not in before_sets]
 
 
 class DRISPIPipeline:
@@ -53,6 +84,8 @@ class DRISPIPipeline:
         instance: CVRPInstance,
         config: DRISPIConfig,
         bks_cost: float | None = None,
+        *,
+        run_label: str | None = None,
     ) -> None:
         self._instance = instance
         self._config = config
@@ -77,13 +110,20 @@ class DRISPIPipeline:
         self._iterations_completed = 0
         self._stopped_by_time = False
         self._stopped_by_no_improve = False
+        self._last_improve_phase: str = ""
 
+        label = run_label if run_label is not None else make_run_label(instance.name)
         self._logger = PipelineLogger(
-            instance.name,
+            label,
             config.output_dir,
             bks=bks_cost,
         )
+        self._snapshot_writer = SnapshotWriter(self.run_dir)
         self._logger.log_init(config, instance)
+
+    @property
+    def run_dir(self) -> Path:
+        return self._logger.run_dir
 
     def run(self) -> list[Route]:
         """
@@ -110,6 +150,37 @@ class DRISPIPipeline:
             return []
         return self._best_solution
 
+    def _write_phase_snapshot(
+        self,
+        iteration: int,
+        phase_num: int,
+        is_spsc: bool,
+        total_phases: int,
+        *,
+        cluster_assignments: dict[int, int] | None = None,
+        routes: list[Route] | None = None,
+        route_cluster_ids: list[int] | None = None,
+        perturbed_route_indices: list[int] | None = None,
+        changed_route_indices: list[int] | None = None,
+        selected_route_indices: list[int] | None = None,
+        phase_tag: str | None = None,
+    ) -> None:
+        self._snapshot_writer.write_phase(
+            iteration,
+            phase_num,
+            _PHASE_SNAPSHOT_NAMES[phase_num],
+            is_spsc,
+            total_phases,
+            self._instance,
+            cluster_assignments=cluster_assignments,
+            routes=routes,
+            route_cluster_ids=route_cluster_ids,
+            perturbed_route_indices=perturbed_route_indices,
+            changed_route_indices=changed_route_indices,
+            selected_route_indices=selected_route_indices,
+            phase_tag=phase_tag,
+        )
+
     def _run_iteration(self, iteration: int) -> None:
         selection = self._haos.select(iteration, self._rng)
         is_spsc = should_run_sp_sc(
@@ -118,11 +189,13 @@ class DRISPIPipeline:
             self._config.sp_interval,
         )
         total_phases = 5 if is_spsc else 3
+        joint_prob = self._haos.joint_probability(selection)
         self._logger.log_haos_roll(
             iteration,
             selection,
             is_spsc,
-            self._haos.joint_probability(selection),
+            joint_prob,
+            levels=None,
         )
         angular_offset = self._rng.uniform(0.0, 2.0 * math.pi)
 
@@ -151,6 +224,16 @@ class DRISPIPipeline:
             angular_offset=angular_offset,
             seed=self._rng.randint(0, 2**31 - 1),
         )
+        cluster_assignments = _partition_to_cluster_assignments(partition)
+        self._write_phase_snapshot(
+            iteration,
+            1,
+            is_spsc,
+            total_phases,
+            cluster_assignments=cluster_assignments,
+        )
+        self._snapshot_writer.cleanup_old_snapshots(iteration)
+
         self._logger.log_phase_done(
             iteration,
             1,
@@ -190,23 +273,67 @@ class DRISPIPipeline:
         )
 
         combined_seqs = [seq for group in cluster_routes for seq in group]
+        route_cluster_ids = _route_cluster_ids(combined_seqs, partition)
+        self._write_phase_snapshot(
+            iteration,
+            2,
+            is_spsc,
+            total_phases,
+            cluster_assignments=cluster_assignments,
+            routes=combined_seqs,
+            route_cluster_ids=route_cluster_ids,
+        )
+
         combined_sol = _seqs_to_solution_routes(self._instance, combined_seqs)
 
-        t0 = time.perf_counter()
-        bg_solution = run_bg_ails(
+        bg_seed = self._rng.randint(0, 2**31 - 1)
+        perturbed_sol, perturbed_indices = run_bg_ails_perturb(
             self._instance,
             combined_sol,
             dissim,
             partition,
+            boundary_threshold=self._config.bg_ails_boundary_threshold,
+            seed=bg_seed,
+        )
+        self._write_phase_snapshot(
+            iteration,
+            3,
+            is_spsc,
+            total_phases,
+            cluster_assignments=cluster_assignments,
+            routes=combined_seqs,
+            route_cluster_ids=route_cluster_ids,
+            perturbed_route_indices=perturbed_indices,
+            phase_tag="pre",
+        )
+
+        t0 = time.perf_counter()
+        bg_solution = run_bg_ails_improve(
+            self._instance,
+            perturbed_sol,
+            partition,
             self._config.bg_ails_initial_omega,
             time_limit=self._config.bg_ails_time_limit,
-            boundary_threshold=self._config.bg_ails_boundary_threshold,
-            seed=self._rng.randint(0, 2**31 - 1),
+            seed=bg_seed,
         )
         bg_elapsed = time.perf_counter() - t0
+        pert_seqs = _solution_routes_to_seqs(perturbed_sol)
         bg_seqs = _solution_routes_to_seqs(bg_solution)
+        bg_changed = _changed_route_indices(pert_seqs, bg_seqs)
         bg_cost = sum(self._instance.route_cost(r) for r in bg_seqs)
         bg_improved = bg_cost < self._best_cost
+
+        self._write_phase_snapshot(
+            iteration,
+            3,
+            is_spsc,
+            total_phases,
+            cluster_assignments=cluster_assignments,
+            routes=bg_seqs,
+            route_cluster_ids=route_cluster_ids,
+            changed_route_indices=bg_changed,
+            phase_tag="post",
+        )
 
         self._logger.log_phase_done(
             iteration,
@@ -228,7 +355,7 @@ class DRISPIPipeline:
         )
         self._haos.update_immediate(selection, iteration, imm)
         if bg_improved:
-            self._update_best(bg_seqs, iteration)
+            self._update_best(bg_seqs, iteration, "bg_ails")
 
         op_tag = selection.to_tag(iteration)
         for seq in bg_seqs:
@@ -254,6 +381,15 @@ class DRISPIPipeline:
             )
             sp_elapsed = time.perf_counter() - t0
             mode_done = "SP" if used_sp else "SC"
+            if sp_result is not None and len(sp_result) > 0:
+                self._write_phase_snapshot(
+                    iteration,
+                    4,
+                    is_spsc,
+                    total_phases,
+                    routes=sp_result,
+                    selected_route_indices=list(range(len(sp_result))),
+                )
             self._logger.log_phase_done(
                 iteration,
                 4,
@@ -283,6 +419,16 @@ class DRISPIPipeline:
             final_seqs = _solution_routes_to_seqs(final_sol)
             final_cost = sum(self._instance.route_cost(r) for r in final_seqs)
             iter_cost = final_cost
+            std_changed = _changed_route_indices(sp_result, final_seqs)
+
+            self._write_phase_snapshot(
+                iteration,
+                5,
+                is_spsc,
+                total_phases,
+                routes=final_seqs,
+                changed_route_indices=std_changed,
+            )
 
             self._logger.log_phase_done(
                 iteration,
@@ -317,14 +463,21 @@ class DRISPIPipeline:
                     iteration,
                     selection,
                 )
-            self._update_best(final_seqs, iteration)
+            self._update_best(final_seqs, iteration, "standard_ails")
             self._last_cost = final_cost
         else:
             if not bg_improved:
-                self._update_best(bg_seqs, iteration)
+                self._update_best(bg_seqs, iteration, "bg_ails")
             self._last_cost = bg_cost
 
         self._haos.update_final(selection, iteration)
+        self._logger.log_haos_roll(
+            iteration,
+            selection,
+            is_spsc,
+            joint_prob,
+            levels=self._haos.state_dict(),
+        )
 
         self._logger.log_summary(
             iteration,
@@ -359,9 +512,8 @@ class DRISPIPipeline:
                 tags.append(tag)
         return tags
 
-    def _update_best(self, solution: list[Route], iteration: int) -> None:
+    def _update_best(self, solution: list[Route], iteration: int, phase_name: str) -> None:
         """Track global best S*, elite pool rows, and stagnation."""
-        del iteration
         recomputed = float(sum(self._instance.route_cost(list(r)) for r in solution))
         if self._initial_cost is None and math.isfinite(recomputed):
             self._initial_cost = recomputed
@@ -370,15 +522,24 @@ class DRISPIPipeline:
             self._best_solution = [list(r) for r in solution]
             self._best_cost = recomputed
             self._no_improve_count = 0
+            self._last_improve_phase = phase_name
             for r in self._best_solution:
                 self._pool.add(r, self._instance.route_cost(r))
             self._pool.set_elite(self._best_solution)
+            self._snapshot_writer.write_best_solution(
+                self._best_solution,
+                self._best_cost,
+                iteration,
+                phase_name,
+                self._instance,
+            )
         else:
             self._no_improve_count += 1
 
     def _finalize(self) -> None:
         """Persist HAOS state, best .sol, and final log block."""
-        out = self._config.output_dir
+        self._snapshot_writer.stop()
+        out = self.run_dir
         out.mkdir(parents=True, exist_ok=True)
         save_weights(
             self._haos,

@@ -34,5 +34,5 @@ class DRISPIConfig:
 
     haos_config: HAOSConfig = field(default_factory=HAOSConfig)
 
-    output_dir: Path = field(default_factory=lambda: Path("output"))
-    seed: int = 999
+    output_dir: Path = field(default_factory=lambda: Path("artifacts/runs"))
+    seed: int = 123

@@ -267,7 +267,7 @@ def perturb_routes(
     rng: np.random.Generator,
     *,
     n_chains: int | None = None,
-) -> list[Route]:
+) -> tuple[list[Route], list[int]]:
     """
     Multi-route cross-reconnect perturbation.
 
@@ -284,7 +284,7 @@ def perturb_routes(
     n_r = len(seqs)
     if n_r < 2:
         s0 = seqs[0] if seqs else []
-        return [Route(customers=s0[:], cost=instance.route_cost(s0))]
+        return [Route(customers=s0[:], cost=instance.route_cost(s0))], []
 
     n_chain_iter = n_chains if n_chains is not None else max(1, len(partition) - 1)
 
@@ -300,13 +300,17 @@ def perturb_routes(
         seqs, route_cluster_ids, partition, dissimilarity_matrix, cid_to_i
     )
 
+    perturbed_indices: set[int] = set()
     for _ in range(n_chain_iter):
         i, j = _pick_route_pair_by_affinity(
             seqs, route_cluster_ids, weights, affinity, rng
         )
+        perturbed_indices.add(i)
+        perturbed_indices.add(j)
         seqs[i], seqs[j] = _cross_reconnect(seqs[i], seqs[j], rng)
 
-    return [Route(customers=s, cost=instance.route_cost(s)) for s in seqs]
+    out = [Route(customers=s, cost=instance.route_cost(s)) for s in seqs]
+    return out, sorted(perturbed_indices)
 
 
 def _routes_to_sol_payload(routes: list[Route], instance: CVRPInstance) -> tuple[list[list[int]], float]:
@@ -349,41 +353,28 @@ def run_standard_improvement(
         )
 
 
-def run_bg_ails(
+def run_bg_ails_perturb(
     instance: CVRPInstance,
     solution: list[Route],
     dissimilarity_matrix: np.ndarray,
     partition: list[list[int]],
-    initial_omega: float,
     *,
-    time_limit: float = DEFAULT_BG_AILS_TIME_LIMIT,
     boundary_threshold: float = 0.5,
-    solver: Ails2Solver | None = None,
     seed: int = 42,
-) -> list[Route]:
+) -> tuple[list[Route], list[int]]:
     """
-    Full BG-AILS pipeline: ranks → weighted perturbation → AILS-II with injected
-    solution and ``-initialOmega``.
+    Boundary ranks + cross-reconnect perturbation only (no AILS-II).
 
-    If ``partition`` has at most one cluster, delegates to
-    :func:`run_standard_improvement` (same ``time_limit``).
-
-    Cross-reconnect chains per run: ``max(1, len(partition) - 1)`` (``k - 1`` for
-    ``k`` clusters), a lower bound on inter-cluster boundaries without extra tuning.
+    Returns ``(perturbed_routes, perturbed_route_indices)`` where indices refer to
+    the input ``solution`` route list (routes chosen for perturbation).
     """
     if len(partition) <= 1:
-        return run_standard_improvement(
-            instance,
-            solution,
-            time_limit=float(time_limit),
-            solver=solver,
-            seed=seed,
-        )
+        return solution, []
     rng = np.random.default_rng(seed)
     customers = list(instance.customers)
     ranks = compute_boundary_ranks(dissimilarity_matrix, partition, customers)
     rw = _apply_threshold(ranks, boundary_threshold)
-    pert = perturb_routes(
+    return perturb_routes(
         solution,
         instance,
         rw,
@@ -391,8 +382,29 @@ def run_bg_ails(
         dissimilarity_matrix,
         rng,
     )
+
+
+def run_bg_ails_improve(
+    instance: CVRPInstance,
+    perturbed: list[Route],
+    partition: list[list[int]],
+    initial_omega: float,
+    *,
+    time_limit: float = DEFAULT_BG_AILS_TIME_LIMIT,
+    solver: Ails2Solver | None = None,
+    seed: int = 42,
+) -> list[Route]:
+    """Run AILS-II on a (possibly perturbed) solution with ``-initialOmega`` when multi-cluster."""
+    if len(partition) <= 1:
+        return run_standard_improvement(
+            instance,
+            perturbed,
+            time_limit=float(time_limit),
+            solver=solver,
+            seed=seed,
+        )
     solv = solver or Ails2Solver()
-    seqs, cost = _routes_to_sol_payload(pert, instance)
+    seqs, cost = _routes_to_sol_payload(perturbed, instance)
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         init_sol = root / "init.sol"
@@ -404,6 +416,52 @@ def run_bg_ails(
             initial_omega=float(initial_omega),
             seed=seed,
         )
+
+
+def run_bg_ails(
+    instance: CVRPInstance,
+    solution: list[Route],
+    dissimilarity_matrix: np.ndarray,
+    partition: list[list[int]],
+    initial_omega: float,
+    *,
+    time_limit: float = DEFAULT_BG_AILS_TIME_LIMIT,
+    boundary_threshold: float = 0.5,
+    solver: Ails2Solver | None = None,
+    seed: int = 42,
+) -> tuple[list[Route], list[int], list[Route]]:
+    """
+    Full BG-AILS pipeline: ranks → weighted perturbation → AILS-II with injected
+    solution and ``-initialOmega``.
+
+    Returns ``(perturbed_routes, perturbed_route_indices, improved_routes)`` where
+    ``perturbed_route_indices`` are indices into the input solution's route list
+    for routes selected in cross-reconnect perturbation chains.
+
+    If ``partition`` has at most one cluster, delegates to
+    :func:`run_standard_improvement` (same ``time_limit``).
+
+    Cross-reconnect chains per run: ``max(1, len(partition) - 1)`` (``k - 1`` for
+    ``k`` clusters), a lower bound on inter-cluster boundaries without extra tuning.
+    """
+    pert, perturbed_indices = run_bg_ails_perturb(
+        instance,
+        solution,
+        dissimilarity_matrix,
+        partition,
+        boundary_threshold=boundary_threshold,
+        seed=seed,
+    )
+    improved = run_bg_ails_improve(
+        instance,
+        pert,
+        partition,
+        initial_omega,
+        time_limit=time_limit,
+        solver=solver,
+        seed=seed,
+    )
+    return pert, perturbed_indices, improved
 
 
 class StandardAilsImprovement(BaseImprovement):
@@ -451,9 +509,10 @@ class BgAilsImprovement(BaseImprovement):
         self._boundary_threshold = float(boundary_threshold)
         self._solver = solver
         self._seed = seed
+        self.last_perturbed_route_indices: list[int] = []
 
     def improve(self, solution: Solution, instance: CVRPInstance, time_limit: float) -> Solution:
-        out_routes = run_bg_ails(
+        _perturbed_routes, perturbed, out_routes = run_bg_ails(
             instance,
             solution.routes,
             self._d,
@@ -464,6 +523,7 @@ class BgAilsImprovement(BaseImprovement):
             solver=self._solver,
             seed=self._seed,
         )
+        self.last_perturbed_route_indices = perturbed
         total = float(sum(r.cost for r in out_routes))
         return Solution(
             routes=out_routes,

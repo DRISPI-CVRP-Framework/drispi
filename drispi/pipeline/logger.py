@@ -315,6 +315,8 @@ class PipelineLogger:
         selection: HAOSSelection,
         is_spsc_iter: bool,
         joint_prob: float,
+        *,
+        levels: dict[str, Any] | None = None,
     ) -> None:
         p_short = _paradigm_short(selection.paradigm)
         method_short = _format_method_short(selection.method)
@@ -324,22 +326,25 @@ class PipelineLogger:
         )
         if is_spsc_iter:
             content += "  SP/SC ✓"
+        json_event: dict[str, Any] = {
+            "type": "haos_roll",
+            "iteration": iteration,
+            "k": selection.k,
+            "lambda_demand": selection.lambda_demand,
+            "paradigm": _paradigm_short(selection.paradigm),
+            "method": selection.method,
+            "solver": selection.solver,
+            "joint_prob": joint_prob,
+            "is_spsc": is_spsc_iter,
+        }
+        if levels is not None:
+            json_event["levels"] = levels
         self._emit(
             iteration,
             _TAG_HAOS,
             content,
             color_style=_ColorStyle.HAOS_ROLL,
-            json_event={
-                "type": "haos_roll",
-                "iteration": iteration,
-                "k": selection.k,
-                "lambda_demand": selection.lambda_demand,
-                "paradigm": _paradigm_short(selection.paradigm),
-                "method": selection.method,
-                "solver": selection.solver,
-                "joint_prob": joint_prob,
-                "is_spsc": is_spsc_iter,
-            },
+            json_event=json_event,
         )
 
     def log_phase_done(

@@ -41,10 +41,22 @@ def _fake_cluster_instance(
     return _even_k_partition(instance, k)
 
 
-def _fake_bg_ails(instance: CVRPInstance, solution: list[SolutionRoute], *args, **kwargs):
-    del args, kwargs
+def _fake_bg_perturb(instance: CVRPInstance, solution: list[SolutionRoute], *args, **kwargs):
+    del args, kwargs, solution
     seqs = [[2, 3, 4, 5], [6, 7, 8, 9], [10, 11, 12, 13]]
-    return [SolutionRoute(customers=list(s), cost=instance.route_cost(s)) for s in seqs]
+    routes = [SolutionRoute(customers=list(s), cost=instance.route_cost(s)) for s in seqs]
+    return routes, []
+
+
+def _fake_bg_improve(
+    instance: CVRPInstance,
+    perturbed: list[SolutionRoute],
+    partition: object,
+    initial_omega: float,
+    **kwargs: object,
+) -> list[SolutionRoute]:
+    del partition, initial_omega, kwargs
+    return perturbed
 
 
 def _fake_run_sp_sc(*args, **kwargs):
@@ -84,13 +96,26 @@ def test_bg_ails_improvement_kept_on_sp_sc_iteration(
     expensive_cost = float(sum(instance_12.route_cost(r) for r in expensive_seqs))
     assert cheap_cost < expensive_cost
 
-    def fake_bg(
+    def fake_bg_perturb(
         instance: CVRPInstance,
         solution: list[SolutionRoute],
         *args: object,
         **kwargs: object,
-    ) -> list[SolutionRoute]:
+    ) -> tuple[list[SolutionRoute], list[int]]:
         del instance, solution, args, kwargs
+        routes = [
+            SolutionRoute(customers=list(s), cost=instance_12.route_cost(s)) for s in cheap_seqs
+        ]
+        return routes, []
+
+    def fake_bg_improve(
+        instance: CVRPInstance,
+        perturbed: list[SolutionRoute],
+        partition: object,
+        initial_omega: float,
+        **kwargs: object,
+    ) -> list[SolutionRoute]:
+        del instance, perturbed, partition, initial_omega, kwargs
         return [
             SolutionRoute(customers=list(s), cost=instance_12.route_cost(s)) for s in cheap_seqs
         ]
@@ -117,7 +142,8 @@ def test_bg_ails_improvement_kept_on_sp_sc_iteration(
             "drispi.pipeline.pipeline.solve_subclusters_parallel",
             side_effect=_fake_cluster_routes,
         ),
-        patch("drispi.pipeline.pipeline.run_bg_ails", side_effect=fake_bg),
+        patch("drispi.pipeline.pipeline.run_bg_ails_perturb", side_effect=fake_bg_perturb),
+        patch("drispi.pipeline.pipeline.run_bg_ails_improve", side_effect=fake_bg_improve),
         patch("drispi.pipeline.pipeline.run_sp_sc", side_effect=fake_sp),
         patch("drispi.pipeline.pipeline.run_standard_improvement", side_effect=fake_std),
     ):
@@ -152,7 +178,8 @@ def test_pipeline_runs_five_iterations(instance_12: CVRPInstance, tmp_path: Path
     with (
         patch("drispi.pipeline.pipeline.cluster_instance", side_effect=_fake_cluster_instance),
         patch("drispi.pipeline.pipeline.solve_subclusters_parallel", side_effect=fake_solve),
-        patch("drispi.pipeline.pipeline.run_bg_ails", side_effect=_fake_bg_ails),
+        patch("drispi.pipeline.pipeline.run_bg_ails_perturb", side_effect=_fake_bg_perturb),
+        patch("drispi.pipeline.pipeline.run_bg_ails_improve", side_effect=_fake_bg_improve),
         patch("drispi.pipeline.pipeline.run_sp_sc", side_effect=_fake_run_sp_sc),
         patch(
             "drispi.pipeline.pipeline.run_standard_improvement",
@@ -177,7 +204,8 @@ def test_pipeline_stops_on_time_limit(instance_12: CVRPInstance, tmp_path: Path)
             "drispi.pipeline.pipeline.solve_subclusters_parallel",
             side_effect=_fake_cluster_routes,
         ),
-        patch("drispi.pipeline.pipeline.run_bg_ails", side_effect=_fake_bg_ails),
+        patch("drispi.pipeline.pipeline.run_bg_ails_perturb", side_effect=_fake_bg_perturb),
+        patch("drispi.pipeline.pipeline.run_bg_ails_improve", side_effect=_fake_bg_improve),
         patch("drispi.pipeline.pipeline.run_sp_sc", side_effect=_fake_run_sp_sc),
     ):
         routes = DRISPIPipeline(instance_12, cfg).run()
@@ -197,7 +225,8 @@ def test_pipeline_stops_on_max_no_improve(instance_12: CVRPInstance, tmp_path: P
             "drispi.pipeline.pipeline.solve_subclusters_parallel",
             side_effect=_fake_cluster_routes,
         ),
-        patch("drispi.pipeline.pipeline.run_bg_ails", side_effect=_fake_bg_ails),
+        patch("drispi.pipeline.pipeline.run_bg_ails_perturb", side_effect=_fake_bg_perturb),
+        patch("drispi.pipeline.pipeline.run_bg_ails_improve", side_effect=_fake_bg_improve),
         patch("drispi.pipeline.pipeline.run_sp_sc", side_effect=_fake_run_sp_sc),
     ):
         pipe = DRISPIPipeline(instance_12, cfg)
@@ -215,10 +244,10 @@ def test_update_best_resets_no_improve(instance_12: CVRPInstance, tmp_path: Path
     pipe = DRISPIPipeline(instance_12, cfg)
     sol = [[2, 3], [4, 5, 6]]
     cost = sum(instance_12.route_cost(r) for r in sol)
-    pipe._update_best(sol, iteration=0)
+    pipe._update_best(sol, iteration=0, phase_name="bg_ails")
     assert pipe._best_cost == cost
     assert pipe._no_improve_count == 0
-    pipe._update_best(sol, iteration=1)
+    pipe._update_best(sol, iteration=1, phase_name="bg_ails")
     assert pipe._no_improve_count == 1
 
 
@@ -239,8 +268,9 @@ def test_finalize_writes_weights_and_sol(instance_12: CVRPInstance, tmp_path: Pa
     pipe._iterations_completed = 3
     pipe._start_time = time.perf_counter() - 1.0
     pipe._finalize()
-    assert (tmp_path / "haos_weights_final.json").is_file()
-    assert (tmp_path / f"{instance_12.name}.sol").is_file()
+    run_dir = pipe.run_dir
+    assert (run_dir / "haos_weights_final.json").is_file()
+    assert (run_dir / f"{instance_12.name}.sol").is_file()
 
 
 def test_haos_weights_change_after_warmup(instance_12: CVRPInstance, tmp_path: Path) -> None:
@@ -259,7 +289,8 @@ def test_haos_weights_change_after_warmup(instance_12: CVRPInstance, tmp_path: P
             "drispi.pipeline.pipeline.solve_subclusters_parallel",
             side_effect=_fake_cluster_routes,
         ),
-        patch("drispi.pipeline.pipeline.run_bg_ails", side_effect=_fake_bg_ails),
+        patch("drispi.pipeline.pipeline.run_bg_ails_perturb", side_effect=_fake_bg_perturb),
+        patch("drispi.pipeline.pipeline.run_bg_ails_improve", side_effect=_fake_bg_improve),
         patch("drispi.pipeline.pipeline.run_sp_sc", side_effect=_fake_run_sp_sc),
     ):
         pipe._run_iteration(0)

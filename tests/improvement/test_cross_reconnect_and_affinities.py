@@ -92,7 +92,7 @@ def test_perturb_routes_preserves_all_customers() -> None:
     ]
     ranks = np.ones(n, dtype=np.float64)
     rng = np.random.default_rng(1)
-    out = bg_ails.perturb_routes(
+    out, _perturbed = bg_ails.perturb_routes(
         routes,
         inst,
         ranks,

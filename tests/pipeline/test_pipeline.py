@@ -244,12 +244,57 @@ def test_update_best_resets_no_improve(instance_12: CVRPInstance, tmp_path: Path
     )
     pipe = DRISPIPipeline(instance_12, cfg)
     sol = [[2, 3], [4, 5, 6]]
+    for route in sol:
+        pipe._pool.add(route, instance_12.route_cost(route))
     cost = sum(instance_12.route_cost(r) for r in sol)
     pipe._update_best(sol, iteration=0, phase_name="bg_ails")
     assert pipe._best_cost == cost
     assert pipe._no_improve_count == 0
     pipe._update_best(sol, iteration=1, phase_name="bg_ails")
     assert pipe._no_improve_count == 1
+
+
+def test_bg_improvement_tags_routes_before_update_best(
+    instance_12: CVRPInstance, tmp_path: Path
+) -> None:
+    """BG-AILS pool routes must keep the iteration HAOS tag after a new best."""
+    cfg = DRISPIConfig(
+        time_limit=1e9,
+        max_no_improve=100,
+        output_dir=tmp_path,
+        warmup_iterations=100,
+        sp_interval=100,
+    )
+    route_selection = HAOSSelection(
+        k=2,
+        lambda_demand=0.0,
+        paradigm="vertex",
+        method="kmeans",
+        solver="pyvrp",
+        k_index=1,
+        lambda_index=0,
+        paradigm_index=0,
+        method_index=0,
+        solver_index=0,
+    )
+    pipe = DRISPIPipeline(instance_12, cfg)
+
+    with (
+        patch.object(pipe._haos, "select", return_value=route_selection),
+        patch("drispi.pipeline.pipeline.cluster_instance", side_effect=_fake_cluster_instance),
+        patch(
+            "drispi.pipeline.pipeline.solve_subclusters_parallel",
+            side_effect=_fake_cluster_routes,
+        ),
+        patch("drispi.pipeline.pipeline.run_bg_ails_perturb", side_effect=_fake_bg_perturb),
+        patch("drispi.pipeline.pipeline.run_bg_ails_improve", side_effect=_fake_bg_improve),
+        patch("drispi.pipeline.pipeline.run_sp_sc", side_effect=_fake_run_sp_sc),
+    ):
+        pipe._run_iteration(0)
+
+    expected_tag = route_selection.to_tag(0)
+    for route in pipe._best_solution or []:
+        assert pipe._pool.get_haos_tag(route) == expected_tag
 
 
 def test_finalize_writes_weights_and_sol(instance_12: CVRPInstance, tmp_path: Path) -> None:

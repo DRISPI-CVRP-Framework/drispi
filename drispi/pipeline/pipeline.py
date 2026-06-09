@@ -358,12 +358,13 @@ class DRISPIPipeline:
             is_deferred=False,
         )
         self._haos.update_immediate(selection, iteration, imm)
-        if bg_improved:
-            self._update_best(bg_seqs, iteration, "bg_ails")
 
         op_tag = selection.to_tag(iteration)
         for seq in bg_seqs:
             self._pool.add(seq, self._instance.route_cost(seq), haos_tag=op_tag)
+
+        if bg_improved:
+            self._update_best(bg_seqs, iteration, "bg_ails")
 
         self._manager.maybe_evict(self._pool)
 
@@ -517,7 +518,11 @@ class DRISPIPipeline:
         return tags
 
     def _update_best(self, solution: list[Route], iteration: int, phase_name: str) -> None:
-        """Track global best S*, elite pool rows, and stagnation."""
+        """Track global best S*, mark elite pool rows, and stagnation.
+
+        Callers must ensure ``solution`` routes are already present in the pool
+        (with correct HAOS tags) before invoking this on an improvement.
+        """
         recomputed = float(sum(self._instance.route_cost(list(r)) for r in solution))
         if self._initial_cost is None and math.isfinite(recomputed):
             self._initial_cost = recomputed
@@ -527,8 +532,6 @@ class DRISPIPipeline:
             self._best_cost = recomputed
             self._no_improve_count = 0
             self._last_improve_phase = phase_name
-            for r in self._best_solution:
-                self._pool.add(r, self._instance.route_cost(r))
             self._pool.set_elite(self._best_solution)
             self._snapshot_writer.write_best_solution(
                 self._best_solution,

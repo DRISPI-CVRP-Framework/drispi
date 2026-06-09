@@ -6,7 +6,7 @@ import pytest
 
 from drispi.core.instance import CVRPInstance
 from drispi.haos.config import HAOSConfig, HAOSRewardConfig
-from drispi.haos.haos import HAOS
+from drispi.haos.haos import HAOS, HAOSSelection
 from drispi.haos.tag import HAOSTag
 
 
@@ -26,6 +26,132 @@ def make_instance_20() -> CVRPInstance:
         coordinates=coordinates,
         demands=demands,
     )
+
+
+def test_coerce_vertex_when_no_routes_switches_paradigm_and_method() -> None:
+    haos = HAOS(config=HAOSConfig(), instance=make_instance_20())
+    route_selection = HAOSSelection(
+        k=2,
+        lambda_demand=0.4,
+        paradigm="route",
+        method="agglomerative_single",
+        solver="pyvrp",
+        k_index=1,
+        lambda_index=2,
+        paradigm_index=1,
+        method_index=3,
+        solver_index=0,
+    )
+    coerced = haos.coerce_vertex_when_no_routes(
+        route_selection,
+        best_solution_available=False,
+        rng=random.Random(42),
+    )
+    assert coerced.paradigm == "vertex"
+    assert coerced.method in haos.wheel_4a_vertex_method.choices
+    assert coerced.paradigm_index == haos.wheel_3_paradigm.choices.index("vertex")
+    assert coerced.k == route_selection.k
+    assert coerced.lambda_demand == route_selection.lambda_demand
+    assert coerced.solver == route_selection.solver
+
+
+def test_coerce_vertex_when_no_routes_noop_if_best_solution_available() -> None:
+    haos = HAOS(config=HAOSConfig(), instance=make_instance_20())
+    route_selection = HAOSSelection(
+        k=2,
+        lambda_demand=0.4,
+        paradigm="route",
+        method="kmeans",
+        solver="pyvrp",
+        k_index=1,
+        lambda_index=2,
+        paradigm_index=1,
+        method_index=0,
+        solver_index=0,
+    )
+    unchanged = haos.coerce_vertex_when_no_routes(
+        route_selection,
+        best_solution_available=True,
+        rng=random.Random(42),
+    )
+    assert unchanged is route_selection
+
+
+def test_cap_k_for_route_clustering_reduces_k_to_route_count() -> None:
+    haos = HAOS(config=HAOSConfig(), instance=make_instance_20())
+    route_selection = HAOSSelection(
+        k=4,
+        lambda_demand=0.4,
+        paradigm="route",
+        method="kmeans",
+        solver="pyvrp",
+        k_index=3,
+        lambda_index=2,
+        paradigm_index=1,
+        method_index=0,
+        solver_index=0,
+    )
+    capped = haos.cap_k_for_route_clustering(route_selection, n_routes=2)
+    assert capped.k == 2
+    assert capped.k_index == haos.wheel_1_k.choices.index(2)
+
+
+def test_cap_k_for_route_clustering_noop_when_k_within_route_count() -> None:
+    haos = HAOS(config=HAOSConfig(), instance=make_instance_20())
+    route_selection = HAOSSelection(
+        k=2,
+        lambda_demand=0.4,
+        paradigm="route",
+        method="kmeans",
+        solver="pyvrp",
+        k_index=1,
+        lambda_index=2,
+        paradigm_index=1,
+        method_index=0,
+        solver_index=0,
+    )
+    unchanged = haos.cap_k_for_route_clustering(route_selection, n_routes=10)
+    assert unchanged is route_selection
+
+
+def test_cap_k_for_route_clustering_noop_for_vertex_paradigm() -> None:
+    haos = HAOS(config=HAOSConfig(), instance=make_instance_20())
+    vertex_selection = HAOSSelection(
+        k=4,
+        lambda_demand=0.4,
+        paradigm="vertex",
+        method="kmeans",
+        solver="pyvrp",
+        k_index=3,
+        lambda_index=2,
+        paradigm_index=0,
+        method_index=0,
+        solver_index=0,
+    )
+    unchanged = haos.cap_k_for_route_clustering(vertex_selection, n_routes=2)
+    assert unchanged is vertex_selection
+
+
+def test_coerce_vertex_when_no_routes_noop_if_already_vertex() -> None:
+    haos = HAOS(config=HAOSConfig(), instance=make_instance_20())
+    vertex_selection = HAOSSelection(
+        k=2,
+        lambda_demand=0.4,
+        paradigm="vertex",
+        method="kmeans",
+        solver="pyvrp",
+        k_index=1,
+        lambda_index=2,
+        paradigm_index=0,
+        method_index=0,
+        solver_index=0,
+    )
+    unchanged = haos.coerce_vertex_when_no_routes(
+        vertex_selection,
+        best_solution_available=False,
+        rng=random.Random(42),
+    )
+    assert unchanged is vertex_selection
 
 
 def test_select_returns_complete_valid_selection() -> None:
@@ -92,6 +218,43 @@ def test_to_tag_from_selection() -> None:
     imp = selection.to_tag(iteration=3, is_improvement_route=True)
     assert imp.is_improvement_route is True
     assert imp.k == selection.k and imp.solver == selection.solver
+
+
+def test_coerced_vertex_selection_credits_vertex_wheels_on_update_final() -> None:
+    config = HAOSConfig(haos_warmup=0, decay=0.8)
+    haos = HAOS(config=config, instance=make_instance_20())
+    route_selection = HAOSSelection(
+        k=2,
+        lambda_demand=0.4,
+        paradigm="route",
+        method="agglomerative_single",
+        solver="pyvrp",
+        k_index=1,
+        lambda_index=2,
+        paradigm_index=1,
+        method_index=3,
+        solver_index=0,
+    )
+    before = haos.state_dict()
+    coerced = haos.coerce_vertex_when_no_routes(
+        route_selection,
+        best_solution_available=False,
+        rng=random.Random(7),
+    )
+    haos.update_immediate(coerced, iteration=0, reward=2.0)
+    haos.update_final(coerced, iteration=0)
+    after = haos.state_dict()
+
+    assert after["level_3_paradigm"]["raw_weights"][coerced.paradigm_index] == pytest.approx(2.8)
+    assert after["level_4a_vertex_method"]["raw_weights"][coerced.method_index] == pytest.approx(2.8)
+    assert (
+        after["level_4b_route_method"]["raw_weights"]
+        == before["level_4b_route_method"]["raw_weights"]
+    )
+    assert (
+        after["level_3_paradigm"]["raw_weights"][route_selection.paradigm_index]
+        == before["level_3_paradigm"]["raw_weights"][route_selection.paradigm_index]
+    )
 
 
 def test_update_final_after_warmup_updates_selected_weights() -> None:

@@ -183,6 +183,14 @@ class DRISPIPipeline:
 
     def _run_iteration(self, iteration: int) -> None:
         selection = self._haos.select(iteration, self._rng)
+        best_routes = self._best_solution
+        selection = self._haos.coerce_vertex_when_no_routes(
+            selection,
+            best_solution_available=best_routes is not None and len(best_routes) > 0,
+            rng=self._rng,
+        )
+        if selection.paradigm == "route" and best_routes is not None:
+            selection = self._haos.cap_k_for_route_clustering(selection, len(best_routes))
         is_spsc = should_run_sp_sc(
             iteration,
             self._config.warmup_iterations,
@@ -206,17 +214,13 @@ class DRISPIPipeline:
             angular_offset,
         )
 
-        route_export = self._pool.as_route_pool()
-        if selection.paradigm == "route" and len(route_export) == 0:
-            paradigm_used = "vertex"
-            routes_for_cluster: list[Route] | None = None
-        else:
-            paradigm_used = selection.paradigm
-            routes_for_cluster = route_export if paradigm_used == "route" else None
+        routes_for_cluster = (
+            [list(r) for r in best_routes] if selection.paradigm == "route" else None
+        )
 
         partition = cluster_instance(
             self._instance,
-            paradigm=paradigm_used,
+            paradigm=selection.paradigm,
             method=selection.method,
             k=selection.k,
             routes=routes_for_cluster,
@@ -243,7 +247,7 @@ class DRISPIPipeline:
             None,
             {
                 "lambda_demand": selection.lambda_demand,
-                "paradigm": paradigm_used,
+                "paradigm": selection.paradigm,
                 "method": selection.method,
             },
         )

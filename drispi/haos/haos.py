@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import random
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from drispi.core.instance import CVRPInstance
 from drispi.haos.config import HAOSConfig, HAOSRewardConfig
@@ -96,6 +96,52 @@ class HAOS:
             method_index=method_index,
             solver_index=solver_index,
         )
+
+    def coerce_vertex_when_no_routes(
+        self,
+        selection: HAOSSelection,
+        *,
+        best_solution_available: bool,
+        rng: random.Random,
+    ) -> HAOSSelection:
+        """
+        When route paradigm was rolled but S* is unavailable, switch to vertex
+        paradigm and re-draw a vertex clustering method.
+        """
+        if selection.paradigm != "route" or best_solution_available:
+            return selection
+
+        vertex_paradigm_index = self.wheel_3_paradigm.choices.index("vertex")
+        method_index, method = self.wheel_4a_vertex_method.select(rng)
+        return replace(
+            selection,
+            paradigm="vertex",
+            method=method,
+            paradigm_index=vertex_paradigm_index,
+            method_index=method_index,
+        )
+
+    def cap_k_for_route_clustering(
+        self,
+        selection: HAOSSelection,
+        n_routes: int,
+    ) -> HAOSSelection:
+        """Ensure k does not exceed the number of S* routes used for clustering."""
+        if selection.paradigm != "route":
+            return selection
+
+        feasible = [k for k in self.wheel_1_k.choices if k <= n_routes]
+        if not feasible:
+            raise ValueError(
+                f"No HAOS k candidate is feasible for route clustering with {n_routes} routes."
+            )
+
+        k_used = min(selection.k, feasible[-1])
+        if k_used == selection.k:
+            return selection
+
+        k_index = self.wheel_1_k.choices.index(k_used)
+        return replace(selection, k=k_used, k_index=k_index)
 
     def joint_probability(self, selection: HAOSSelection) -> float:
         """Product of per-level roulette probabilities for the current selection."""

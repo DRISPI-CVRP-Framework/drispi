@@ -8,6 +8,7 @@ from unittest.mock import patch
 from drispi.core.instance import CVRPInstance
 from drispi.core.solution import Route as SolutionRoute
 from drispi.haos.config import HAOSConfig
+from drispi.haos.haos import HAOSSelection
 from drispi.pipeline.config import DRISPIConfig
 from drispi.pipeline.pipeline import DRISPIPipeline
 
@@ -271,6 +272,68 @@ def test_finalize_writes_weights_and_sol(instance_12: CVRPInstance, tmp_path: Pa
     run_dir = pipe.run_dir
     assert (run_dir / "haos_weights_final.json").is_file()
     assert (run_dir / f"{instance_12.name}.sol").is_file()
+
+
+def test_route_clustering_uses_best_solution_not_pool(
+    instance_12: CVRPInstance, tmp_path: Path
+) -> None:
+    """Route-based clustering must use S* routes, not the full route pool."""
+    cfg = DRISPIConfig(
+        time_limit=1e9,
+        max_no_improve=100,
+        output_dir=tmp_path,
+        warmup_iterations=100,
+        sp_interval=100,
+    )
+    pipe = DRISPIPipeline(instance_12, cfg)
+    best = [[2, 3, 4, 5], [6, 7, 8, 9], [10, 11, 12, 13]]
+    pipe._best_solution = [list(r) for r in best]
+    pipe._best_cost = sum(instance_12.route_cost(r) for r in best)
+    pipe._pool.add([2, 3, 4], instance_12.route_cost([2, 3, 4]))
+    pipe._pool.add([5, 6, 7, 8, 9, 10, 11, 12, 13], instance_12.route_cost([5, 6, 7, 8, 9, 10, 11, 12, 13]))
+
+    route_selection = HAOSSelection(
+        k=2,
+        lambda_demand=0.0,
+        paradigm="route",
+        method="kmeans",
+        solver="pyvrp",
+        k_index=1,
+        lambda_index=0,
+        paradigm_index=1,
+        method_index=0,
+        solver_index=0,
+    )
+    cluster_calls: list[dict[str, object]] = []
+
+    def capture_cluster(
+        instance: CVRPInstance,
+        paradigm: str,
+        method: str,
+        k: int,
+        routes: list | None = None,
+        **kwargs: object,
+    ) -> list[list[int]]:
+        del instance, method, kwargs
+        cluster_calls.append({"paradigm": paradigm, "k": k, "routes": routes})
+        return _even_k_partition(instance_12, k)
+
+    with (
+        patch.object(pipe._haos, "select", return_value=route_selection),
+        patch("drispi.pipeline.pipeline.cluster_instance", side_effect=capture_cluster),
+        patch(
+            "drispi.pipeline.pipeline.solve_subclusters_parallel",
+            side_effect=_fake_cluster_routes,
+        ),
+        patch("drispi.pipeline.pipeline.run_bg_ails_perturb", side_effect=_fake_bg_perturb),
+        patch("drispi.pipeline.pipeline.run_bg_ails_improve", side_effect=_fake_bg_improve),
+        patch("drispi.pipeline.pipeline.run_sp_sc", side_effect=_fake_run_sp_sc),
+    ):
+        pipe._run_iteration(1)
+
+    assert len(cluster_calls) == 1
+    assert cluster_calls[0]["paradigm"] == "route"
+    assert cluster_calls[0]["routes"] == best
 
 
 def test_haos_weights_change_after_warmup(instance_12: CVRPInstance, tmp_path: Path) -> None:

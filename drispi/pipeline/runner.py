@@ -173,19 +173,19 @@ def load_instance_from_vrp_path(instance_path: Path) -> CVRPInstance:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run the DRISPI pipeline on a CVRP instance.")
     parser.add_argument("instance", type=Path, help="Path to a .vrp instance file")
-    parser.add_argument("--time-limit", type=float, default=3600.0)
+    parser.add_argument("--time-limit", type=float, default=7200.0)
     parser.add_argument("--max-no-improve", type=int, default=100)
-    parser.add_argument("--n-workers", type=int, default=6)
+    parser.add_argument("--n-workers", type=int, default=8)
     parser.add_argument("--warmup", type=int, default=10)
     parser.add_argument("--sp-interval", type=int, default=3)
     parser.add_argument("--min-coverage", type=int, default=5)
     parser.add_argument("--sp-time-limit", type=float, default=300.0)
-    parser.add_argument("--mip-gap", type=float, default=0.001)
+    parser.add_argument("--mip-gap", type=float, default=0.0005)
     parser.add_argument("--max-pool-size", type=int, default=10000)
     parser.add_argument("--bg-ails-omega", type=float, default=0.8)
     parser.add_argument("--decay", type=float, default=0.95)
     parser.add_argument("--output-dir", type=Path, default=Path("artifacts/runs"))
-    parser.add_argument("--seed", type=int, default=321)
+    parser.add_argument("--seed", type=int, default=676688)
     parser.add_argument("--bks", type=float, default=None, help="Known BKS cost (overrides file)")
     parser.add_argument(
         "--bks-file",

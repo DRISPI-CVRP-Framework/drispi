@@ -12,16 +12,16 @@ from drispi.haos.config import HAOSConfig
 class DRISPIConfig:
     """Full configuration for the DRISPI pipeline."""
 
-    time_limit: float = 3600.0
+    time_limit: float = 7200.0
     max_no_improve: int = 100
 
-    n_workers: int = 6
+    n_workers: int = 8
 
     warmup_iterations: int = 10
     sp_interval: int = 3
     min_coverage: int = 5
     sp_time_limit: float = 300.0
-    mip_gap: float = 0.001
+    mip_gap: float = 0.0005
 
     subcluster_time_per_customer: float = 0.05
     bg_ails_time_limit: float = 90.0

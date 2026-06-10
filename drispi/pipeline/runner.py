@@ -185,7 +185,7 @@ def main() -> None:
     parser.add_argument("--bg-ails-omega", type=float, default=0.8)
     parser.add_argument("--decay", type=float, default=0.95)
     parser.add_argument("--output-dir", type=Path, default=Path("artifacts/runs"))
-    parser.add_argument("--seed", type=int, default=44444)
+    parser.add_argument("--seed", type=int, default=321)
     parser.add_argument("--bks", type=float, default=None, help="Known BKS cost (overrides file)")
     parser.add_argument(
         "--bks-file",

@@ -7,6 +7,7 @@ This module is the single narrative entry point for how subsystems connect.
 
 from __future__ import annotations
 
+import json
 import math
 import random
 import time
@@ -111,6 +112,7 @@ class DRISPIPipeline:
         self._iterations_completed = 0
         self._stopped_by_time = False
         self._stopped_by_no_improve = False
+        self._cancelled = False
         self._last_improve_phase: str = ""
 
         label = run_label if run_label is not None else make_run_label(instance.name)
@@ -132,18 +134,22 @@ class DRISPIPipeline:
         the best solution on disk.
         """
         self._start_time = time.perf_counter()
+        self._write_status("running")
         iteration = 0
-        while True:
-            elapsed = time.perf_counter() - self._start_time
-            if iteration > 0 and elapsed >= self._config.time_limit:
-                self._stopped_by_time = True
-                break
-            if iteration > 0 and self._no_improve_count >= self._config.max_no_improve:
-                self._stopped_by_no_improve = True
-                break
+        try:
+            while True:
+                elapsed = time.perf_counter() - self._start_time
+                if iteration > 0 and elapsed >= self._config.time_limit:
+                    self._stopped_by_time = True
+                    break
+                if iteration > 0 and self._no_improve_count >= self._config.max_no_improve:
+                    self._stopped_by_no_improve = True
+                    break
 
-            self._run_iteration(iteration)
-            iteration += 1
+                self._run_iteration(iteration)
+                iteration += 1
+        except KeyboardInterrupt:
+            self._cancelled = True
 
         self._iterations_completed = iteration
         self._finalize()
@@ -595,6 +601,13 @@ class DRISPIPipeline:
             self._best_solution or [],
             self._pool,
             self._instance,
+            cancelled=self._cancelled,
+        )
+        self._write_status(
+            "cancelled" if self._cancelled else "finished",
+            stop_reason=self._stop_reason(),
+            elapsed=round(elapsed, 1),
+            iterations=self._iterations_completed,
         )
 
         if self._config.run_analysis:
@@ -602,3 +615,25 @@ class DRISPIPipeline:
 
             lines = load_jsonl(self.run_dir)
             run_auto_analysis(self.run_dir, lines, self._bks_cost)
+
+    def _stop_reason(self) -> str | None:
+        if self._cancelled:
+            return "cancelled"
+        if self._stopped_by_time:
+            return "time_limit"
+        if self._stopped_by_no_improve:
+            return "no_improve"
+        return None
+
+    def _write_status(self, status: str, **extra: object) -> None:
+        """Persist run status for the dashboard (running / finished / cancelled)."""
+        payload: dict[str, object] = {
+            "status": status,
+            "updated_at": datetime.now().isoformat(timespec="seconds"),
+            **extra,
+        }
+        path = self.run_dir / "status.json"
+        try:
+            path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        except OSError:
+            pass

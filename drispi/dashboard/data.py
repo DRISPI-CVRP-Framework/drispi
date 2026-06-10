@@ -241,14 +241,49 @@ def get_improve_events(run_dir: Path) -> list[dict[str, Any]]:
     return [e for e in _read_jsonl(run_dir / "run.jsonl") if e.get("type") == "improve"]
 
 
-def parse_first_summary_timestamp(run_dir: Path) -> str | None:
-    """Extract HH:MM:SS from run.log for the first Summary line."""
+def parse_run_start_timestamp(run_dir: Path) -> str | None:
+    """Extract HH:MM:SS of run start from the first timestamped line in run.log."""
     log_path = run_dir / "run.log"
     if not log_path.is_file():
         return None
     for line in log_path.read_text(encoding="utf-8").splitlines():
-        if " Summary " in line or "[ Summary ]" in line:
-            ts = line.split("|", 1)[0].strip()
-            if len(ts) >= 8 and ts[2] == ":":
-                return ts
+        ts = line.split("|", 1)[0].strip()
+        if len(ts) >= 8 and ts[2] == ":" and ts[5] == ":":
+            return ts
     return None
+
+
+def get_run_status(run_dir: Path) -> dict[str, Any]:
+    """
+    Run lifecycle state: ``{"status": "running"|"finished"|"cancelled", ...}``.
+
+    Reads ``status.json`` written by the pipeline; falls back to the jsonl
+    ``final`` event for runs that predate status files.
+    """
+    path = run_dir / "status.json"
+    if path.is_file():
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            payload = None
+        if isinstance(payload, dict) and payload.get("status"):
+            return payload
+
+    for event in reversed(_read_jsonl(run_dir / "run.jsonl")):
+        if event.get("type") != "final":
+            continue
+        if event.get("cancelled"):
+            status, reason = "cancelled", "cancelled"
+        elif event.get("stopped_by_time"):
+            status, reason = "finished", "time_limit"
+        elif event.get("stopped_by_no_improve"):
+            status, reason = "finished", "no_improve"
+        else:
+            status, reason = "finished", None
+        return {
+            "status": status,
+            "stop_reason": reason,
+            "elapsed": event.get("elapsed"),
+            "iterations": event.get("iterations"),
+        }
+    return {"status": "running"}

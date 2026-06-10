@@ -533,16 +533,19 @@ class PipelineLogger:
         best_solution: list[Route],
         pool: RoutePool,
         instance: CVRPInstance,
+        *,
+        cancelled: bool = False,
     ) -> None:
         del instance
         delta_bks_s = _format_gap_to_bks(best_cost, self._bks_cost, self._instance_name)
+        headline = "Run cancelled" if cancelled else "Run complete"
 
         self._emit(None, _TAG_FINAL, _HRULE)
         self._emit(
             None,
             _TAG_FINAL,
             (
-                f"Run complete  iterations={iterations}  "
+                f"{headline}  iterations={iterations}  "
                 f"elapsed={_format_elapsed_hms(elapsed)}  best={best_cost:.2f}"
             ),
         )
@@ -551,7 +554,7 @@ class PipelineLogger:
             _TAG_FINAL,
             (
                 f"Δ_BKS={delta_bks_s}  no_improve_stop={stopped_by_no_improve}  "
-                f"time_stop={stopped_by_time}"
+                f"time_stop={stopped_by_time}  cancelled={cancelled}"
             ),
         )
         self._emit(None, _TAG_FINAL, "")
@@ -572,6 +575,7 @@ class PipelineLogger:
                 "best_cost": best_cost,
                 "stopped_by_no_improve": stopped_by_no_improve,
                 "stopped_by_time": stopped_by_time,
+                "cancelled": cancelled,
                 "pool_tag_iterations": pool_tag_iterations,
             },
         )

@@ -385,7 +385,8 @@ def build_trajectory_figure(
         fig.update_yaxes(showgrid=True, gridcolor=GRID, zeroline=False)
         return fig
 
-    iters = [int(s.get("iteration", 0)) for s in summary_lines]
+    # 1-based display, matching the ITERATION metric and run.log.
+    iters = [int(s.get("iteration", 0)) + 1 for s in summary_lines]
     iter_costs = [float(s.get("iter_cost", 0)) for s in summary_lines]
     best_costs: list[float] = []
     running = float("inf")
@@ -433,7 +434,7 @@ def build_trajectory_figure(
                 continue
             fig.add_trace(
                 go.Scatter(
-                    x=[int(it)],
+                    x=[int(it) + 1],
                     y=[float(cost)],
                     mode="markers",
                     marker=dict(size=6, color=phase_colors[phase]),

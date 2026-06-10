@@ -305,7 +305,8 @@ def plot_cost_trajectory(
     style_axes(ax)
 
     if summaries:
-        iters = [s.get("iteration", i) for i, s in enumerate(summaries)]
+        # 1-based display, matching the dashboard and run.log.
+        iters = [int(s.get("iteration", i)) + 1 for i, s in enumerate(summaries)]
         iter_costs = [s.get("iter_cost", float("nan")) for s in summaries]
         best_costs: list[float] = []
         running = float("inf")
@@ -322,7 +323,7 @@ def plot_cost_trajectory(
             if color is None:
                 continue
             ax.scatter(
-                [imp.get("iteration", 0)],
+                [int(imp.get("iteration", 0)) + 1],
                 [imp.get("cost", float("nan"))],
                 color=color,
                 s=28,

@@ -10,13 +10,13 @@ from drispi.core.instance import CVRPInstance
 class HAOSRewardConfig:
     """Immediate and deferred HAOS reward scores."""
 
-    reward_new_best: float = 5.0
-    reward_improvement: float = 2
-    reward_no_improvement: float = 1
+    reward_new_best: float = 8.0
+    reward_improvement: float = 3.0
+    reward_no_improvement: float = 1.0
     reward_no_solution: float = 0.0
 
-    deferred_new_best: float = 3.0
-    deferred_improvement: float = 1
+    deferred_new_best: float = 5.0
+    deferred_improvement: float = 2.0
     deferred_no_improvement: float = 0.0
 
 

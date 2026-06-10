@@ -48,6 +48,8 @@ st.markdown(
     .metric-value-row {display:flex;align-items:center;gap:10px;margin:0;}
     .metric-value-main {font-size:1.4rem;color:#e8e8e8;line-height:1.2;}
     .metric-value-gap {font-size:0.95rem;color:#ef4444;line-height:1.2;}
+    @keyframes statusPulse {0%, 100% {opacity:1;} 50% {opacity:0.25;}}
+    .status-dot-pulse {animation: statusPulse 1.6s ease-in-out infinite;}
     </style>
     """,
     unsafe_allow_html=True,
@@ -91,8 +93,20 @@ def _format_pct(val: float | None) -> str:
     return f"{sign}{val:.2f}%"
 
 
-def _runtime_str(run_dir: Path) -> str:
-    ts = data.parse_first_summary_timestamp(run_dir)
+def _format_hms(seconds: float) -> str:
+    total = max(0, int(seconds))
+    h, rem = divmod(total, 3600)
+    m, s = divmod(rem, 60)
+    return f"{h:02d}:{m:02d}:{s:02d}"
+
+
+def _runtime_str(run_dir: Path, status: dict[str, Any]) -> str:
+    # Frozen final runtime once the run has ended.
+    if status.get("status") != "running":
+        elapsed = status.get("elapsed")
+        if isinstance(elapsed, (int, float)):
+            return _format_hms(float(elapsed))
+    ts = data.parse_run_start_timestamp(run_dir)
     if ts is None:
         return "00:00:00"
     try:
@@ -101,13 +115,33 @@ def _runtime_str(run_dir: Path) -> str:
         start = start.replace(year=now.year, month=now.month, day=now.day)
         if start > now:
             start = start.replace(day=now.day - 1)
-        delta = now - start
-        total = int(delta.total_seconds())
-        h, rem = divmod(total, 3600)
-        m, s = divmod(rem, 60)
-        return f"{h:02d}:{m:02d}:{s:02d}"
+        return _format_hms((now - start).total_seconds())
     except ValueError:
         return "00:00:00"
+
+
+def _status_badge(status: dict[str, Any]) -> str:
+    state = str(status.get("status", "running"))
+    if state == "cancelled":
+        label, color, bg = "CANCELLED", "#f87171", "rgba(239,68,68,0.12)"
+    elif state == "finished":
+        reason = {"time_limit": "TIME LIMIT", "no_improve": "STAGNATION"}.get(
+            str(status.get("stop_reason"))
+        )
+        label = f"FINISHED · {reason}" if reason else "FINISHED"
+        color, bg = "#60a5fa", "rgba(59,130,246,0.12)"
+    else:
+        label, color, bg = "RUNNING", "#4ade80", "rgba(74,222,128,0.10)"
+    dot_cls = ' class="status-dot-pulse"' if state == "running" else ""
+    return (
+        f'<span style="margin-left:auto;display:inline-flex;align-items:center;gap:8px;'
+        f"padding:4px 14px;border-radius:14px;background:{bg};"
+        f"border:1px solid {color}55;color:{color};font-size:0.8rem;font-weight:600;"
+        f'letter-spacing:0.06em;white-space:nowrap">'
+        f'<span{dot_cls} style="width:8px;height:8px;border-radius:50%;'
+        f'background:{color};display:inline-block"></span>'
+        f"{label}</span>"
+    )
 
 
 def _config_chips(
@@ -261,6 +295,7 @@ if run_dir is None or not run_dir.exists():
     st.rerun()
 
 meta = data.get_run_metadata(run_dir)
+run_status = data.get_run_status(run_dir)
 state = data.get_latest_run_state(run_dir)
 snapshot = data.get_latest_snapshot(run_dir)
 best = data.get_best_solution(run_dir)
@@ -294,6 +329,7 @@ st.markdown(
     DRISPI Monitor <code style="color:#4ade80">{instance_name}</code>
   </div>
   <div style="color:#888;font-size:0.8rem;line-height:1.5">{config_line}</div>
+  {_status_badge(run_status)}
 </div>
 """,
     unsafe_allow_html=True,
@@ -301,7 +337,7 @@ st.markdown(
 
 m1, m2, m3, m4, m5 = st.columns(5)
 with m1:
-    st.metric("RUNTIME", _runtime_str(run_dir))
+    st.metric("RUNTIME", _runtime_str(run_dir, run_status))
 with m2:
     st.metric("ITERATION", str(iteration_disp) if state else "—")
 with m3:
@@ -406,5 +442,8 @@ with col_haos_panel:
     mtime = jsonl_path.stat().st_mtime if jsonl_path.is_file() else 0.0
     st.markdown(_haos_html(str(run_dir), mtime), unsafe_allow_html=True)
 
-time.sleep(1)
-st.rerun()
+# Keep polling only while the run is alive; freeze the page once it has
+# finished or been cancelled.
+if run_status.get("status", "running") == "running":
+    time.sleep(1)
+    st.rerun()

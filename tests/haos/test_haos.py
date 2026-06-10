@@ -221,7 +221,7 @@ def test_to_tag_from_selection() -> None:
 
 
 def test_coerced_vertex_selection_credits_vertex_wheels_on_update_final() -> None:
-    config = HAOSConfig(haos_warmup=0, decay=0.8)
+    config = HAOSConfig(haos_warmup=0, decay=0.95)
     haos = HAOS(config=config, instance=make_instance_20())
     route_selection = HAOSSelection(
         k=2,
@@ -245,8 +245,12 @@ def test_coerced_vertex_selection_credits_vertex_wheels_on_update_final() -> Non
     haos.update_final(coerced, iteration=0)
     after = haos.state_dict()
 
-    assert after["level_3_paradigm"]["raw_weights"][coerced.paradigm_index] == pytest.approx(2.8)
-    assert after["level_4a_vertex_method"]["raw_weights"][coerced.method_index] == pytest.approx(2.8)
+    # (10.0 + 2.0) * 0.95 = 11.4; unrewarded weights decay to 9.5 but are
+    # floored back at 10.0, so they stay unchanged.
+    assert after["level_3_paradigm"]["raw_weights"][coerced.paradigm_index] == pytest.approx(11.4)
+    assert after["level_4a_vertex_method"]["raw_weights"][coerced.method_index] == pytest.approx(
+        11.4
+    )
     assert (
         after["level_4b_route_method"]["raw_weights"]
         == before["level_4b_route_method"]["raw_weights"]
@@ -258,7 +262,7 @@ def test_coerced_vertex_selection_credits_vertex_wheels_on_update_final() -> Non
 
 
 def test_update_final_after_warmup_updates_selected_weights() -> None:
-    config = HAOSConfig(haos_warmup=0, decay=0.8)
+    config = HAOSConfig(haos_warmup=0, decay=0.95)
     haos = HAOS(config=config, instance=make_instance_20())
     selection = haos.select(iteration=0, rng=random.Random(4))
     before = haos.state_dict()
@@ -266,7 +270,7 @@ def test_update_final_after_warmup_updates_selected_weights() -> None:
     haos.update_final(selection, iteration=0)
     after = haos.state_dict()
     assert after != before
-    assert after["level_1_k"]["raw_weights"][selection.k_index] == pytest.approx(2.8)
+    assert after["level_1_k"]["raw_weights"][selection.k_index] == pytest.approx(11.4)
 
 
 def test_state_dict_has_all_levels() -> None:

@@ -214,35 +214,35 @@ class HAOS:
     def _update_by_tag_all_levels(self, tag: HAOSTag, reward: float) -> None:
         k_index = self._try_reverse_index(self.wheel_1_k, tag.k, "level_1_k")
         if k_index is not None:
-            self.wheel_1_k.update(k_index, reward, decay=0.0)
+            self.wheel_1_k.update(k_index, reward)
 
         lambda_index = self._try_reverse_index(
             self.wheel_2_lambda, tag.lambda_demand, "level_2_lambda_demand"
         )
         if lambda_index is not None:
-            self.wheel_2_lambda.update(lambda_index, reward, decay=0.0)
+            self.wheel_2_lambda.update(lambda_index, reward)
 
         paradigm_index = self._try_reverse_index(
             self.wheel_3_paradigm, tag.paradigm, "level_3_paradigm"
         )
         if paradigm_index is not None:
-            self.wheel_3_paradigm.update(paradigm_index, reward, decay=0.0)
+            self.wheel_3_paradigm.update(paradigm_index, reward)
 
-        vertex_index = self._try_reverse_index(
-            self.wheel_4a_vertex_method, tag.method, "level_4a_vertex_method"
-        )
-        if vertex_index is not None:
-            self.wheel_4a_vertex_method.update(vertex_index, reward, decay=0.0)
-
-        route_index = self._try_reverse_index(
-            self.wheel_4b_route_method, tag.method, "level_4b_route_method"
-        )
-        if route_index is not None:
-            self.wheel_4b_route_method.update(route_index, reward, decay=0.0)
+        # The method belongs to exactly one wheel, determined by the tag's
+        # paradigm; updating both would double-credit methods present in both.
+        if tag.paradigm == "vertex":
+            method_wheel = self.wheel_4a_vertex_method
+            method_level = "level_4a_vertex_method"
+        else:
+            method_wheel = self.wheel_4b_route_method
+            method_level = "level_4b_route_method"
+        method_index = self._try_reverse_index(method_wheel, tag.method, method_level)
+        if method_index is not None:
+            method_wheel.update(method_index, reward)
 
         solver_index = self._try_reverse_index(self.wheel_5_solver, tag.solver, "level_5_solver")
         if solver_index is not None:
-            self.wheel_5_solver.update(solver_index, reward, decay=0.0)
+            self.wheel_5_solver.update(solver_index, reward)
 
     def update_final(self, selection: HAOSSelection, iteration: int) -> None:
         if iteration < self.config.haos_warmup:
@@ -256,18 +256,30 @@ class HAOS:
         current_deferred = deferred_map.pop(current_tag, 0.0)
         total_reward = immediate_reward + current_deferred
 
-        decay = self.config.decay
-        self.wheel_1_k.update(selection.k_index, total_reward, decay)
-        self.wheel_2_lambda.update(selection.lambda_index, total_reward, decay)
-        self.wheel_3_paradigm.update(selection.paradigm_index, total_reward, decay)
+        self.wheel_1_k.update(selection.k_index, total_reward)
+        self.wheel_2_lambda.update(selection.lambda_index, total_reward)
+        self.wheel_3_paradigm.update(selection.paradigm_index, total_reward)
         if selection.paradigm == "vertex":
-            self.wheel_4a_vertex_method.update(selection.method_index, total_reward, decay)
+            self.wheel_4a_vertex_method.update(selection.method_index, total_reward)
         else:
-            self.wheel_4b_route_method.update(selection.method_index, total_reward, decay)
-        self.wheel_5_solver.update(selection.solver_index, total_reward, decay)
+            self.wheel_4b_route_method.update(selection.method_index, total_reward)
+        self.wheel_5_solver.update(selection.solver_index, total_reward)
 
         for tag, reward in deferred_map.items():
             self._update_by_tag_all_levels(tag, reward)
+
+        # Global end-of-iteration decay: every weight on every wheel decays,
+        # but never below the WEIGHT_FLOOR baseline.
+        decay = self.config.decay
+        for wheel in (
+            self.wheel_1_k,
+            self.wheel_2_lambda,
+            self.wheel_3_paradigm,
+            self.wheel_4a_vertex_method,
+            self.wheel_4b_route_method,
+            self.wheel_5_solver,
+        ):
+            wheel.decay_all(decay)
 
     def compute_reward(
         self,

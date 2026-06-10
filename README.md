@@ -6,7 +6,7 @@ DRISPI is a Python research framework for vehicle routing that combines hierarch
 
 ## Repo structure
 
-The installable package lives under `drispi/` (core domain types, clustering, solvers, set partitioning, route pool, improvement, HAOS, pipeline, utils). Configuration YAML files are in `configs/`, CLI entry scripts in `scripts/`, tests in `tests/`, instance and benchmark data under `data/`, and external solver sources under `vendor/` (Git submodules). Docker assets are in `docker/` with a root `docker-compose.yml` for containerized runs.
+The installable package lives under `drispi/` (core domain types, clustering, solvers, set partitioning, route pool, improvement, HAOS, pipeline, utils). CLI entry scripts are in `scripts/`, tests in `tests/`, instance and benchmark data under `data/`, and external solver sources under `vendor/` (Git submodules). Docker assets are in `docker/` with a root `docker-compose.yml` for containerized runs.
 
 ## Setup
 
@@ -14,8 +14,8 @@ Clone the repository, then initialize submodules so `vendor/filo`, `vendor/filo2
 
 ## Running a benchmark
 
-From the repo root after installation, `python scripts/run_benchmark.py` is the intended batch driver (stub today). With Docker Compose, `docker compose up --build` runs the same default command inside the image, with `./data` mounted at `/data` and the license file at `/opt/gurobi/gurobi.lic`.
+From the repo root after installation, run the pipeline via `drispi-pipeline <instance.vrp>` (or `python -m drispi.pipeline.runner`); see `--help` for time limits, SP/SC scheduling, `--gui`, and `--analysis` options. With Docker Compose, `docker compose up --build` runs the default command inside the image, with `./data` mounted at `/data` and the license file at `/opt/gurobi/gurobi.lic`.
 
-## Config reference
+## Configuration
 
-`configs/default.yaml` holds global defaults: cluster cardinality cap (`k_max`), coverage floor (`min_coverage`), SP/SC time limits, segment count (`n_segments`), HAOS `decay`, worker counts, selector settings (`selectors`), enabled `solvers`, and lists of `vertex_methods` / `route_methods`. `configs/xl_instances.yaml` overrides a subset for large instances (`k_max`, `sp_time_limit`, `n_segments`). Experiment-specific YAML can be added under `configs/experiments/`.
+All pipeline configuration lives in code: `drispi/pipeline/config.py` (`DRISPIConfig`) and `drispi/haos/config.py` (`HAOSConfig`), with CLI overrides exposed by `drispi/pipeline/runner.py` (see `drispi-pipeline --help`).

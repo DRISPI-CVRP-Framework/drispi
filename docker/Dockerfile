@@ -24,4 +24,4 @@ RUN pip install --no-cache-dir .
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["python", "scripts/run_benchmark.py"]
+CMD ["python", "-m", "drispi.pipeline.runner", "--help"]

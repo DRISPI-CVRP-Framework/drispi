@@ -173,10 +173,10 @@ def load_instance_from_vrp_path(instance_path: Path) -> CVRPInstance:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run the DRISPI pipeline on a CVRP instance.")
     parser.add_argument("instance", type=Path, help="Path to a .vrp instance file")
-    parser.add_argument("--time-limit", type=float, default=1800.0)
+    parser.add_argument("--time-limit", type=float, default=3600.0)
     parser.add_argument("--max-no-improve", type=int, default=100)
-    parser.add_argument("--n-workers", type=int, default=4)
-    parser.add_argument("--warmup", type=int, default=8)
+    parser.add_argument("--n-workers", type=int, default=6)
+    parser.add_argument("--warmup", type=int, default=10)
     parser.add_argument("--sp-interval", type=int, default=3)
     parser.add_argument("--min-coverage", type=int, default=5)
     parser.add_argument("--sp-time-limit", type=float, default=300.0)
@@ -185,7 +185,7 @@ def main() -> None:
     parser.add_argument("--bg-ails-omega", type=float, default=0.8)
     parser.add_argument("--decay", type=float, default=0.8)
     parser.add_argument("--output-dir", type=Path, default=Path("artifacts/runs"))
-    parser.add_argument("--seed", type=int, default=777)
+    parser.add_argument("--seed", type=int, default=44444)
     parser.add_argument("--bks", type=float, default=None, help="Known BKS cost (overrides file)")
     parser.add_argument(
         "--bks-file",
@@ -202,6 +202,11 @@ def main() -> None:
         "--gui",
         action="store_true",
         help="Launch the Streamlit dashboard alongside the pipeline run.",
+    )
+    parser.add_argument(
+        "--analysis",
+        action="store_true",
+        help="Run post-run analysis and generate charts after the pipeline completes.",
     )
     args = parser.parse_args()
 
@@ -222,6 +227,7 @@ def main() -> None:
         haos_config=haos_cfg,
         output_dir=args.output_dir,
         seed=args.seed,
+        run_analysis=args.analysis,
     )
 
     inst = load_instance_from_vrp_path(args.instance)

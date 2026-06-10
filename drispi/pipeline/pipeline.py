@@ -274,6 +274,7 @@ class DRISPIPipeline:
             time.perf_counter() - t0,
             max_budget,
             {"solver": selection.solver, "k": selection.k},
+            cluster_sizes=cluster_sizes,
         )
 
         combined_seqs = [seq for group in cluster_routes for seq in group]
@@ -339,6 +340,7 @@ class DRISPIPipeline:
             phase_tag="post",
         )
 
+        bg_cost_before = sum(self._instance.route_cost(r) for r in combined_seqs)
         self._logger.log_phase_done(
             iteration,
             3,
@@ -346,6 +348,8 @@ class DRISPIPipeline:
             "bg_ails",
             bg_elapsed,
             self._config.bg_ails_time_limit,
+            bg_cost_before=bg_cost_before,
+            bg_cost_after=bg_cost,
         )
         if bg_improved:
             self._log_improvement(iteration, bg_cost, bg_seqs, "bg_ails")
@@ -408,6 +412,7 @@ class DRISPIPipeline:
                     "avg_coverage": average_coverage(self._pool, self._instance),
                     "min_coverage": self._config.min_coverage,
                 },
+                lp_fractionality=self._manager.last_lp_fractionality,
             )
 
         iter_cost = bg_cost
@@ -484,12 +489,26 @@ class DRISPIPipeline:
             levels=self._haos.state_dict(),
         )
 
+        rejected, replaced = self._pool.get_iter_counters()
+        self._pool.reset_iter_counters()
+        entries = self._pool.routes()
+        diversity_avg = (
+            sum(e.diversity_rank_score for e in entries) / len(entries) if entries else 0.0
+        )
+        quality_avg = (
+            sum(e.quality_rank_score for e in entries) / len(entries) if entries else 0.0
+        )
         self._logger.log_summary(
             iteration,
             iter_cost,
             self._best_cost,
             self._last_cost,
             self._no_improve_count,
+            pool_size=self._pool.size(),
+            pool_diversity_avg=diversity_avg,
+            pool_quality_avg=quality_avg,
+            duplicates_rejected=rejected,
+            duplicates_replaced=replaced,
         )
 
     def _log_improvement(
@@ -571,3 +590,9 @@ class DRISPIPipeline:
             self._pool,
             self._instance,
         )
+
+        if self._config.run_analysis:
+            from drispi.pipeline.analysis import load_jsonl, run_auto_analysis
+
+            lines = load_jsonl(self.run_dir)
+            run_auto_analysis(self.run_dir, lines, self._bks_cost)

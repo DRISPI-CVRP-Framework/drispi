@@ -21,6 +21,8 @@ class RoutePool:
     def __init__(self) -> None:
         self._entries: dict[frozenset[int], RouteEntry] = {}
         self._elite_keys: set[frozenset[int]] = set()
+        self._iter_rejected = 0
+        self._iter_replaced = 0
 
     def add(
         self,
@@ -43,6 +45,9 @@ class RoutePool:
                     diversity_scores=existing.diversity_scores,
                 )
                 self._entries[key] = replacement
+                self._iter_replaced += 1
+            else:
+                self._iter_rejected += 1
             return False
 
         self._entries[key] = RouteEntry(
@@ -101,6 +106,15 @@ class RoutePool:
     def size(self) -> int:
         """Number of routes currently stored."""
         return len(self._entries)
+
+    def reset_iter_counters(self) -> None:
+        """Reset per-iteration duplicate-rejection/replacement counters."""
+        self._iter_rejected = 0
+        self._iter_replaced = 0
+
+    def get_iter_counters(self) -> tuple[int, int]:
+        """Return ``(duplicates_rejected, duplicates_replaced)`` since last reset."""
+        return self._iter_rejected, self._iter_replaced
 
     def get_haos_tag(self, route: Route) -> HAOSTag | None:
         """Return the HAOS tag for this customer set if the route is in the pool."""

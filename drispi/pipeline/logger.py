@@ -356,6 +356,11 @@ class PipelineLogger:
         elapsed: float,
         budget: float | None,
         operator_info: dict[str, Any] | None = None,
+        *,
+        cluster_sizes: list[int] | None = None,
+        bg_cost_before: float | None = None,
+        bg_cost_after: float | None = None,
+        lp_fractionality: float | None = None,
     ) -> None:
         op = operator_info or {}
         elapsed_s = f"{elapsed:.2f}s"
@@ -411,6 +416,14 @@ class PipelineLogger:
             "load_pct": round(load_pct, 1) if load_pct is not None else None,
             "operator_info": op or None,
         }
+        if cluster_sizes is not None:
+            json_event["cluster_sizes"] = cluster_sizes
+        if bg_cost_before is not None:
+            json_event["bg_cost_before"] = bg_cost_before
+        if bg_cost_after is not None:
+            json_event["bg_cost_after"] = bg_cost_after
+        if lp_fractionality is not None:
+            json_event["lp_fractionality"] = lp_fractionality
         self._emit(iteration, tag, content, json_event=json_event)
 
     def log_improve(self, iteration: int, cost: float, phase_name: str) -> None:
@@ -465,6 +478,12 @@ class PipelineLogger:
         best_cost: float,
         last_cost: float,
         no_improve: int,
+        *,
+        pool_size: int | None = None,
+        pool_diversity_avg: float | None = None,
+        pool_quality_avg: float | None = None,
+        duplicates_rejected: int | None = None,
+        duplicates_replaced: int | None = None,
     ) -> None:
         del last_cost
         delta_s_star_s, delta_s_star = _format_pct_gap(iter_cost, best_cost)
@@ -475,22 +494,33 @@ class PipelineLogger:
             f"cost={iter_cost:.2f}  Δ_S*={delta_s_star_s}  "
             f"Δ_BKS={delta_iter_bks_s}  Δ_S*_BKS={delta_best_bks_s}  no_improve={no_improve}"
         )
+        json_event: dict[str, Any] = {
+            "type": "summary",
+            "iteration": iteration,
+            "iter_cost": iter_cost,
+            "best_cost": best_cost,
+            "delta_to_best_pct": round(delta_s_star, 2) if delta_s_star is not None else None,
+            "delta_to_bks_pct": round(delta_iter_bks, 2) if delta_iter_bks is not None else None,
+            "delta_best_to_bks_pct": (
+                round(delta_best_bks, 2) if delta_best_bks is not None else None
+            ),
+            "no_improve": no_improve,
+        }
+        if pool_size is not None:
+            json_event["pool_size"] = pool_size
+        if pool_diversity_avg is not None:
+            json_event["pool_diversity_avg"] = pool_diversity_avg
+        if pool_quality_avg is not None:
+            json_event["pool_quality_avg"] = pool_quality_avg
+        if duplicates_rejected is not None:
+            json_event["duplicates_rejected"] = duplicates_rejected
+        if duplicates_replaced is not None:
+            json_event["duplicates_replaced"] = duplicates_replaced
         self._emit(
             iteration,
             _TAG_SUMMARY,
             content,
-            json_event={
-                "type": "summary",
-                "iteration": iteration,
-                "iter_cost": iter_cost,
-                "best_cost": best_cost,
-                "delta_to_best_pct": round(delta_s_star, 2) if delta_s_star is not None else None,
-                "delta_to_bks_pct": round(delta_iter_bks, 2) if delta_iter_bks is not None else None,
-                "delta_best_to_bks_pct": (
-                    round(delta_best_bks, 2) if delta_best_bks is not None else None
-                ),
-                "no_improve": no_improve,
-            },
+            json_event=json_event,
         )
 
     def log_final(
@@ -528,6 +558,9 @@ class PipelineLogger:
         self._write_haos_summary("BEST SOLUTION — HAOS TAG SUMMARY", best_solution, pool)
         self._emit(None, _TAG_FINAL, "")
         self._write_haos_summary("ROUTE POOL — HAOS TAG SUMMARY", None, pool)
+        pool_tag_iterations = [
+            entry.haos_tag.iteration for entry in pool if entry.haos_tag is not None
+        ]
         self._emit(
             None,
             _TAG_FINAL,
@@ -539,6 +572,7 @@ class PipelineLogger:
                 "best_cost": best_cost,
                 "stopped_by_no_improve": stopped_by_no_improve,
                 "stopped_by_time": stopped_by_time,
+                "pool_tag_iterations": pool_tag_iterations,
             },
         )
 

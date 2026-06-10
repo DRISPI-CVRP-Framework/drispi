@@ -24,6 +24,7 @@ class RoutePoolManager:
         self.diversity_weight = diversity_weight
         self.warmup_iterations = warmup_iterations
         self.sp_interval = sp_interval
+        self.last_lp_fractionality: float | None = None
 
     def maybe_evict(self, pool: RoutePool) -> int:
         """Evict routes if pool exceeds configured max size."""
@@ -43,6 +44,10 @@ class RoutePoolManager:
         lp_weights: dict[frozenset[int], float],
     ) -> None:
         """Update quality scores first, then diversity scores."""
+        fractional = [v for v in lp_weights.values() if 0.0 < v < 1.0]
+        self.last_lp_fractionality = (
+            sum(fractional) / len(fractional) if fractional else 0.0
+        )
         pool.update_quality_scores(lp_weights)
         pool.update_diversity_scores()
 

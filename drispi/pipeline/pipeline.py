@@ -12,6 +12,7 @@ import random
 import time
 from datetime import datetime
 from pathlib import Path
+from statistics import median
 
 from drispi.clustering.dissimilarity import compute_dissimilarity_matrix
 from drispi.clustering.interface import cluster_instance
@@ -31,7 +32,7 @@ from drispi.pipeline.config import DRISPIConfig
 from drispi.pipeline.logger import PipelineLogger
 from drispi.pipeline.snapshot import SnapshotWriter
 from drispi.pipeline.subproblem import solve_subclusters_parallel
-from drispi.route_pool.coverage import average_coverage
+from drispi.route_pool.coverage import coverage_counts
 from drispi.route_pool.manager import RoutePoolManager
 from drispi.route_pool.pool import RoutePool
 from drispi.route_pool.post_sp_improvement import add_post_standard_improvement_routes_to_pool
@@ -399,6 +400,8 @@ class DRISPIPipeline:
                     routes=sp_result,
                     selected_route_indices=list(range(len(sp_result))),
                 )
+            cov = sorted(coverage_counts(self._pool, self._instance).values())
+            cov_avg = sum(cov) / len(cov) if cov else 0.0
             self._logger.log_phase_done(
                 iteration,
                 4,
@@ -409,8 +412,11 @@ class DRISPIPipeline:
                 {
                     "sc_or_sp": mode_done,
                     "pool_size": self._pool.size(),
-                    "avg_coverage": average_coverage(self._pool, self._instance),
+                    "avg_coverage": cov_avg,
                     "min_coverage": self._config.min_coverage,
+                    "coverage_min": cov[0] if cov else 0,
+                    "coverage_median": float(median(cov)) if cov else 0.0,
+                    "coverage_max": cov[-1] if cov else 0,
                 },
                 lp_fractionality=self._manager.last_lp_fractionality,
             )

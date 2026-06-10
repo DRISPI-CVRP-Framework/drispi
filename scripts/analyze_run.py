@@ -30,7 +30,6 @@ from drispi.pipeline.analysis import (
     SPINE_COLOR,
     TEXT_COLOR,
     filter_by_type,
-    get_haos_config_from_jsonl,
     load_jsonl,
     make_figure,
     save_figure,
@@ -227,57 +226,6 @@ def plot_cluster_size_distribution(lines: list[dict], output_dir: Path) -> None:
     save_figure(fig, Path(output_dir) / "cluster_size_distribution.png")
 
 
-def plot_k_selection(lines: list[dict], haos_config: dict, output_dir: Path) -> None:
-    """Actual vs expected k selection frequency + k chosen over iterations."""
-    haos_config = haos_config or {}
-    rolls = filter_by_type(lines, "haos_roll")
-    by_iter: dict[int, int] = {}
-    for roll in rolls:
-        it = roll.get("iteration")
-        k = roll.get("k")
-        if it is None or k is None:
-            continue
-        by_iter[int(it)] = int(k)
-
-    fig = make_figure((11.0, 4.5))
-    ax_bar = fig.add_subplot(121)
-    ax_line = fig.add_subplot(122)
-    style_axes(ax_bar, horizontal_grid_only=True)
-    style_axes(ax_line)
-
-    if by_iter:
-        counts = Counter(by_iter.values())
-        candidates = haos_config.get("k_candidates") or []
-        k_values = sorted({int(k) for k in candidates} | set(counts))
-        total = len(by_iter)
-        expected = total / len(k_values) if k_values else 0.0
-        ax_bar.bar(
-            [str(k) for k in k_values],
-            [counts.get(k, 0) for k in k_values],
-            color="#4aa3ff",
-            label="actual",
-        )
-        ax_bar.axhline(expected, color="#f5d442", linestyle=":", linewidth=1.4,
-                       label="expected (uniform)")
-        legend = ax_bar.legend(loc="upper right", fontsize=8)
-        style_legend(legend)
-
-        iters = sorted(by_iter)
-        ax_line.plot(iters, [by_iter[i] for i in iters], color="#4aa3ff",
-                     linewidth=1.2, marker=".", markersize=5)
-    else:
-        _no_data(ax_bar)
-        _no_data(ax_line)
-
-    ax_bar.set_title("k selection frequency", fontsize=10)
-    ax_bar.set_xlabel("k")
-    ax_bar.set_ylabel("times selected")
-    ax_line.set_title("k selected over iterations", fontsize=10)
-    ax_line.set_xlabel("iteration")
-    ax_line.set_ylabel("k")
-    save_figure(fig, Path(output_dir) / "k_selection.png")
-
-
 # ---------------------------------------------------------------------------
 # Improvement analysis
 # ---------------------------------------------------------------------------
@@ -310,7 +258,7 @@ def plot_bg_ails_improvement(lines: list[dict], output_dir: Path) -> None:
             for b, a in zip(before, after, strict=True)
         ]
 
-        sc = ax_scatter.scatter(before, after, c=improvement_pct, cmap="viridis", s=26)
+        sc = ax_scatter.scatter(after, before, c=improvement_pct, cmap="viridis", s=26)
         lo = min(min(before), min(after))
         hi = max(max(before), max(after))
         ax_scatter.plot([lo, hi], [lo, hi], color=SPINE_COLOR, linewidth=1.0,
@@ -329,9 +277,11 @@ def plot_bg_ails_improvement(lines: list[dict], output_dir: Path) -> None:
         for ax in (ax_scatter, ax_hist, ax_trend):
             _no_data(ax)
 
-    ax_scatter.set_title("BG-AILS cost before vs after", fontsize=10)
-    ax_scatter.set_xlabel("cost before")
-    ax_scatter.set_ylabel("cost after")
+    ax_scatter.set_title(
+        "BG-AILS cost after vs before (above diagonal = improved)", fontsize=10
+    )
+    ax_scatter.set_xlabel("cost after")
+    ax_scatter.set_ylabel("cost before")
     ax_hist.set_title("BG-AILS improvement % distribution", fontsize=10)
     ax_hist.set_xlabel("improvement %")
     ax_hist.set_ylabel("count")
@@ -391,6 +341,13 @@ def plot_lp_fractionality(lines: list[dict], output_dir: Path) -> None:
     ]
 
     fig = make_figure((11.0, 4.5))
+    fig.suptitle(
+        "How fractional the LP relaxation is: ~0 = LP already picks whole routes "
+        "(tight bound, easy MIP) · ~1 = LP blends many partial routes (loose bound, hard MIP)",
+        color=TEXT_COLOR,
+        fontsize=8,
+        fontfamily="monospace",
+    )
     ax_line = fig.add_subplot(121)
     ax_hist = fig.add_subplot(122)
     style_axes(ax_line)
@@ -428,126 +385,70 @@ def plot_lp_fractionality(lines: list[dict], output_dir: Path) -> None:
     save_figure(fig, Path(output_dir) / "lp_fractionality.png")
 
 
-def plot_mip_solve_times(lines: list[dict], output_dir: Path) -> None:
-    """SP/SC solve time per solve colored by budget load + histogram."""
-    sp_lines = [line for line in _sp_sc_lines(lines) if line.get("elapsed") is not None]
-
-    fig = make_figure((11.0, 4.5))
-    ax_time = fig.add_subplot(121)
-    ax_hist = fig.add_subplot(122)
-    style_axes(ax_time)
-    style_axes(ax_hist)
-
-    if sp_lines:
-        iters = [s.get("iteration", i) for i, s in enumerate(sp_lines)]
-        elapsed = [float(s["elapsed"]) for s in sp_lines]
-        budgets = [s.get("budget") for s in sp_lines]
-        budget = next((float(b) for b in budgets if b is not None), None)
-
-        colors = []
-        over_count = 0
-        for e, b in zip(elapsed, budgets, strict=True):
-            if b is None or float(b) <= 0:
-                colors.append("#888888")
-                continue
-            load = e / float(b)
-            if load > 1.0:
-                colors.append("#e74c3c")
-                over_count += 1
-            elif load >= 0.8:
-                colors.append("#ff9f43")
-            else:
-                colors.append("#2ecc71")
-
-        bar_width = max(0.8, (max(iters) - min(iters)) / max(len(iters) * 2, 1))
-        ax_time.bar(iters, elapsed, color=colors, width=bar_width)
-        if budget is not None:
-            ax_time.axhline(budget, color="#f5d442", linestyle=":", linewidth=1.4,
-                            label="budget")
-            legend = ax_time.legend(loc="upper right", fontsize=8)
-            style_legend(legend)
-
-        ax_hist.hist(elapsed, bins=min(20, max(5, len(elapsed))), color="#4aa3ff",
-                     edgecolor=AX_BG)
-        pct_over = over_count / len(elapsed) * 100.0
-        ax_hist.text(
-            0.97,
-            0.95,
-            f"{pct_over:.1f}% hit time limit",
-            transform=ax_hist.transAxes,
-            ha="right",
-            va="top",
-            color=TEXT_COLOR,
-            fontsize=9,
-            fontfamily="monospace",
-        )
-    else:
-        _no_data(ax_time)
-        _no_data(ax_hist)
-
-    ax_time.set_title("SP/SC solve time per iteration", fontsize=10)
-    ax_time.set_xlabel("iteration")
-    ax_time.set_ylabel("elapsed (s)")
-    ax_hist.set_title("Solve time distribution", fontsize=10)
-    ax_hist.set_xlabel("elapsed (s)")
-    ax_hist.set_ylabel("count")
-    save_figure(fig, Path(output_dir) / "mip_solve_times.png")
-
-
 def plot_sp_sc_usage(lines: list[dict], output_dir: Path) -> None:
-    """SP vs SC vs skipped totals + per-iteration model timeline."""
+    """Grouped bar chart of pool coverage stats per SP/SC iteration.
+
+    Four bars per iteration (min / median / avg / max customer coverage) with a
+    horizontal line at the ``min_coverage`` threshold required to use SP.
+    """
     sp_lines = _sp_sc_lines(lines)
-    summaries = _summaries(lines)
-    mode_by_iter: dict[int, str] = {}
+
+    stats: list[tuple[str, str, str]] = [
+        ("min", "coverage_min", "#e74c3c"),
+        ("median", "coverage_median", "#ff9f43"),
+        ("avg", "avg_coverage", "#4aa3ff"),
+        ("max", "coverage_max", "#2ecc71"),
+    ]
+
+    rows: list[tuple[int, dict[str, float]]] = []
+    threshold: float | None = None
     for line in sp_lines:
         op = line.get("operator_info") or {}
-        mode = str(op.get("sc_or_sp", "")).upper()
-        if mode in ("SP", "SC"):
-            mode_by_iter[int(line.get("iteration", -1))] = mode
+        if threshold is None and op.get("min_coverage") is not None:
+            threshold = float(op["min_coverage"])
+        values = {
+            key: float(op[key])
+            for _, key, _ in stats
+            if op.get(key) is not None
+        }
+        if values:
+            rows.append((int(line.get("iteration", len(rows))), values))
 
-    all_iters = sorted({int(s.get("iteration", i)) for i, s in enumerate(summaries)})
-    if not all_iters and mode_by_iter:
-        all_iters = sorted(mode_by_iter)
+    fig = make_figure((11.0, 5.0))
+    ax = fig.add_subplot(111)
+    style_axes(ax, horizontal_grid_only=True)
 
-    fig = make_figure((11.0, 4.5))
-    ax_bar = fig.add_subplot(121)
-    ax_timeline = fig.add_subplot(122)
-    style_axes(ax_bar, horizontal_grid_only=True)
-    style_axes(ax_timeline)
-
-    mode_colors = {"SP": "#4aa3ff", "SC": "#ff9f43", "skipped": "#555555"}
-    if all_iters:
-        sp_count = sum(1 for m in mode_by_iter.values() if m == "SP")
-        sc_count = sum(1 for m in mode_by_iter.values() if m == "SC")
-        skipped = len(all_iters) - sp_count - sc_count
-        ax_bar.bar(
-            ["SP", "SC", "skipped"],
-            [sp_count, sc_count, skipped],
-            color=[mode_colors["SP"], mode_colors["SC"], mode_colors["skipped"]],
-        )
-
-        for mode, level in (("SP", 2), ("SC", 1), ("skipped", 0)):
-            xs = [
-                i
-                for i in all_iters
-                if mode_by_iter.get(i, "skipped") == mode
-            ]
-            if xs:
-                ax_timeline.scatter(
-                    xs, [level] * len(xs), color=mode_colors[mode], s=26,
-                    marker="s", label=mode,
-                )
-        ax_timeline.set_yticks([0, 1, 2])
-        ax_timeline.set_yticklabels(["skipped", "SC", "SP"])
-        ax_timeline.set_ylim(-0.5, 2.5)
+    if rows:
+        present = [
+            (label, key, color)
+            for label, key, color in stats
+            if any(key in values for _, values in rows)
+        ]
+        n_stats = len(present)
+        width = 0.8 / max(n_stats, 1)
+        x_positions = list(range(len(rows)))
+        for offset, (label, key, color) in enumerate(present):
+            xs = [x + (offset - (n_stats - 1) / 2) * width for x in x_positions]
+            ys = [values.get(key, 0.0) for _, values in rows]
+            ax.bar(xs, ys, width=width, color=color, label=label)
+        if threshold is not None:
+            ax.axhline(
+                threshold,
+                color="#f5d442",
+                linestyle=":",
+                linewidth=1.4,
+                label="min_coverage (SP criterion)",
+            )
+        ax.set_xticks(x_positions)
+        ax.set_xticklabels([str(it) for it, _ in rows])
+        legend = ax.legend(loc="upper right", fontsize=8)
+        style_legend(legend)
     else:
-        _no_data(ax_bar)
-        _no_data(ax_timeline)
+        _no_data(ax)
 
-    ax_bar.set_title("SP vs SC vs skipped iterations", fontsize=10)
-    ax_bar.set_ylabel("iterations")
-    ax_timeline.set_title("SP/SC model used per iteration", fontsize=10)
-    ax_timeline.set_xlabel("iteration")
+    ax.set_title("Pool coverage per SP/SC iteration", fontsize=10)
+    ax.set_xlabel("iteration")
+    ax.set_ylabel("coverage (routes per customer)")
     save_figure(fig, Path(output_dir) / "sp_sc_usage.png")
 
 
@@ -567,7 +468,6 @@ _DEEP_SECTIONS: list[tuple[str, list[tuple[str, str]]]] = [
         "Subproblem structure",
         [
             ("cluster_size_distribution.png", "cluster size distribution"),
-            ("k_selection.png", "k selection"),
         ],
     ),
     (
@@ -580,8 +480,7 @@ _DEEP_SECTIONS: list[tuple[str, list[tuple[str, str]]]] = [
         "SP/SC solver behavior",
         [
             ("lp_fractionality.png", "LP fractionality"),
-            ("mip_solve_times.png", "MIP solve times"),
-            ("sp_sc_usage.png", "SP vs SC usage"),
+            ("sp_sc_usage.png", "pool coverage per SP/SC iteration"),
         ],
     ),
     (
@@ -632,7 +531,6 @@ def main() -> None:
 
     run_dir: Path = args.run_dir
     lines = load_jsonl(run_dir)
-    haos_config = get_haos_config_from_jsonl(lines) or {}
     deep_dir = run_dir / "deep_analysis"
     deep_dir.mkdir(parents=True, exist_ok=True)
 
@@ -643,8 +541,6 @@ def main() -> None:
         ("plot_route_age_distribution", lambda: plot_route_age_distribution(lines, deep_dir)),
         ("plot_bg_ails_improvement", lambda: plot_bg_ails_improvement(lines, deep_dir)),
         ("plot_lp_fractionality", lambda: plot_lp_fractionality(lines, deep_dir)),
-        ("plot_mip_solve_times", lambda: plot_mip_solve_times(lines, deep_dir)),
-        ("plot_k_selection", lambda: plot_k_selection(lines, haos_config, deep_dir)),
         ("plot_sp_sc_usage", lambda: plot_sp_sc_usage(lines, deep_dir)),
         ("generate_deep_report", lambda: generate_deep_report(run_dir, lines)),
     ]

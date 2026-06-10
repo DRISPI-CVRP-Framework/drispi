@@ -123,8 +123,8 @@ def get_haos_config_from_jsonl(lines: list[dict]) -> dict | None:
 
 
 def make_figure(figsize: tuple[float, float] = (10.0, 5.0)) -> Figure:
-    """Create a dark-themed figure."""
-    fig = plt.figure(figsize=figsize, facecolor=FIG_BG, dpi=DPI)
+    """Create a dark-themed figure with constrained layout (avoids panel overlap)."""
+    fig = plt.figure(figsize=figsize, facecolor=FIG_BG, dpi=DPI, layout="constrained")
     return fig
 
 

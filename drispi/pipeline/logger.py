@@ -7,7 +7,6 @@ import logging
 import math
 import sys
 from collections import Counter
-from datetime import datetime
 from logging import Handler, LogRecord
 from pathlib import Path
 from typing import Any, TextIO
@@ -23,6 +22,7 @@ from drispi.pipeline.config_io import config_to_dict
 from drispi.route_pool.pool import RoutePool
 from drispi.utils.io import write_sol
 from drispi.utils.metrics import gap_to_bks
+from drispi.utils.time import local_now
 
 # ANSI (terminal only)
 _RESET = "\033[0m"
@@ -53,7 +53,7 @@ def _format_phase_tag(phase_num: int, total_phases: int) -> str:
 
 
 def _format_timestamp() -> str:
-    return datetime.now().strftime("%H:%M:%S")
+    return local_now().strftime("%H:%M:%S")
 
 
 def _format_iteration(iteration: int | None) -> str:

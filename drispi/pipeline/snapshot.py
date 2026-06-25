@@ -5,12 +5,12 @@ from __future__ import annotations
 import json
 import queue
 import threading
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from drispi.core.instance import CVRPInstance
 from drispi.core.types import Route
+from drispi.utils.time import local_now
 
 _SENTINEL: object = object()
 
@@ -68,7 +68,7 @@ class SnapshotWriter:
             "phase_name": phase_name,
             "is_spsc_iter": is_spsc_iter,
             "total_phases": total_phases,
-            "timestamp": datetime.now().strftime("%H:%M:%S"),
+            "timestamp": local_now().strftime("%H:%M:%S"),
             "depot": depot,
             "customer_ids": customer_ids,
             "customers": customers,

@@ -576,6 +576,20 @@ Instance `.vrp` files are also excluded from the context (they live under `data/
 
 Compose encodes the same volumes and environment as the `docker run` examples above.
 
+### Log timestamps (`DRISPI_TZ`)
+
+Log lines, run directory names, and dashboard snapshots use an explicit timezone
+(default **UTC**). Set `DRISPI_TZ` to your IANA zone (e.g. `Europe/Berlin`) when
+starting a container:
+
+```bash
+export DRISPI_TZ=Europe/Berlin
+docker compose run --rm drispi data/instances/x/X-n106-k14.vrp --time-limit 60
+```
+
+`DRISPI_TZ` takes precedence over the standard `TZ` variable. The image ships
+with `tzdata` so named zones resolve correctly.
+
 ### Local (build + run)
 
 ```bash

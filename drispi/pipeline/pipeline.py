@@ -36,7 +36,7 @@ from drispi.pipeline.config import DRISPIConfig
 from drispi.pipeline.core_manager import CoreManager
 from drispi.pipeline.logger import PipelineLogger
 from drispi.pipeline.snapshot import SnapshotWriter
-from drispi.pipeline.subproblem import solve_subclusters_parallel, SubclusterWallTimeoutError
+from drispi.pipeline.subproblem import SubclusterWallTimeoutError, solve_subclusters_parallel
 from drispi.route_pool.coverage import coverage_counts
 from drispi.route_pool.manager import RoutePoolManager
 from drispi.route_pool.pool import RoutePool
@@ -44,6 +44,7 @@ from drispi.route_pool.post_sp_improvement import add_post_standard_improvement_
 from drispi.sp.policy import should_run_sp_sc
 from drispi.sp.solver import run_sp_sc
 from drispi.utils.io import write_sol
+from drispi.utils.time import local_now
 
 _PHASE_SNAPSHOT_NAMES: dict[int, str] = {
     1: "dissim+cluster",
@@ -56,7 +57,7 @@ _PHASE_SNAPSHOT_NAMES: dict[int, str] = {
 
 def make_run_label(instance_name: str, *, now: datetime | None = None) -> str:
     """Build timestamped run directory label: ``<instance>_<MMDD_HHMM>``."""
-    t = now or datetime.now()
+    t = now or local_now()
     return f"{instance_name}_{t.strftime('%m%d_%H%M')}"
 
 
@@ -801,7 +802,7 @@ class DRISPIPipeline:
         """Persist run status for the dashboard (running / finished / cancelled)."""
         payload: dict[str, object] = {
             "status": status,
-            "updated_at": datetime.now().isoformat(timespec="seconds"),
+            "updated_at": local_now().isoformat(timespec="seconds"),
             **extra,
         }
         path = self.run_dir / "status.json"

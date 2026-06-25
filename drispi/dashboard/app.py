@@ -9,6 +9,7 @@ Or via pipeline:
 
 from __future__ import annotations
 
+import html
 import sys
 import time
 from datetime import datetime
@@ -17,9 +18,8 @@ from typing import Any
 
 import streamlit as st
 
-import html
-
 from drispi.dashboard import data, formatting, phase_hold, viz
+from drispi.utils.time import local_now
 
 PHASE_DISPLAY_NAMES: dict[str, str] = {
     "dissim+cluster": "clustering",
@@ -111,7 +111,7 @@ def _runtime_str(run_dir: Path, status: dict[str, Any]) -> str:
         return "00:00:00"
     try:
         start = datetime.strptime(ts, "%H:%M:%S")
-        now = datetime.now()
+        now = local_now()
         start = start.replace(year=now.year, month=now.month, day=now.day)
         if start > now:
             start = start.replace(day=now.day - 1)

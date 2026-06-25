@@ -14,12 +14,6 @@ from drispi.improvement.base import BaseImprovement
 from drispi.solvers.ails2 import Ails2Solver
 from drispi.utils.io import write_sol
 
-DEFAULT_BG_AILS_TIME_LIMIT = 120.0
-DEFAULT_STANDARD_IMPROVEMENT_TIME_LIMIT = 300.0
-
-SMALL_CLUSTER_CAP = 20
-SMALL_CLUSTER_ALPHA = 0.5
-
 
 def _validate_partition(partition: list[list[int]], customers: list[int]) -> None:
     flat = [c for g in partition for c in g]
@@ -38,8 +32,8 @@ def compute_boundary_ranks(
     partition: list[list[int]],
     customers: list[int],
     *,
-    small_cluster_cap: int = SMALL_CLUSTER_CAP,
-    small_cluster_alpha: float = SMALL_CLUSTER_ALPHA,
+    small_cluster_cap: int,
+    small_cluster_alpha: float,
 ) -> np.ndarray:
     """
     Per-customer boundary ranks in ``[0, 1]``, aligned with ``customers`` / ``D``.
@@ -332,10 +326,10 @@ def export_boundary_ranks_csv(path: Path, customers: list[int], ranks: np.ndarra
 def run_standard_improvement(
     instance: CVRPInstance,
     solution: list[Route],
-    time_limit: float = DEFAULT_STANDARD_IMPROVEMENT_TIME_LIMIT,
+    time_limit: float,
     *,
     solver: Ails2Solver | None = None,
-    seed: int = 42,
+    seed: int,
 ) -> list[Route]:
     """Post-SP/SC style: AILS-II with ``-initialSolution`` only (no ``-initialOmega``)."""
     solv = solver or Ails2Solver()
@@ -359,8 +353,10 @@ def run_bg_ails_perturb(
     dissimilarity_matrix: np.ndarray,
     partition: list[list[int]],
     *,
-    boundary_threshold: float = 0.5,
-    seed: int = 42,
+    boundary_threshold: float,
+    small_cluster_cap: int,
+    small_cluster_alpha: float,
+    seed: int,
 ) -> tuple[list[Route], list[int]]:
     """
     Boundary ranks + cross-reconnect perturbation only (no AILS-II).
@@ -372,7 +368,13 @@ def run_bg_ails_perturb(
         return solution, []
     rng = np.random.default_rng(seed)
     customers = list(instance.customers)
-    ranks = compute_boundary_ranks(dissimilarity_matrix, partition, customers)
+    ranks = compute_boundary_ranks(
+        dissimilarity_matrix,
+        partition,
+        customers,
+        small_cluster_cap=small_cluster_cap,
+        small_cluster_alpha=small_cluster_alpha,
+    )
     rw = _apply_threshold(ranks, boundary_threshold)
     return perturb_routes(
         solution,
@@ -390,9 +392,9 @@ def run_bg_ails_improve(
     partition: list[list[int]],
     initial_omega: float,
     *,
-    time_limit: float = DEFAULT_BG_AILS_TIME_LIMIT,
+    time_limit: float,
     solver: Ails2Solver | None = None,
-    seed: int = 42,
+    seed: int,
 ) -> list[Route]:
     """Run AILS-II on a (possibly perturbed) solution with ``-initialOmega`` when multi-cluster."""
     if len(partition) <= 1:
@@ -425,10 +427,12 @@ def run_bg_ails(
     partition: list[list[int]],
     initial_omega: float,
     *,
-    time_limit: float = DEFAULT_BG_AILS_TIME_LIMIT,
-    boundary_threshold: float = 0.5,
+    time_limit: float,
+    boundary_threshold: float,
+    small_cluster_cap: int,
+    small_cluster_alpha: float,
     solver: Ails2Solver | None = None,
-    seed: int = 42,
+    seed: int,
 ) -> tuple[list[Route], list[int], list[Route]]:
     """
     Full BG-AILS pipeline: ranks → weighted perturbation → AILS-II with injected
@@ -450,6 +454,8 @@ def run_bg_ails(
         dissimilarity_matrix,
         partition,
         boundary_threshold=boundary_threshold,
+        small_cluster_cap=small_cluster_cap,
+        small_cluster_alpha=small_cluster_alpha,
         seed=seed,
     )
     improved = run_bg_ails_improve(
@@ -467,7 +473,7 @@ def run_bg_ails(
 class StandardAilsImprovement(BaseImprovement):
     """Post-SP/SC style improvement via :func:`run_standard_improvement`."""
 
-    def __init__(self, *, solver: Ails2Solver | None = None, seed: int = 42) -> None:
+    def __init__(self, *, solver: Ails2Solver | None = None, seed: int) -> None:
         self._solver = solver
         self._seed = seed
 
@@ -499,14 +505,18 @@ class BgAilsImprovement(BaseImprovement):
         partition: list[list[int]],
         initial_omega: float,
         *,
-        boundary_threshold: float = 0.5,
+        boundary_threshold: float,
+        small_cluster_cap: int,
+        small_cluster_alpha: float,
         solver: Ails2Solver | None = None,
-        seed: int = 42,
+        seed: int,
     ) -> None:
         self._d = np.asarray(dissimilarity_matrix, dtype=np.float64)
         self._partition = partition
         self._initial_omega = float(initial_omega)
         self._boundary_threshold = float(boundary_threshold)
+        self._small_cluster_cap = small_cluster_cap
+        self._small_cluster_alpha = small_cluster_alpha
         self._solver = solver
         self._seed = seed
         self.last_perturbed_route_indices: list[int] = []
@@ -520,6 +530,8 @@ class BgAilsImprovement(BaseImprovement):
             self._initial_omega,
             time_limit=float(time_limit),
             boundary_threshold=self._boundary_threshold,
+            small_cluster_cap=self._small_cluster_cap,
+            small_cluster_alpha=self._small_cluster_alpha,
             solver=self._solver,
             seed=self._seed,
         )

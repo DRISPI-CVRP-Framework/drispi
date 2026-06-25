@@ -1,0 +1,27 @@
+# Server: pull a pre-built image and run (no build, no host script mounts).
+#
+#   export DRISPI_IMAGE=ghcr.io/you/drispi:0.1.0
+#   export GRB_LICENSE_FILE=/path/to/gurobi.lic
+#   docker compose -f docker-compose.server.yml pull
+#   docker compose -f docker-compose.server.yml run --rm drispi ...
+#   docker compose -f docker-compose.server.yml run --rm benchmark ...
+
+x-drispi-runtime: &drispi-runtime
+  image: ${DRISPI_IMAGE:?Set DRISPI_IMAGE e.g. ghcr.io/you/drispi:0.1.0}
+  volumes:
+    - ./data:/app/data:ro
+    - ./artifacts:/app/artifacts
+    - ${GRB_LICENSE_FILE:?Set GRB_LICENSE_FILE}:/root/gurobi.lic:ro
+  environment:
+    GRB_LICENSE_FILE: /root/gurobi.lic
+    OMP_NUM_THREADS: "1"
+    OPENBLAS_NUM_THREADS: "1"
+    MKL_NUM_THREADS: "1"
+
+services:
+  drispi:
+    <<: *drispi-runtime
+
+  benchmark:
+    <<: *drispi-runtime
+    entrypoint: ["uv", "run", "python", "scripts/run_benchmark.py"]

@@ -14,10 +14,10 @@ class RoutePoolManager:
     def __init__(
         self,
         max_pool_size: int,
-        min_coverage: int = 1,
-        diversity_weight: float = 1.0,
-        warmup_iterations: int = 10,
-        sp_interval: int = 3,
+        min_coverage: int,
+        diversity_weight: float,
+        warmup_iterations: int,
+        sp_interval: int,
     ) -> None:
         self.max_pool_size = max_pool_size
         self.min_coverage = min_coverage

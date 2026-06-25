@@ -1,11 +1,32 @@
+# Local dev: build and run (single image shared by both services).
+#
+#   export DRISPI_IMAGE=ghcr.io/you/drispi:0.1.0
+#   docker compose build
+#   docker compose push          # after docker login
+#
+#   docker compose run --rm drispi data/instances/x/X-n106-k14.vrp --time-limit 60
+#   docker compose run --rm benchmark "data/instances/x/*.vrp" --total-cores 8 ...
+
+x-drispi-image: &drispi-image
+  image: ${DRISPI_IMAGE:-drispi:local}
+  build: .
+
+x-drispi-runtime: &drispi-runtime
+  <<: *drispi-image
+  volumes:
+    - ./data:/app/data:ro
+    - ./artifacts:/app/artifacts
+    - ${GRB_LICENSE_FILE:-~/.gurobi/gurobi.lic}:/root/gurobi.lic:ro
+  environment:
+    GRB_LICENSE_FILE: /root/gurobi.lic
+    OMP_NUM_THREADS: "1"
+    OPENBLAS_NUM_THREADS: "1"
+    MKL_NUM_THREADS: "1"
+
 services:
   drispi:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
-    volumes:
-      - ./gurobi.lic:/opt/gurobi/gurobi.lic:ro
-      - ./data:/data
-    environment:
-      GRB_LICENSE_FILE: /opt/gurobi/gurobi.lic
-    command: python -m drispi.pipeline.runner --help
+    <<: *drispi-runtime
+
+  benchmark:
+    <<: *drispi-runtime
+    entrypoint: ["uv", "run", "python", "scripts/run_benchmark.py"]

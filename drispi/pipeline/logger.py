@@ -7,7 +7,6 @@ import logging
 import math
 import sys
 from collections import Counter
-from dataclasses import asdict, is_dataclass
 from datetime import datetime
 from logging import Handler, LogRecord
 from pathlib import Path
@@ -20,6 +19,7 @@ from drispi.core.types import Route
 from drispi.haos.haos import HAOSSelection
 from drispi.haos.tag import HAOSTag
 from drispi.pipeline.config import DRISPIConfig
+from drispi.pipeline.config_io import config_to_dict
 from drispi.route_pool.pool import RoutePool
 from drispi.utils.io import write_sol
 from drispi.utils.metrics import gap_to_bks
@@ -124,16 +124,22 @@ def _format_elapsed_hms(seconds: float) -> str:
 
 
 def _config_to_json(config: DRISPIConfig) -> dict[str, Any]:
-    raw = asdict(config)
-    out: dict[str, Any] = {}
-    for key, value in raw.items():
-        if isinstance(value, Path):
-            out[key] = str(value)
-        elif is_dataclass(value):
-            out[key] = asdict(value)
-        else:
-            out[key] = value
-    return out
+    return config_to_dict(config)
+
+
+_CONFIG_SECTION_LABELS: dict[str, str] = {
+    "stopping": "stopping",
+    "parallelism": "parallelism",
+    "sp_sc": "sp/sc",
+    "subcluster": "subcluster",
+    "bg_ails": "bg_ails",
+    "standard_improvement": "standard_improvement",
+    "pool": "pool",
+    "haos": "haos",
+    "haos_rewards": "haos_rewards",
+    "seed": "seed",
+    "output": "output",
+}
 
 
 class JsonlHandler(Handler):
@@ -272,34 +278,43 @@ class PipelineLogger:
         record.json_event = json_event  # type: ignore[attr-defined]
         self._logger.handle(record)
 
+    def log_config(self, config: DRISPIConfig) -> None:
+        """Write full config to terminal, run.log, and run.jsonl."""
+        grouped = config_to_dict(config)
+        lines = [
+            "═" * 54,
+            "CONFIGURATION",
+        ]
+        for section, fields in grouped.items():
+            label = _CONFIG_SECTION_LABELS.get(section, section)
+            lines.append(f"── {label} " + "─" * max(0, 40 - len(label)))
+            for key, value in fields.items():
+                lines.append(f"  {key:<28}= {value}")
+        lines.append("═" * 54)
+        for i, line in enumerate(lines):
+            json_event = None
+            if i == len(lines) - 1:
+                json_event = {"type": "config", "config": grouped}
+            self._emit(None, _TAG_INIT, line, json_event=json_event)
+
     def log_init(self, config: DRISPIConfig, instance: CVRPInstance) -> None:
         bks_display = f"{self._bks_cost:.2f}" if self._bks_cost is not None else "N/A"
-        lines = [
+        header_lines = [
             _HRULE,
             (
                 f"DRISPI  instance={instance.name}  n={instance.n_customers}  "
                 f"capacity={instance.capacity}"
             ),
-            (
-                f"time_limit={config.time_limit}  max_no_improve={config.max_no_improve}  "
-                f"n_workers={config.n_workers}  seed={config.seed}"
-            ),
-            (
-                f"warmup={config.warmup_iterations}  sp_interval={config.sp_interval}  "
-                f"min_coverage={config.min_coverage}  max_pool={config.max_pool_size}"
-            ),
-            (
-                f"decay={config.haos_config.decay}  "
-                f"bg_ails_omega={config.bg_ails_initial_omega}  "
-                f"bg_time={config.bg_ails_time_limit}  "
-                f"std_time={config.standard_improvement_time_limit}"
-            ),
-            f"BKS={bks_display}",
-            _HRULE,
         ]
-        for i, line in enumerate(lines):
+        for line in header_lines:
+            self._emit(None, _TAG_INIT, line)
+
+        self.log_config(config)
+
+        closing = [f"BKS={bks_display}", _HRULE]
+        for i, line in enumerate(closing):
             json_event = None
-            if i == len(lines) - 1:
+            if i == len(closing) - 1:
                 json_event = {
                     "type": "init",
                     "instance": instance.name,

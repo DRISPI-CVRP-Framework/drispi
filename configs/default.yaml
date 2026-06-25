@@ -1,0 +1,65 @@
+# DRISPI Configuration
+
+# Stopping criteria
+time_limit: 7200.0
+max_no_improve: 100
+
+# Parallelism
+n_workers: 8
+
+# SP/SC scheduling
+warmup_iterations: 10
+sp_interval: 3
+min_coverage: 5
+sp_time_limit: 300.0
+mip_gap: 0.0005
+
+# Subcluster solver
+subcluster_time_per_customer: 0.05
+
+# BG-AILS
+bg_ails_time_limit: 90.0
+bg_ails_initial_omega: 0.8
+bg_ails_boundary_threshold: 0.5
+bg_ails_small_cluster_cap: 20
+bg_ails_small_cluster_alpha: 0.5
+
+# Standard improvement
+standard_improvement_time_limit: 120.0
+
+# Route pool
+max_pool_size: 10000
+pool_diversity_weight: 1.0
+
+# HAOS
+haos_decay: 0.95
+haos_warmup: 10
+haos_starting_weight: 10.0
+haos_min_weight_k: 0.025
+haos_min_weight_lambda: 0.05
+haos_min_weight_paradigm: 0.1
+haos_min_weight_vertex_method: 0.05
+haos_min_weight_route_method: 0.05
+haos_min_weight_solver: 0.05
+haos_k_candidates: [1, 2, 3, 4, 6, 8, 10, 12, 14, 16]
+haos_lambda_demand_values: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+haos_paradigm_values: ["vertex", "route"]
+haos_vertex_method_values: ["kmeans", "agglomerative_avg", "agglomerative_complete", "agglomerative_single", "kmedoids", "fcm"]
+haos_route_method_values: ["kmeans", "agglomerative_avg", "agglomerative_complete", "agglomerative_single"]
+haos_solver_values: ["pyvrp", "filo", "filo2", "ails2"]
+
+# HAOS rewards
+haos_reward_new_best: 8.0
+haos_reward_improvement: 3.0
+haos_reward_no_improvement: 1.0
+haos_reward_no_solution: 0.0
+haos_deferred_new_best: 5.0
+haos_deferred_improvement: 2.0
+haos_deferred_no_improvement: 0.0
+
+# Seed (all sub-seeds derived deterministically from this)
+seed: 42
+
+# Output
+output_dir: "artifacts/runs"
+run_analysis: false

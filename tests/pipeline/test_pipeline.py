@@ -7,7 +7,6 @@ from unittest.mock import patch
 
 from drispi.core.instance import CVRPInstance
 from drispi.core.solution import Route as SolutionRoute
-from drispi.haos.config import HAOSConfig, HAOSRewardConfig
 from drispi.haos.haos import HAOSSelection
 from drispi.pipeline.config import DRISPIConfig
 from drispi.pipeline.pipeline import DRISPIPipeline
@@ -159,7 +158,7 @@ def test_pipeline_runs_five_iterations(instance_12: CVRPInstance, tmp_path: Path
         time_limit=1e9,
         max_no_improve=1000,
         output_dir=tmp_path,
-        haos_config=HAOSConfig(haos_warmup=2),
+        haos_warmup=2,
         warmup_iterations=100,
         sp_interval=100,
     )
@@ -384,12 +383,12 @@ def test_route_clustering_uses_best_solution_not_pool(
 def test_haos_weights_change_after_warmup(instance_12: CVRPInstance, tmp_path: Path) -> None:
     # The no-improvement reward must be large enough to survive the global
     # end-of-iteration decay + weight floor: (10 + r) * decay > 10.
-    rewards = HAOSRewardConfig(reward_no_improvement=2.0)
     cfg = DRISPIConfig(
         time_limit=1e9,
         max_no_improve=100,
         output_dir=tmp_path,
-        haos_config=HAOSConfig(haos_warmup=2, rewards=rewards),
+        haos_warmup=2,
+        haos_reward_no_improvement=2.0,
         warmup_iterations=100,
         sp_interval=100,
     )

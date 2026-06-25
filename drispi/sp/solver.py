@@ -17,11 +17,11 @@ def run_sp_sc(
     manager: RoutePoolManager,
     iteration: int,
     best_solution: list[Route],
-    time_limit: float = 300.0,
-    mip_gap: float = 0.01,
-    min_coverage: int = 1,
-    warmup_iterations: int = 10,
-    sp_interval: int = 3,
+    time_limit: float,
+    mip_gap: float,
+    min_coverage: int,
+    warmup_iterations: int,
+    sp_interval: int,
 ) -> tuple[list[Route] | None, bool]:
     """
     Run set partitioning or set covering for one iteration when policy allows.

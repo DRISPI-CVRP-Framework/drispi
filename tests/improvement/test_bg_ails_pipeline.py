@@ -13,6 +13,13 @@ from drispi.core.solution import Route, Solution
 from drispi.improvement.bg_ails import BgAilsImprovement, run_bg_ails, run_standard_improvement
 from drispi.solvers.ails2 import Ails2Solver
 
+_BG_KW = {
+    "boundary_threshold": 0.5,
+    "small_cluster_cap": 20,
+    "small_cluster_alpha": 0.5,
+    "seed": 1,
+}
+
 
 def _inst() -> CVRPInstance:
     return CVRPInstance(
@@ -55,6 +62,7 @@ def test_run_bg_ails_single_cluster_delegates_to_standard(monkeypatch: pytest.Mo
         [[2, 3, 4, 5]],
         initial_omega=12.0,
         time_limit=30.0,
+        **_BG_KW,
     )
     assert called.get("std") is True
     assert out == routes
@@ -95,6 +103,7 @@ def test_run_bg_ails_passes_initial_omega(monkeypatch: pytest.MonkeyPatch) -> No
         initial_omega=18.0,
         time_limit=10.0,
         solver=mock_solver,
+        **_BG_KW,
     )
     _args, kwargs = mock_solver.run_improvement.call_args
     assert kwargs["initial_omega"] == 18.0
@@ -121,6 +130,7 @@ def test_run_bg_ails_preserves_customer_multiset(monkeypatch: pytest.MonkeyPatch
         initial_omega=5.0,
         time_limit=5.0,
         solver=mock_solver,
+        **_BG_KW,
     )
     flat = sorted(c for r in out for c in r.customers)
     assert flat == sorted(inst.customers)
@@ -141,7 +151,10 @@ def test_bg_ails_improvement_delegates() -> None:
         partition,
         initial_omega=10.0,
         boundary_threshold=0.2,
+        small_cluster_cap=20,
+        small_cluster_alpha=0.5,
         solver=mock,
+        seed=1,
     )
     sol = Solution(
         routes=[Route([2, 3], 0.0), Route([4, 5], 0.0)],

@@ -15,11 +15,14 @@ from datetime import datetime
 from pathlib import Path
 from statistics import median
 
+import numpy as np
+
 from drispi.clustering.dissimilarity import compute_dissimilarity_matrix
 from drispi.clustering.interface import cluster_instance
 from drispi.core.instance import CVRPInstance
 from drispi.core.solution import Route as SolutionRoute
 from drispi.core.types import Route
+from drispi.haos.config import HAOSConfig, HAOSRewardConfig
 from drispi.haos.haos import HAOS
 from drispi.haos.tag import HAOSTag
 from drispi.haos.weights_io import save_weights
@@ -30,6 +33,7 @@ from drispi.improvement.bg_ails import (
     run_standard_improvement,
 )
 from drispi.pipeline.config import DRISPIConfig
+from drispi.pipeline.core_manager import CoreManager
 from drispi.pipeline.logger import PipelineLogger
 from drispi.pipeline.snapshot import SnapshotWriter
 from drispi.pipeline.subproblem import solve_subclusters_parallel
@@ -75,6 +79,36 @@ def _changed_route_indices(before: list[Route], after: list[Route]) -> list[int]
     return [i for i, r in enumerate(after) if frozenset(r) not in before_sets]
 
 
+def _build_haos_config(config: DRISPIConfig) -> HAOSConfig:
+    """Build internal HAOSConfig from flat DRISPIConfig fields."""
+    return HAOSConfig(
+        decay=config.haos_decay,
+        haos_warmup=config.haos_warmup,
+        starting_weight=config.haos_starting_weight,
+        rewards=HAOSRewardConfig(
+            reward_new_best=config.haos_reward_new_best,
+            reward_improvement=config.haos_reward_improvement,
+            reward_no_improvement=config.haos_reward_no_improvement,
+            reward_no_solution=config.haos_reward_no_solution,
+            deferred_new_best=config.haos_deferred_new_best,
+            deferred_improvement=config.haos_deferred_improvement,
+            deferred_no_improvement=config.haos_deferred_no_improvement,
+        ),
+        k_candidates=list(config.haos_k_candidates),
+        min_weight_k=config.haos_min_weight_k,
+        lambda_demand_values=list(config.haos_lambda_demand_values),
+        min_weight_lambda=config.haos_min_weight_lambda,
+        paradigm_values=list(config.haos_paradigm_values),
+        min_weight_paradigm=config.haos_min_weight_paradigm,
+        vertex_method_values=list(config.haos_vertex_method_values),
+        min_weight_vertex_method=config.haos_min_weight_vertex_method,
+        route_method_values=list(config.haos_route_method_values),
+        min_weight_route_method=config.haos_min_weight_route_method,
+        solver_values=list(config.haos_solver_values),
+        min_weight_solver=config.haos_min_weight_solver,
+    )
+
+
 class DRISPIPipeline:
     """
     End-to-end DRISPI loop: operator selection, clustering, subcluster routing,
@@ -88,12 +122,23 @@ class DRISPIPipeline:
         bks_cost: float | None = None,
         *,
         run_label: str | None = None,
+        core_manager: CoreManager | None = None,
+        instance_id: str | None = None,
     ) -> None:
         self._instance = instance
         self._config = config
         self._bks_cost = bks_cost
-        self._rng = random.Random(config.seed)
-        self._haos = HAOS(config.haos_config, instance, rng=self._rng)
+        self._core_manager = core_manager
+        self._instance_id = instance_id if instance_id is not None else instance.name
+
+        rng = np.random.default_rng(config.seed)
+        self._solver_seed = int(rng.integers(0, 2**31))
+        self._haos_seed = int(rng.integers(0, 2**31))
+        self._bg_seed = int(rng.integers(0, 2**31))
+        self._rng = random.Random(self._haos_seed)
+
+        self._haos_config = _build_haos_config(config)
+        self._haos = HAOS(self._haos_config, instance, rng=self._rng)
         self._pool = RoutePool()
         self._manager = RoutePoolManager(
             max_pool_size=config.max_pool_size,
@@ -127,6 +172,18 @@ class DRISPIPipeline:
     @property
     def run_dir(self) -> Path:
         return self._logger.run_dir
+
+    @property
+    def best_cost(self) -> float:
+        return self._best_cost
+
+    @property
+    def iterations_completed(self) -> int:
+        return self._iterations_completed
+
+    @property
+    def stop_reason(self) -> str | None:
+        return self._stop_reason()
 
     def run(self) -> list[Route]:
         """
@@ -265,14 +322,30 @@ class DRISPIPipeline:
             default=0.0,
         )
         t0 = time.perf_counter()
-        cluster_routes = solve_subclusters_parallel(
-            self._instance,
-            partition,
-            selection.solver,
-            self._config.subcluster_time_per_customer,
-            self._config.n_workers,
-            self._config.seed + iteration * 10007,
-        )
+        n_clusters = len(partition)
+        if self._core_manager is not None:
+            n_workers = self._core_manager.acquire(self._instance_id, n_clusters)
+            try:
+                cluster_routes = solve_subclusters_parallel(
+                    self._instance,
+                    partition,
+                    selection.solver,
+                    self._config.subcluster_time_per_customer,
+                    n_workers,
+                    self._solver_seed + iteration * 10007,
+                )
+            finally:
+                self._core_manager.release(self._instance_id, n_workers)
+        else:
+            n_workers = min(self._config.n_workers, n_clusters)
+            cluster_routes = solve_subclusters_parallel(
+                self._instance,
+                partition,
+                selection.solver,
+                self._config.subcluster_time_per_customer,
+                n_workers,
+                self._solver_seed + iteration * 10007,
+            )
         self._logger.log_phase_done(
             iteration,
             2,
@@ -298,13 +371,15 @@ class DRISPIPipeline:
 
         combined_sol = _seqs_to_solution_routes(self._instance, combined_seqs)
 
-        bg_seed = self._rng.randint(0, 2**31 - 1)
+        bg_seed = self._bg_seed + iteration
         perturbed_sol, perturbed_indices = run_bg_ails_perturb(
             self._instance,
             combined_sol,
             dissim,
             partition,
             boundary_threshold=self._config.bg_ails_boundary_threshold,
+            small_cluster_cap=self._config.bg_ails_small_cluster_cap,
+            small_cluster_alpha=self._config.bg_ails_small_cluster_alpha,
             seed=bg_seed,
         )
         self._write_phase_snapshot(
@@ -365,7 +440,7 @@ class DRISPIPipeline:
             bg_cost,
             self._best_cost,
             self._last_cost,
-            self._config.haos_config.rewards,
+            self._haos_config.rewards,
             is_deferred=False,
         )
         self._haos.update_immediate(selection, iteration, imm)
@@ -467,7 +542,7 @@ class DRISPIPipeline:
                 final_cost,
                 self._best_cost,
                 self._last_cost,
-                self._config.haos_config.rewards,
+                self._haos_config.rewards,
                 is_deferred=True,
             )
             contributing = self._contributing_tags_from_sp_routes(sp_result)

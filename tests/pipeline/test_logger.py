@@ -8,7 +8,6 @@ import re
 from pathlib import Path
 
 from drispi.core.instance import CVRPInstance
-from drispi.haos.config import HAOSConfig
 from drispi.haos.haos import HAOSSelection
 from drispi.haos.tag import HAOSTag
 from drispi.pipeline.config import DRISPIConfig
@@ -29,7 +28,6 @@ def _minimal_config(tmp_path: Path) -> DRISPIConfig:
         time_limit=60.0,
         max_no_improve=10,
         output_dir=tmp_path,
-        haos_config=HAOSConfig(),
         seed=1,
     )
 

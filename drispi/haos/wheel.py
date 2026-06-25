@@ -15,6 +15,7 @@ class RouletteWheel:
 
     choices: list[Any]
     min_weight: float
+    starting_weight: float = WEIGHT_FLOOR
     _weights: list[float] = field(init=False)
 
     def __post_init__(self) -> None:
@@ -24,7 +25,7 @@ class RouletteWheel:
             raise ValueError("min_weight must be in [0.0, 1.0)")
         if self.min_weight * len(self.choices) > 1.0:
             raise ValueError("min_weight * n_choices > 1.0: floor is infeasible")
-        self._weights = [WEIGHT_FLOOR] * len(self.choices)
+        self._weights = [self.starting_weight] * len(self.choices)
 
     def _effective_probabilities(self) -> list[float]:
         total = sum(self._weights)
@@ -42,16 +43,18 @@ class RouletteWheel:
         return index, self.choices[index]
 
     def update(self, index: int, reward: float) -> None:
-        """Add ``reward`` to the weight at ``index`` (floored at WEIGHT_FLOOR)."""
+        """Add ``reward`` to the weight at ``index`` (floored at starting_weight)."""
         if index < 0 or index >= len(self._weights):
             raise IndexError("index out of range for wheel update")
-        self._weights[index] = max(self._weights[index] + reward, WEIGHT_FLOOR)
+        floor = self.starting_weight
+        self._weights[index] = max(self._weights[index] + reward, floor)
 
     def decay_all(self, decay: float) -> None:
-        """Multiply every weight by ``decay``, never dropping below WEIGHT_FLOOR."""
+        """Multiply every weight by ``decay``, never dropping below starting_weight."""
         if not (0.0 <= decay <= 1.0):
             raise ValueError("decay must be in [0.0, 1.0]")
-        self._weights = [max(weight * decay, WEIGHT_FLOOR) for weight in self._weights]
+        floor = self.starting_weight
+        self._weights = [max(weight * decay, floor) for weight in self._weights]
 
     def probabilities(self) -> list[float]:
         return self._effective_probabilities()

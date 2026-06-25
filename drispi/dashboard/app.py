@@ -154,14 +154,24 @@ def _config_chips(
     if meta is None:
         return f"time_limit {time_limit_s} · no_improve {no_improve}/{max_no_improve}"
     cfg = meta.get("config") or {}
+    if "stopping" in cfg:
+        flat: dict = {}
+        for section in cfg.values():
+            if isinstance(section, dict):
+                flat.update(section)
+        cfg = flat
     parts = []
     if "n_customers" in meta:
         parts.append(f"n={meta['n_customers']}")
     if "n_workers" in cfg:
         parts.append(f"workers={cfg['n_workers']}")
     haos_cfg = cfg.get("haos_config") or {}
-    if "decay" in haos_cfg:
-        parts.append(f"decay={haos_cfg['decay']}")
+    if isinstance(cfg.get("haos"), dict):
+        haos_section = cfg["haos"]
+        haos_cfg = {**haos_section, **haos_cfg}
+    decay = haos_cfg.get("decay", haos_cfg.get("haos_decay"))
+    if decay is not None:
+        parts.append(f"decay={decay}")
     for key, label in (
         ("max_no_improve", "max_no_improve"),
         ("warmup_iterations", "warmup"),

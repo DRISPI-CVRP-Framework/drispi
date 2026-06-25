@@ -9,7 +9,6 @@ import pytest
 
 from drispi.core.instance import CVRPInstance
 from drispi.core.solution import Route as SolutionRoute
-from drispi.haos.config import HAOSConfig
 from drispi.pipeline.config import DRISPIConfig
 from drispi.pipeline.pipeline import DRISPIPipeline, _seqs_to_solution_routes
 
@@ -66,7 +65,7 @@ def test_xl_n1281_pipeline_smoke_short(xl_n1281: CVRPInstance) -> None:
         max_no_improve=500,
         n_workers=2,
         output_dir=out,
-        haos_config=HAOSConfig(haos_warmup=10),
+        haos_warmup=10,
         warmup_iterations=1000,
         sp_interval=1000,
         subcluster_time_per_customer=0.02,

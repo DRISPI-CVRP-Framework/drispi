@@ -11,6 +11,24 @@ from drispi.route_pool.manager import RoutePoolManager
 from drispi.route_pool.pool import RoutePool
 from drispi.sp.solver import run_sp_sc
 
+_SP_SC_KW = {
+    "time_limit": 300.0,
+    "mip_gap": 0.0005,
+    "min_coverage": 1,
+    "warmup_iterations": 10,
+    "sp_interval": 3,
+}
+
+
+def _manager(max_pool_size: int = 100) -> RoutePoolManager:
+    return RoutePoolManager(
+        max_pool_size=max_pool_size,
+        min_coverage=1,
+        diversity_weight=1.0,
+        warmup_iterations=10,
+        sp_interval=3,
+    )
+
 
 def _pool_snapshot(pool: RoutePool) -> dict[frozenset[int], float]:
     return {frozenset(entry.route): entry.cost for entry in pool.routes()}
@@ -19,7 +37,7 @@ def _pool_snapshot(pool: RoutePool) -> dict[frozenset[int], float]:
 def test_run_sp_sc_skips_before_warmup(sp_instance: CVRPInstance) -> None:
     pool = RoutePool()
     pool.add([2, 3, 4, 5, 6, 7], sp_instance.route_cost([2, 3, 4, 5, 6, 7]))
-    manager = RoutePoolManager(max_pool_size=100)
+    manager = _manager()
 
     out = run_sp_sc(
         pool,
@@ -27,8 +45,7 @@ def test_run_sp_sc_skips_before_warmup(sp_instance: CVRPInstance) -> None:
         manager,
         iteration=5,
         best_solution=[[2, 3], [4, 5], [6, 7]],
-        warmup_iterations=10,
-        sp_interval=3,
+        **_SP_SC_KW,
     )
     assert out == (None, False)
 
@@ -46,8 +63,7 @@ def test_run_sp_sc_calls_update_scores_after_solve(sp_instance: CVRPInstance) ->
             manager,
             iteration=10,
             best_solution=[[2, 3], [4, 5], [6, 7]],
-            warmup_iterations=10,
-            sp_interval=3,
+            **_SP_SC_KW,
         )
 
     manager.update_scores_after_solve.assert_called_once_with(pool, lp)
@@ -76,8 +92,7 @@ def test_run_sp_sc_timeout_no_incumbent_uses_best_and_keeps_pool(
             manager,
             iteration=10,
             best_solution=best,
-            warmup_iterations=10,
-            sp_interval=3,
+            **_SP_SC_KW,
         )
 
     reset.assert_not_called()
@@ -105,8 +120,7 @@ def test_run_sp_sc_sp_path_skips_remove_duplicates(sp_instance: CVRPInstance) ->
             manager,
             iteration=10,
             best_solution=raw,
-            warmup_iterations=10,
-            sp_interval=3,
+            **_SP_SC_KW,
         )
 
     assert use_sp is True
@@ -123,7 +137,7 @@ def test_run_sp_sc_end_to_end_partition(
     pool.add([4, 5], sp_instance.route_cost([4, 5]))
     pool.add([6, 7], sp_instance.route_cost([6, 7]))
 
-    manager = RoutePoolManager(max_pool_size=100)
+    manager = _manager()
     best = [[2, 3], [4, 5], [6, 7]]
 
     sol, use_sp = run_sp_sc(
@@ -132,8 +146,7 @@ def test_run_sp_sc_end_to_end_partition(
         manager,
         iteration=10,
         best_solution=best,
-        warmup_iterations=10,
-        sp_interval=3,
+        **_SP_SC_KW,
         min_coverage=1,
     )
 
@@ -155,7 +168,7 @@ def test_run_sp_sc_end_to_end_set_covering(
     pool.add([4, 5], sp_instance.route_cost([4, 5]))
     pool.add([6, 7], sp_instance.route_cost([6, 7]))
 
-    manager = RoutePoolManager(max_pool_size=100)
+    manager = _manager()
     best = [[2, 3], [4, 5], [6, 7]]
 
     sol, use_sp = run_sp_sc(
@@ -164,8 +177,7 @@ def test_run_sp_sc_end_to_end_set_covering(
         manager,
         iteration=10,
         best_solution=best,
-        warmup_iterations=10,
-        sp_interval=3,
+        **_SP_SC_KW,
         min_coverage=2,
     )
 

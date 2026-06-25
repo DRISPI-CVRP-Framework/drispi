@@ -16,7 +16,9 @@ def test_maybe_evict_reduces_pool_to_max_size() -> None:
         entry.quality_scores.append(float(idx))
         entry.diversity_scores.append(float(4 - idx))
 
-    manager = RoutePoolManager(max_pool_size=2)
+    manager = RoutePoolManager(
+        max_pool_size=2, min_coverage=1, diversity_weight=1.0, warmup_iterations=10, sp_interval=3
+    )
     evicted = manager.maybe_evict(pool)
 
     assert evicted == 1
@@ -29,7 +31,9 @@ def test_update_scores_after_solve_appends_quality_and_diversity() -> None:
     route_b = [4, 5]
     pool.add(route_a, 10.0)
     pool.add(route_b, 12.0)
-    manager = RoutePoolManager(max_pool_size=10)
+    manager = RoutePoolManager(
+        max_pool_size=10, min_coverage=1, diversity_weight=1.0, warmup_iterations=10, sp_interval=3
+    )
 
     lp_weights = {frozenset(route_a): 0.7}
     manager.update_scores_after_solve(pool, lp_weights)
@@ -47,7 +51,9 @@ def test_reset_pool_to_best_clears_and_marks_all_elite(grid_instance) -> None:
 
     best_solution = [[4, 5], [6, 7]]
     costs = [11.0, 12.0]
-    manager = RoutePoolManager(max_pool_size=10)
+    manager = RoutePoolManager(
+        max_pool_size=10, min_coverage=1, diversity_weight=1.0, warmup_iterations=10, sp_interval=3
+    )
     manager.reset_pool_to_best(pool, best_solution, costs, grid_instance)
 
     assert pool.size() == 2

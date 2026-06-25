@@ -30,7 +30,7 @@ def uncovered_customers(pool: RoutePool, instance: CVRPInstance) -> list[int]:
 def coverage_satisfied(
     pool: RoutePool,
     instance: CVRPInstance,
-    min_coverage: int = 1,
+    min_coverage: int,
 ) -> bool:
     """Return whether every customer meets the minimum coverage requirement."""
     counts = coverage_counts(pool, instance)

@@ -105,16 +105,42 @@ def filter_by_type(lines: list[dict], type_: str) -> list[dict]:
     return [line for line in lines if line.get("type") == type_]
 
 
+_HAOS_FLAT_TO_LEGACY: dict[str, str] = {
+    "haos_k_candidates": "k_candidates",
+    "haos_lambda_demand_values": "lambda_demand_values",
+    "haos_paradigm_values": "paradigm_values",
+    "haos_vertex_method_values": "vertex_method_values",
+    "haos_route_method_values": "route_method_values",
+    "haos_solver_values": "solver_values",
+    "haos_decay": "decay",
+}
+
+
+def _normalize_haos_config(haos: dict) -> dict:
+    """Map flat ``haos_*`` keys to legacy names used by analysis charts."""
+    out = dict(haos)
+    for flat_key, legacy_key in _HAOS_FLAT_TO_LEGACY.items():
+        if flat_key in out and legacy_key not in out:
+            out[legacy_key] = out[flat_key]
+    return out
+
+
 def get_haos_config_from_jsonl(lines: list[dict]) -> dict | None:
-    """Extract HAOSConfig values from the init line."""
-    init_lines = filter_by_type(lines, "init")
-    if not init_lines:
-        return None
-    config = init_lines[0].get("config")
-    if not isinstance(config, dict):
-        return None
-    haos_config = config.get("haos_config")
-    return haos_config if isinstance(haos_config, dict) else None
+    """Extract HAOSConfig values from the init or config line."""
+    for type_ in ("init", "config"):
+        typed = filter_by_type(lines, type_)
+        if not typed:
+            continue
+        config = typed[0].get("config")
+        if not isinstance(config, dict):
+            continue
+        haos = config.get("haos")
+        if isinstance(haos, dict):
+            return _normalize_haos_config(haos)
+        haos_config = config.get("haos_config")
+        if isinstance(haos_config, dict):
+            return haos_config
+    return None
 
 
 # ---------------------------------------------------------------------------

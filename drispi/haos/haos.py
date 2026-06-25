@@ -53,24 +53,31 @@ class HAOS:
         self.rng = rng or random.Random()
 
         self.k_values = HAOSConfig.compute_k_values(instance, config.k_candidates)
-        self.wheel_1_k = RouletteWheel(self.k_values, config.min_weight_k)
+        sw = config.starting_weight
+        self.wheel_1_k = RouletteWheel(self.k_values, config.min_weight_k, starting_weight=sw)
         self.wheel_2_lambda = RouletteWheel(
             config.lambda_demand_values,
             config.min_weight_lambda,
+            starting_weight=sw,
         )
         self.wheel_3_paradigm = RouletteWheel(
             config.paradigm_values,
             config.min_weight_paradigm,
+            starting_weight=sw,
         )
         self.wheel_4a_vertex_method = RouletteWheel(
             config.vertex_method_values,
             config.min_weight_vertex_method,
+            starting_weight=sw,
         )
         self.wheel_4b_route_method = RouletteWheel(
             config.route_method_values,
             config.min_weight_route_method,
+            starting_weight=sw,
         )
-        self.wheel_5_solver = RouletteWheel(config.solver_values, config.min_weight_solver)
+        self.wheel_5_solver = RouletteWheel(
+            config.solver_values, config.min_weight_solver, starting_weight=sw
+        )
 
         self._immediate_rewards: dict[int, float] = {}
         self._deferred_rewards: dict[int, dict[HAOSTag, float]] = {}

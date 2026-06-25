@@ -6,7 +6,6 @@ from pathlib import Path
 from unittest.mock import patch
 
 from drispi.core.instance import CVRPInstance
-from drispi.haos.config import HAOSConfig
 from drispi.pipeline.config import DRISPIConfig
 from drispi.pipeline.pipeline import DRISPIPipeline
 
@@ -46,7 +45,7 @@ def test_drispi_pipeline_smoke_one_iteration(small_instance: CVRPInstance, tmp_p
         time_limit=1e9,
         max_no_improve=100,
         output_dir=tmp_path,
-        haos_config=HAOSConfig(haos_warmup=10),
+        haos_warmup=10,
         warmup_iterations=1000,
         sp_interval=1000,
     )

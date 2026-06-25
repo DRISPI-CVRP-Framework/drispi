@@ -9,8 +9,8 @@ from drispi.route_pool.pool import RoutePool
 
 def should_run_sp_sc(
     iteration: int,
-    warmup_iterations: int = 10,
-    sp_interval: int = 3,
+    warmup_iterations: int,
+    sp_interval: int,
 ) -> bool:
     """
     Returns True if SP/SC should run this iteration.
@@ -27,7 +27,7 @@ def should_run_sp_sc(
 def should_use_sp(
     pool: RoutePool,
     instance: CVRPInstance,
-    min_coverage: int = 1,
+    min_coverage: int,
 ) -> bool:
     """
     Returns True if every customer is covered at least ``min_coverage`` times in the pool.

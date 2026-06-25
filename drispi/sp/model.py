@@ -23,8 +23,8 @@ def build_and_solve(
     pool: RoutePool,
     instance: CVRPInstance,
     use_sp: bool,
-    time_limit: float = 300.0,
-    mip_gap: float = 0.01,
+    time_limit: float,
+    mip_gap: float,
 ) -> tuple[dict[frozenset[int], float], list[Route], bool, int]:
     """
     Build and solve the SC or SP model using two sequential Gurobi calls on one model.

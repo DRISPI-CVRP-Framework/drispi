@@ -21,7 +21,9 @@ def test_partition_must_cover_customers_exactly() -> None:
     bad = [[2, 3], [4]]  # missing 5
     d = np.zeros((4, 4), dtype=np.float64)
     with pytest.raises(ValueError, match="partition must cover"):
-        compute_boundary_ranks(d, bad, customers)
+        compute_boundary_ranks(
+            d, bad, customers, small_cluster_cap=20, small_cluster_alpha=0.5
+        )
 
 
 def test_compute_boundary_ranks_two_clusters() -> None:
@@ -37,7 +39,9 @@ def test_compute_boundary_ranks_two_clusters() -> None:
         ],
         dtype=np.float64,
     )
-    ranks = compute_boundary_ranks(d, partition, customers)
+    ranks = compute_boundary_ranks(
+        d, partition, customers, small_cluster_cap=20, small_cluster_alpha=0.5
+    )
     assert ranks.shape == (4,)
     assert np.all((ranks >= 0) & (ranks <= 1))
     # Customer 2 (index 0) has min cross distance 1 to the other cluster; customer 3 has 5.
@@ -93,6 +97,8 @@ def test_compute_boundary_ranks_large_n() -> None:
         lo = i * chunk
         hi = (i + 1) * chunk if i < k - 1 else n
         partition.append([customers[int(j)] for j in perm[lo:hi]])
-    ranks = compute_boundary_ranks(d, partition, customers)
+    ranks = compute_boundary_ranks(
+        d, partition, customers, small_cluster_cap=20, small_cluster_alpha=0.5
+    )
     assert ranks.shape == (n,)
     assert np.all(np.isfinite(ranks))

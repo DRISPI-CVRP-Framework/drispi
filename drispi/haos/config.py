@@ -26,6 +26,7 @@ class HAOSConfig:
 
     decay: float = 0.95
     haos_warmup: int = 10
+    starting_weight: float = 10.0
     rewards: HAOSRewardConfig = field(default_factory=HAOSRewardConfig)
 
     k_candidates: list[int] = field(

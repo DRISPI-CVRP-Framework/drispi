@@ -15,7 +15,7 @@ class SubclusterWallTimeoutError(RuntimeError):
 
 def subcluster_wall_timeout(max_budget: float) -> float:
     """Wall-clock limit for waiting on all subcluster workers (>= per-cluster budgets)."""
-    return max(180.0, 2.0 * max_budget)
+    return max(2.0 * max_budget, max_budget + 120.0)
 
 
 def make_subinstance(instance: CVRPInstance, cluster: list[int]) -> CVRPInstance:

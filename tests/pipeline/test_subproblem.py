@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
+from concurrent.futures import Future
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 from drispi.core.instance import CVRPInstance
 from drispi.pipeline.subproblem import (
+    SubclusterWallTimeoutError,
     make_subinstance,
     remap_routes_from_subcluster,
     solve_subclusters_parallel,
+    subcluster_wall_timeout,
 )
 
 
@@ -31,6 +36,35 @@ def test_remap_roundtrip(instance_12: CVRPInstance) -> None:
     sub_routes = [[2, 3], [4]]
     parent = remap_routes_from_subcluster(sub_routes, cluster)
     assert parent == [[3, 7], [9]]
+
+
+def test_subcluster_wall_timeout_formula() -> None:
+    assert subcluster_wall_timeout(0.0) == 180.0
+    assert subcluster_wall_timeout(100.0) == 200.0
+    assert subcluster_wall_timeout(489.5) == pytest.approx(979.0)
+
+
+def test_solve_subclusters_parallel_raises_on_wall_timeout(instance_12: CVRPInstance) -> None:
+    partition = [instance_12.customers[0:6], instance_12.customers[6:12]]
+    pending_future: Future = Future()
+    with patch("drispi.pipeline.subproblem.ProcessPoolExecutor") as mock_executor_cls:
+        mock_executor = MagicMock()
+        mock_executor_cls.return_value = mock_executor
+        mock_executor.submit.return_value = pending_future
+        with patch(
+            "drispi.pipeline.subproblem.wait",
+            return_value=({pending_future}, {pending_future}),
+        ):
+            with pytest.raises(SubclusterWallTimeoutError, match="wall timeout"):
+                solve_subclusters_parallel(
+                    instance_12,
+                    partition,
+                    "pyvrp",
+                    time_per_customer=0.05,
+                    n_workers=2,
+                    seed=1,
+                )
+    mock_executor.shutdown.assert_called_with(wait=False, cancel_futures=True)
 
 
 def test_solve_subclusters_parallel_real_pyvrp_small(instance_12: CVRPInstance) -> None:

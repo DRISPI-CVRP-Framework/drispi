@@ -23,7 +23,7 @@ from drispi.core.instance import CVRPInstance
 from drispi.core.solution import Route as SolutionRoute
 from drispi.core.types import Route
 from drispi.haos.config import HAOSConfig, HAOSRewardConfig
-from drispi.haos.haos import HAOS
+from drispi.haos.haos import HAOS, HAOSSelection
 from drispi.haos.tag import HAOSTag
 from drispi.haos.weights_io import save_weights
 from drispi.improvement.bg_ails import (
@@ -36,7 +36,7 @@ from drispi.pipeline.config import DRISPIConfig
 from drispi.pipeline.core_manager import CoreManager
 from drispi.pipeline.logger import PipelineLogger
 from drispi.pipeline.snapshot import SnapshotWriter
-from drispi.pipeline.subproblem import solve_subclusters_parallel
+from drispi.pipeline.subproblem import solve_subclusters_parallel, SubclusterWallTimeoutError
 from drispi.route_pool.coverage import coverage_counts
 from drispi.route_pool.manager import RoutePoolManager
 from drispi.route_pool.pool import RoutePool
@@ -323,29 +323,26 @@ class DRISPIPipeline:
         )
         t0 = time.perf_counter()
         n_clusters = len(partition)
-        if self._core_manager is not None:
-            n_workers = self._core_manager.acquire(self._instance_id, n_clusters)
-            try:
-                cluster_routes = solve_subclusters_parallel(
-                    self._instance,
-                    partition,
-                    selection.solver,
-                    self._config.subcluster_time_per_customer,
-                    n_workers,
-                    self._solver_seed + iteration * 10007,
-                )
-            finally:
-                self._core_manager.release(self._instance_id, n_workers)
-        else:
-            n_workers = min(self._config.n_workers, n_clusters)
-            cluster_routes = solve_subclusters_parallel(
-                self._instance,
+        try:
+            cluster_routes = self._solve_subclusters_parallel(
                 partition,
-                selection.solver,
-                self._config.subcluster_time_per_customer,
-                n_workers,
-                self._solver_seed + iteration * 10007,
+                selection,
+                iteration,
+                n_clusters,
             )
+        except SubclusterWallTimeoutError as exc:
+            self._skip_iteration_subcluster_timeout(
+                iteration,
+                selection,
+                is_spsc,
+                total_phases,
+                joint_prob,
+                time.perf_counter() - t0,
+                max_budget,
+                cluster_sizes,
+                exc,
+            )
+            return
         self._logger.log_phase_done(
             iteration,
             2,
@@ -585,6 +582,106 @@ class DRISPIPipeline:
         quality_avg = (
             sum(e.quality_rank_score for e in entries) / len(entries) if entries else 0.0
         )
+        self._logger.log_summary(
+            iteration,
+            iter_cost,
+            self._best_cost,
+            self._last_cost,
+            self._no_improve_count,
+            pool_size=self._pool.size(),
+            pool_diversity_avg=diversity_avg,
+            pool_quality_avg=quality_avg,
+            duplicates_rejected=rejected,
+            duplicates_replaced=replaced,
+        )
+
+    def _solve_subclusters_parallel(
+        self,
+        partition: list[list[int]],
+        selection: HAOSSelection,
+        iteration: int,
+        n_clusters: int,
+    ) -> list[list[Route]]:
+        seed = self._solver_seed + iteration * 10007
+        if self._core_manager is not None:
+            n_workers = self._core_manager.acquire(self._instance_id, n_clusters)
+            try:
+                return solve_subclusters_parallel(
+                    self._instance,
+                    partition,
+                    selection.solver,
+                    self._config.subcluster_time_per_customer,
+                    n_workers,
+                    seed,
+                )
+            finally:
+                self._core_manager.release(self._instance_id, n_workers)
+        n_workers = min(self._config.n_workers, n_clusters)
+        return solve_subclusters_parallel(
+            self._instance,
+            partition,
+            selection.solver,
+            self._config.subcluster_time_per_customer,
+            n_workers,
+            seed,
+        )
+
+    def _skip_iteration_subcluster_timeout(
+        self,
+        iteration: int,
+        selection: HAOSSelection,
+        is_spsc: bool,
+        total_phases: int,
+        joint_prob: float,
+        elapsed: float,
+        max_budget: float,
+        cluster_sizes: list[int],
+        exc: SubclusterWallTimeoutError,
+    ) -> None:
+        self._logger.log_iteration_skipped(
+            iteration,
+            "route",
+            str(exc),
+            elapsed=elapsed,
+            budget=max_budget,
+        )
+        self._logger.log_phase_done(
+            iteration,
+            2,
+            total_phases,
+            "route",
+            elapsed,
+            max_budget,
+            {"solver": selection.solver, "k": selection.k, "failed": True},
+            cluster_sizes=cluster_sizes,
+        )
+        imm = self._haos.compute_reward(
+            None,
+            self._best_cost,
+            self._last_cost,
+            self._haos_config.rewards,
+            is_deferred=False,
+        )
+        self._haos.update_immediate(selection, iteration, imm)
+        self._haos.update_final(selection, iteration)
+        self._no_improve_count += 1
+        self._logger.log_haos_roll(
+            iteration,
+            selection,
+            is_spsc,
+            joint_prob,
+            levels=self._haos.state_dict(),
+        )
+        rejected, replaced = self._pool.get_iter_counters()
+        self._pool.reset_iter_counters()
+        entries = self._pool.routes()
+        diversity_avg = (
+            sum(e.diversity_rank_score for e in entries) / len(entries) if entries else 0.0
+        )
+        quality_avg = (
+            sum(e.quality_rank_score for e in entries) / len(entries) if entries else 0.0
+        )
+        iter_cost = self._last_cost if math.isfinite(self._last_cost) else self._best_cost
         self._logger.log_summary(
             iteration,
             iter_cost,

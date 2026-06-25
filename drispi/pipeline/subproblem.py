@@ -9,6 +9,15 @@ from drispi.core.solution import Route as SolutionRoute
 from drispi.core.types import Route
 
 
+class SubclusterWallTimeoutError(RuntimeError):
+    """Raised when parallel subcluster workers exceed the wall-clock timeout."""
+
+
+def subcluster_wall_timeout(max_budget: float) -> float:
+    """Wall-clock limit for waiting on all subcluster workers (>= per-cluster budgets)."""
+    return max(180.0, 2.0 * max_budget)
+
+
 def make_subinstance(instance: CVRPInstance, cluster: list[int]) -> CVRPInstance:
     """
     Build a sub-CVRP with contiguous internal node IDs 2..len(cluster)+1.
@@ -98,9 +107,8 @@ def solve_subclusters_parallel(
 
     max_workers = max(1, n_workers)
     max_budget = max((budget(c) for c in partition), default=0.0)
-    # Parallel wall clock should be ~max_budget; allow JVM/pickle slack. Bounded
-    # wait avoids an unbounded block if a worker ignores its per-solve time limit.
-    wall_timeout = max(180.0, max_budget + 150.0)
+    # Parallel wall clock should be ~max_budget; allow model-build / pickle slack.
+    wall_timeout = subcluster_wall_timeout(max_budget)
 
     executor = ProcessPoolExecutor(max_workers=max_workers)
     clean_shutdown = True
@@ -121,7 +129,7 @@ def solve_subclusters_parallel(
             clean_shutdown = False
             executor.shutdown(wait=False, cancel_futures=True)
             sizes = [len(c) for c in partition]
-            raise RuntimeError(
+            raise SubclusterWallTimeoutError(
                 f"Subcluster parallel solve exceeded wall timeout {wall_timeout:.0f}s "
                 f"(solver={solver_name!r}, cluster_sizes={sizes}, max_budget={max_budget:.1f}s). "
                 "A worker may be hung or ignoring its time limit."

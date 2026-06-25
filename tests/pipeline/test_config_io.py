@@ -118,4 +118,4 @@ def test_repo_benchmark_yaml_inherits_seed_from_default() -> None:
     repo_root = Path(__file__).resolve().parents[2]
     loaded = load_config(repo_root / "configs" / "benchmark.yaml")
     assert loaded.seed == 42
-    assert loaded.max_no_improve == 200
+    assert loaded.max_no_improve == 100

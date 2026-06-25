@@ -538,6 +538,32 @@ class PipelineLogger:
             json_event=json_event,
         )
 
+    def log_iteration_skipped(
+        self,
+        iteration: int,
+        phase_name: str,
+        reason: str,
+        *,
+        elapsed: float | None = None,
+        budget: float | None = None,
+    ) -> None:
+        parts = [f"SKIPPED after {phase_name}", reason]
+        if elapsed is not None and budget is not None:
+            parts.append(f"({elapsed:.2f}s / {budget:.2f}s budget)")
+        self._emit(
+            iteration,
+            _TAG_SUMMARY,
+            "  ".join(parts),
+            json_event={
+                "type": "iteration_skipped",
+                "iteration": iteration,
+                "phase_name": phase_name,
+                "reason": reason,
+                "elapsed": round(elapsed, 2) if elapsed is not None else None,
+                "budget": budget,
+            },
+        )
+
     def log_final(
         self,
         iterations: int,

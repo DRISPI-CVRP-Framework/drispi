@@ -26,16 +26,21 @@ def test_build_and_set_covering_lp_weights_bounded(
     pool.add([6, 7], sp_instance.route_cost([6, 7]))
     pool.add([4, 5, 6], sp_instance.route_cost([4, 5, 6]))
 
-    lp_weights, raw, timed_out, sol_count = build_and_solve(
+    lp_weights, raw, timed_out, sol_count, metrics = build_and_solve(
         pool,
         sp_instance,
         use_sp=False,
         time_limit=300.0,
         mip_gap=0.01,
+        threads=1,
     )
 
     assert timed_out is False
     assert sol_count >= 1
+    assert metrics.sol_count == sol_count
+    assert metrics.total_wall_s >= 0.0
+    assert metrics.objective is not None
+    assert metrics.mip_gap is not None
     assert all(0.0 <= w <= 1.0 for w in lp_weights.values())
 
     covered = set()
@@ -53,16 +58,18 @@ def test_partition_solution_unique_assignment(
     pool.add([4, 5], sp_instance.route_cost([4, 5]))
     pool.add([6, 7], sp_instance.route_cost([6, 7]))
 
-    lp_weights, raw, timed_out, sol_count = build_and_solve(
+    lp_weights, raw, timed_out, sol_count, metrics = build_and_solve(
         pool,
         sp_instance,
         use_sp=True,
         time_limit=300.0,
         mip_gap=0.01,
+        threads=1,
     )
 
     assert timed_out is False
     assert sol_count >= 1
+    assert metrics.timed_out is False
 
     counts: dict[int, int] = {}
     for route in raw:
@@ -81,14 +88,14 @@ def test_lp_weights_respect_formulation_constraints(
     pool.add([6, 7], sp_instance.route_cost([6, 7]))
     pool.add([4, 5, 6], sp_instance.route_cost([4, 5, 6]))
 
-    lp_sc, _, _, _ = build_and_solve(
+    lp_sc, _, _, _, _ = build_and_solve(
         pool,
         sp_instance,
         use_sp=False,
         time_limit=300.0,
         mip_gap=0.01,
     )
-    lp_sp, _, _, _ = build_and_solve(
+    lp_sp, _, _, _, _ = build_and_solve(
         pool,
         sp_instance,
         use_sp=True,

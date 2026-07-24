@@ -2,12 +2,28 @@
 
 from __future__ import annotations
 
+import time
+from dataclasses import dataclass
+
 import gurobipy as gp
 from gurobipy import GRB
 
 from drispi.core.instance import CVRPInstance
 from drispi.core.types import Route
 from drispi.route_pool.pool import RoutePool
+
+
+@dataclass(frozen=True)
+class SolveMetrics:
+    """Wall-clock and MIP quality metrics from one LP-then-MIP ``build_and_solve`` call."""
+
+    lp_wall_s: float
+    mip_wall_s: float
+    total_wall_s: float
+    mip_gap: float | None
+    objective: float | None
+    timed_out: bool
+    sol_count: int
 
 
 def compute_route_cost(route: Route, instance: CVRPInstance) -> float:
@@ -25,15 +41,22 @@ def build_and_solve(
     use_sp: bool,
     time_limit: float,
     mip_gap: float,
-) -> tuple[dict[frozenset[int], float], list[Route], bool, int]:
+    *,
+    threads: int | None = None,
+) -> tuple[dict[frozenset[int], float], list[Route], bool, int, SolveMetrics]:
     """
     Build and solve the SC or SP model using two sequential Gurobi calls on one model.
+
+    Args:
+        threads: If set, passed to Gurobi ``Threads`` before the LP call so both the
+            LP and MIP phases use that thread count. ``None`` leaves Gurobi's default.
 
     Returns:
         lp_weights: LP relaxation primal x_r in [0, 1] for each route column.
         raw_solution: routes selected in the MIP (x_r > 0.5).
         timed_out: True if the MIP stopped on the time limit before proving optimality.
         sol_count: ``model.SolCount`` after the MIP (feasible integer solutions found).
+        metrics: per-phase wall times, MIP gap, and objective for the MIP call.
     """
     ordered: list[tuple[frozenset[int], Route]] = []
     for route in pool.as_route_pool():
@@ -42,6 +65,8 @@ def build_and_solve(
 
     model = gp.Model("drispi_sp_sc")
     model.setParam("OutputFlag", 0)
+    if threads is not None:
+        model.setParam("Threads", int(threads))
     model.ModelSense = GRB.MINIMIZE
 
     vars_by_key: dict[frozenset[int], gp.Var] = {}
@@ -64,8 +89,11 @@ def build_and_solve(
         else:
             model.addConstr(expr >= 1, name=f"cover_ge_{customer}")
 
+    t_lp0 = time.perf_counter()
     model.optimize()
+    lp_wall_s = time.perf_counter() - t_lp0
     if model.Status == GRB.INFEASIBLE:
+        model.dispose()
         msg = "LP relaxation is infeasible for the given pool and instance."
         raise RuntimeError(msg)
 
@@ -80,12 +108,15 @@ def build_and_solve(
 
     model.setParam("TimeLimit", time_limit)
     model.setParam("MIPGap", mip_gap)
+    t_mip0 = time.perf_counter()
     model.optimize()
+    mip_wall_s = time.perf_counter() - t_mip0
 
     timed_out = model.Status == GRB.TIME_LIMIT
     sol_count = int(model.SolCount)
 
     if model.Status == GRB.INFEASIBLE:
+        model.dispose()
         msg = "MIP is infeasible for the given pool and instance."
         raise RuntimeError(msg)
 
@@ -94,4 +125,23 @@ def build_and_solve(
         if vars_by_key[key].X > 0.5:
             raw_solution.append(list(route))
 
-    return lp_weights, raw_solution, timed_out, sol_count
+    if model.Status == GRB.OPTIMAL:
+        reported_gap: float | None = 0.0
+    elif sol_count > 0:
+        reported_gap = float(model.MIPGap)
+    else:
+        reported_gap = None
+
+    objective: float | None = float(model.ObjVal) if sol_count > 0 else None
+
+    metrics = SolveMetrics(
+        lp_wall_s=lp_wall_s,
+        mip_wall_s=mip_wall_s,
+        total_wall_s=lp_wall_s + mip_wall_s,
+        mip_gap=reported_gap,
+        objective=objective,
+        timed_out=timed_out,
+        sol_count=sol_count,
+    )
+    model.dispose()
+    return lp_weights, raw_solution, timed_out, sol_count, metrics

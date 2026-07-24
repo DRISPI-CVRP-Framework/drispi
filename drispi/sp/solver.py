@@ -22,6 +22,8 @@ def run_sp_sc(
     min_coverage: int,
     warmup_iterations: int,
     sp_interval: int,
+    *,
+    threads: int | None = None,
 ) -> tuple[list[Route] | None, bool]:
     """
     Run set partitioning or set covering for one iteration when policy allows.
@@ -39,12 +41,13 @@ def run_sp_sc(
         return None, False
 
     use_sp = should_use_sp(pool, instance, min_coverage)
-    lp_weights, raw_solution, timed_out, sol_count = build_and_solve(
+    lp_weights, raw_solution, timed_out, sol_count, _metrics = build_and_solve(
         pool,
         instance,
         use_sp,
         time_limit=time_limit,
         mip_gap=mip_gap,
+        threads=threads,
     )
 
     manager.update_scores_after_solve(pool, lp_weights)

@@ -56,7 +56,10 @@ def test_run_sp_sc_calls_update_scores_after_solve(sp_instance: CVRPInstance) ->
     manager = MagicMock(spec=RoutePoolManager)
 
     lp = {frozenset({2, 3}): 0.5, frozenset({4, 5, 6, 7}): 0.5}
-    with patch("drispi.sp.solver.build_and_solve", return_value=(lp, [[2, 3], [4, 5, 6, 7]], False, 1)):
+    with patch(
+        "drispi.sp.solver.build_and_solve",
+        return_value=(lp, [[2, 3], [4, 5, 6, 7]], False, 1, None),
+    ):
         run_sp_sc(
             pool,
             sp_instance,
@@ -84,7 +87,7 @@ def test_run_sp_sc_timeout_no_incumbent_uses_best_and_keeps_pool(
     lp = {frozenset({2, 3}): 0.33, frozenset({4, 5}): 0.33, frozenset({6, 7}): 0.34}
     with (
         patch.object(RoutePoolManager, "reset_pool_to_best") as reset,
-        patch("drispi.sp.solver.build_and_solve", return_value=(lp, [], True, 0)),
+        patch("drispi.sp.solver.build_and_solve", return_value=(lp, [], True, 0, None)),
     ):
         sol, use_sp = run_sp_sc(
             pool,
@@ -111,7 +114,7 @@ def test_run_sp_sc_sp_path_skips_remove_duplicates(sp_instance: CVRPInstance) ->
     lp = {frozenset({2, 3}): 1.0, frozenset({4, 5}): 1.0, frozenset({6, 7}): 1.0}
     raw = [[2, 3], [4, 5], [6, 7]]
     with (
-        patch("drispi.sp.solver.build_and_solve", return_value=(lp, raw, False, 1)),
+        patch("drispi.sp.solver.build_and_solve", return_value=(lp, raw, False, 1, None)),
         patch("drispi.sp.solver.remove_duplicates") as rd,
     ):
         sol, use_sp = run_sp_sc(

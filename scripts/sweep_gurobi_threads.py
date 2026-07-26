@@ -145,9 +145,9 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--threads",
         type=int,
         nargs="+",
-        default=[1, 2, 4, 8, 16],
+        default=[1, 2, 3, 4, 5, 6],
         metavar="N",
-        help="Thread counts to sweep (default: 1 2 4 8 16)",
+        help="Thread counts to sweep (default: 1 2 3 4 5 6)",
     )
     parser.add_argument(
         "--repeats",

@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Overnight Gurobi Threads sweep orchestrator for dantzig.
-# Wave 1: n2307 on CPUs 0-15 + n3975 on 16-31 (parallel)
-# Wave 2: n8389 on CPUs 0-15 (after wave 1)
+# All three instances in parallel on disjoint 6-core islands (max Threads=6):
+#   n2307  → CPUs 0-5
+#   n3975  → CPUs 6-11
+#   n8389  → CPUs 12-17
 #
 # Usage (from ~/drispi on the server):
 #   bash scripts/run_gurobi_sweeps_overnight.sh
@@ -15,7 +17,7 @@ cd "$ROOT"
 mkdir -p artifacts/sweeps
 
 IMAGE="${DRISPI_IMAGE:-altendeitering_sp-benchmark}"
-THREADS="${SWEEP_THREADS:-1 2 4 8 16}"
+THREADS="${SWEEP_THREADS:-1 2 3 4 5 6}"
 REPEATS="${SWEEP_REPEATS:-3}"
 MODE="${SWEEP_MODE:-sp}"
 TIME_LIMIT="${SWEEP_TIME_LIMIT:-300}"
@@ -54,24 +56,21 @@ run_sweep () {
   echo "$(date -Is) started $name on CPUs $cpus -> $out"
 }
 
-echo "$(date -Is) wave 1: n2307 on 0-15, n3975 on 16-31"
-run_sweep altendeitering_sweep_n2307-k34 0-15 \
+echo "$(date -Is) starting all 3 sweeps in parallel (threads: ${THREADS})"
+run_sweep altendeitering_sweep_n2307-k34 0-5 \
   artifacts/pool_snapshots/n2307-k34 \
   artifacts/sweeps/n2307-k34_gurobi_threads.jsonl
 
-run_sweep altendeitering_sweep_n3975-k687 16-31 \
+run_sweep altendeitering_sweep_n3975-k687 6-11 \
   artifacts/pool_snapshots/n3975-k687 \
   artifacts/sweeps/n3975-k687_gurobi_threads.jsonl
 
-echo "$(date -Is) waiting for wave 1..."
-docker wait altendeitering_sweep_n2307-k34
-docker wait altendeitering_sweep_n3975-k687
-echo "$(date -Is) wave 1 done"
-
-echo "$(date -Is) wave 2: n8389 on 0-15"
-run_sweep altendeitering_sweep_n8389-k2028 0-15 \
+run_sweep altendeitering_sweep_n8389-k2028 12-17 \
   artifacts/pool_snapshots/n8389-k2028 \
   artifacts/sweeps/n8389-k2028_gurobi_threads.jsonl
 
+echo "$(date -Is) waiting for all sweeps..."
+docker wait altendeitering_sweep_n2307-k34
+docker wait altendeitering_sweep_n3975-k687
 docker wait altendeitering_sweep_n8389-k2028
 echo "$(date -Is) all sweeps finished"

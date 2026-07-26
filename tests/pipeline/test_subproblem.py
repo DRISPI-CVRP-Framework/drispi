@@ -9,6 +9,7 @@ import pytest
 
 from drispi.core.instance import CVRPInstance
 from drispi.pipeline.subproblem import (
+    SubclusterSolveError,
     SubclusterWallTimeoutError,
     make_subinstance,
     remap_routes_from_subcluster,
@@ -65,6 +66,32 @@ def test_solve_subclusters_parallel_raises_on_wall_timeout(instance_12: CVRPInst
                     seed=1,
                 )
     mock_executor.shutdown.assert_called_with(wait=False, cancel_futures=True)
+
+
+def test_solve_subclusters_parallel_wraps_worker_failure(instance_12: CVRPInstance) -> None:
+    partition = [instance_12.customers[0:6], instance_12.customers[6:12]]
+    failed: Future = Future()
+    failed.set_exception(
+        RuntimeError("ails2 subprocess exceeded hard timeout (563.28 s).")
+    )
+    with patch("drispi.pipeline.subproblem.ProcessPoolExecutor") as mock_executor_cls:
+        mock_executor = MagicMock()
+        mock_executor_cls.return_value = mock_executor
+        mock_executor.submit.return_value = failed
+        with patch(
+            "drispi.pipeline.subproblem.wait",
+            return_value=({failed}, set()),
+        ):
+            with pytest.raises(SubclusterSolveError, match="Subcluster worker failed"):
+                solve_subclusters_parallel(
+                    instance_12,
+                    partition,
+                    "ails2",
+                    time_per_customer=0.05,
+                    n_workers=2,
+                    seed=1,
+                )
+    mock_executor.shutdown.assert_called_with(wait=True, cancel_futures=False)
 
 
 def test_solve_subclusters_parallel_real_pyvrp_small(instance_12: CVRPInstance) -> None:

@@ -9,7 +9,11 @@ from drispi.core.solution import Route as SolutionRoute
 from drispi.core.types import Route
 
 
-class SubclusterWallTimeoutError(RuntimeError):
+class SubclusterSolveError(RuntimeError):
+    """Raised when parallel subcluster solving fails (wall timeout or worker error)."""
+
+
+class SubclusterWallTimeoutError(SubclusterSolveError):
     """Raised when parallel subcluster workers exceed the wall-clock timeout."""
 
 
@@ -134,7 +138,15 @@ def solve_subclusters_parallel(
                 f"(solver={solver_name!r}, cluster_sizes={sizes}, max_budget={max_budget:.1f}s). "
                 "A worker may be hung or ignoring its time limit."
             )
-        return [f.result() for f in futures]
+        try:
+            return [f.result() for f in futures]
+        except Exception as exc:
+            sizes = [len(c) for c in partition]
+            raise SubclusterSolveError(
+                f"Subcluster worker failed "
+                f"(solver={solver_name!r}, cluster_sizes={sizes}, "
+                f"max_budget={max_budget:.1f}s): {exc}"
+            ) from exc
     finally:
         if clean_shutdown:
             executor.shutdown(wait=True, cancel_futures=False)

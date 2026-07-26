@@ -36,7 +36,7 @@ from drispi.pipeline.config import DRISPIConfig
 from drispi.pipeline.core_manager import CoreManager
 from drispi.pipeline.logger import PipelineLogger
 from drispi.pipeline.snapshot import SnapshotWriter
-from drispi.pipeline.subproblem import SubclusterWallTimeoutError, solve_subclusters_parallel
+from drispi.pipeline.subproblem import SubclusterSolveError, solve_subclusters_parallel
 from drispi.route_pool.coverage import coverage_counts
 from drispi.route_pool.manager import RoutePoolManager
 from drispi.route_pool.pool import RoutePool
@@ -331,8 +331,8 @@ class DRISPIPipeline:
                 iteration,
                 n_clusters,
             )
-        except SubclusterWallTimeoutError as exc:
-            self._skip_iteration_subcluster_timeout(
+        except SubclusterSolveError as exc:
+            self._skip_iteration_subcluster_failure(
                 iteration,
                 selection,
                 is_spsc,
@@ -627,7 +627,7 @@ class DRISPIPipeline:
             seed,
         )
 
-    def _skip_iteration_subcluster_timeout(
+    def _skip_iteration_subcluster_failure(
         self,
         iteration: int,
         selection: HAOSSelection,
@@ -637,7 +637,7 @@ class DRISPIPipeline:
         elapsed: float,
         max_budget: float,
         cluster_sizes: list[int],
-        exc: SubclusterWallTimeoutError,
+        exc: SubclusterSolveError,
     ) -> None:
         self._logger.log_iteration_skipped(
             iteration,

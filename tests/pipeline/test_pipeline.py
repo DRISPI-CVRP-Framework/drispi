@@ -10,7 +10,7 @@ from drispi.core.solution import Route as SolutionRoute
 from drispi.haos.haos import HAOSSelection
 from drispi.pipeline.config import DRISPIConfig
 from drispi.pipeline.pipeline import DRISPIPipeline
-from drispi.pipeline.subproblem import SubclusterWallTimeoutError
+from drispi.pipeline.subproblem import SubclusterSolveError, SubclusterWallTimeoutError
 
 
 def _fake_cluster_routes(
@@ -431,6 +431,47 @@ def test_pipeline_skips_iteration_on_subcluster_timeout(
         calls["n"] += 1
         if calls["n"] == 1:
             raise SubclusterWallTimeoutError("wall timeout")
+        return _fake_cluster_routes(instance_12, _even_k_partition(instance_12, 2))
+
+    with (
+        patch("drispi.pipeline.pipeline.cluster_instance", side_effect=_fake_cluster_instance),
+        patch("drispi.pipeline.pipeline.solve_subclusters_parallel", side_effect=fake_solve),
+        patch("drispi.pipeline.pipeline.run_bg_ails_perturb", side_effect=_fake_bg_perturb),
+        patch("drispi.pipeline.pipeline.run_bg_ails_improve", side_effect=_fake_bg_improve),
+        patch("drispi.pipeline.pipeline.run_sp_sc", side_effect=_fake_run_sp_sc),
+        patch(
+            "drispi.pipeline.pipeline.run_standard_improvement",
+            side_effect=_fake_standard_improvement,
+        ),
+    ):
+        routes = pipe.run()
+
+    assert calls["n"] >= 2
+    assert pipe._no_improve_count >= 1
+    assert isinstance(routes, list)
+
+
+def test_pipeline_skips_iteration_on_subcluster_worker_failure(
+    instance_12: CVRPInstance, tmp_path: Path
+) -> None:
+    cfg = DRISPIConfig(
+        time_limit=1e9,
+        max_no_improve=1000,
+        output_dir=tmp_path,
+        haos_warmup=2,
+        warmup_iterations=100,
+        sp_interval=100,
+    )
+    pipe = DRISPIPipeline(instance_12, cfg)
+    calls = {"n": 0}
+
+    def fake_solve(*args: object, **kwargs: object) -> list[list[list[int]]]:
+        del args, kwargs
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise SubclusterSolveError(
+                "Subcluster worker failed: ails2 subprocess exceeded hard timeout"
+            )
         return _fake_cluster_routes(instance_12, _even_k_partition(instance_12, 2))
 
     with (

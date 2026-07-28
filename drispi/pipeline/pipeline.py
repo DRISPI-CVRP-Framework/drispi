@@ -379,6 +379,8 @@ class DRISPIPipeline:
             small_cluster_cap=self._config.bg_ails_small_cluster_cap,
             small_cluster_alpha=self._config.bg_ails_small_cluster_alpha,
             seed=bg_seed,
+            pair_selection=self._config.bg_ails_pair_selection,
+            n_chains_mode=self._config.bg_ails_n_chains_mode,
         )
         self._write_phase_snapshot(
             iteration,

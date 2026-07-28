@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import tempfile
 from pathlib import Path
+from typing import Literal
 
 import numpy as np
 
@@ -13,6 +14,9 @@ from drispi.core.solution import Route, Solution
 from drispi.improvement.base import BaseImprovement
 from drispi.solvers.ails2 import Ails2Solver
 from drispi.utils.io import write_sol
+
+PairSelection = Literal["stochastic", "greedy"]
+NChainsMode = Literal["k_minus_1", "k"]
 
 
 def _validate_partition(partition: list[list[int]], customers: list[int]) -> None:
@@ -175,25 +179,44 @@ def compute_route_boundary_affinities(
     return aff
 
 
+def _pick_from_weights(
+    weights: np.ndarray,
+    rng: np.random.Generator,
+    *,
+    selection: PairSelection,
+) -> int:
+    """Sample index ∝ ``weights``, or take ``argmax`` when ``selection == "greedy"``."""
+    w = np.asarray(weights, dtype=np.float64)
+    if selection == "greedy":
+        return int(np.argmax(w))
+    total = float(w.sum())
+    if total < 1e-15:
+        return int(rng.integers(0, len(w)))
+    return int(rng.choice(len(w), p=w / total))
+
+
 def _pick_route_pair_by_affinity(
     seqs: list[list[int]],
     route_cluster_ids: list[int],
     overall_weights: np.ndarray,
     affinity_matrix: np.ndarray,
     rng: np.random.Generator,
+    *,
+    selection: PairSelection = "stochastic",
 ) -> tuple[int, int]:
     """
     Select routes ``(i, j)`` near the same boundary: pick ``i`` by boundary weight,
     pick neighboring cluster ``k`` from ``i``'s affinity row, then pick ``j`` in
     ``k`` weighted by how close ``j`` is to ``i``'s cluster.
+
+    ``selection="stochastic"`` samples at each step; ``"greedy"`` takes argmax.
     """
     n_r = len(seqs)
     if n_r < 2:
         return 0, 0
 
     w = overall_weights.astype(np.float64) + 1e-9
-    p_i = w / w.sum()
-    i = int(rng.choice(n_r, p=p_i))
+    i = _pick_from_weights(w, rng, selection=selection)
     c_i = route_cluster_ids[i]
 
     row = affinity_matrix[i].astype(np.float64)
@@ -203,11 +226,15 @@ def _pick_route_pair_by_affinity(
         if n_c <= 1:
             j = (i + 1) % n_r
             return i, j
-        k = int(rng.integers(0, n_c))
-        if k == c_i:
-            k = (k + 1) % n_c
+        if selection == "greedy":
+            # Prefer first cluster that is not i's own (deterministic fallback).
+            k = 0 if c_i != 0 else (1 if n_c > 1 else 0)
+        else:
+            k = int(rng.integers(0, n_c))
+            if k == c_i:
+                k = (k + 1) % n_c
     else:
-        k = int(rng.choice(len(row), p=row / row_sum))
+        k = _pick_from_weights(row, rng, selection=selection)
 
     candidates = [j for j in range(n_r) if j != i and route_cluster_ids[j] == k]
     if not candidates:
@@ -216,8 +243,7 @@ def _pick_route_pair_by_affinity(
         if w2.sum() < 1e-15:
             j = (i + 1) % n_r
             return i, j
-        p2 = w2 / w2.sum()
-        j = int(rng.choice(n_r, p=p2))
+        j = _pick_from_weights(w2, rng, selection=selection)
         return i, j
 
     if c_i < 0:
@@ -227,8 +253,7 @@ def _pick_route_pair_by_affinity(
             [affinity_matrix[j, c_i] + 1e-9 for j in candidates],
             dtype=np.float64,
         )
-    scores = scores / scores.sum()
-    pick = int(rng.choice(len(candidates), p=scores))
+    pick = _pick_from_weights(scores, rng, selection=selection)
     j = candidates[pick]
     return i, j
 
@@ -252,6 +277,21 @@ def _cross_reconnect(
     return new_i, new_j
 
 
+def _resolve_n_chains(
+    partition: list[list[int]],
+    *,
+    n_chains: int | None,
+    n_chains_mode: NChainsMode,
+) -> int:
+    """Resolve chain count from explicit override or ``n_chains_mode``."""
+    if n_chains is not None:
+        return n_chains
+    k = len(partition)
+    if n_chains_mode == "k":
+        return k
+    return max(1, k - 1)
+
+
 def perturb_routes(
     routes: list[Route],
     instance: CVRPInstance,
@@ -261,6 +301,8 @@ def perturb_routes(
     rng: np.random.Generator,
     *,
     n_chains: int | None = None,
+    pair_selection: PairSelection = "stochastic",
+    n_chains_mode: NChainsMode = "k_minus_1",
 ) -> tuple[list[Route], list[int]]:
     """
     Multi-route cross-reconnect perturbation.
@@ -269,8 +311,9 @@ def perturb_routes(
     then :func:`_cross_reconnect` on the chosen pair, repeated for the resolved chain
     count (see below).
 
-    If ``n_chains`` is ``None``, uses ``max(1, len(partition) - 1)`` (one chain per
-    inter-cluster boundary, at least one).
+    If ``n_chains`` is ``None``, ``n_chains_mode="k_minus_1"`` uses
+    ``max(1, len(partition) - 1)`` and ``"k"`` uses ``len(partition)``.
+    ``pair_selection`` controls stochastic vs greedy route-pair picking.
     """
     customers = list(instance.customers)
     cid_to_i = _customer_index_map(customers)
@@ -280,7 +323,9 @@ def perturb_routes(
         s0 = seqs[0] if seqs else []
         return [Route(customers=s0[:], cost=instance.route_cost(s0))], []
 
-    n_chain_iter = n_chains if n_chains is not None else max(1, len(partition) - 1)
+    n_chain_iter = _resolve_n_chains(
+        partition, n_chains=n_chains, n_chains_mode=n_chains_mode
+    )
 
     weights = np.array(
         [
@@ -297,7 +342,12 @@ def perturb_routes(
     perturbed_indices: set[int] = set()
     for _ in range(n_chain_iter):
         i, j = _pick_route_pair_by_affinity(
-            seqs, route_cluster_ids, weights, affinity, rng
+            seqs,
+            route_cluster_ids,
+            weights,
+            affinity,
+            rng,
+            selection=pair_selection,
         )
         perturbed_indices.add(i)
         perturbed_indices.add(j)
@@ -357,6 +407,8 @@ def run_bg_ails_perturb(
     small_cluster_cap: int,
     small_cluster_alpha: float,
     seed: int,
+    pair_selection: PairSelection = "stochastic",
+    n_chains_mode: NChainsMode = "k_minus_1",
 ) -> tuple[list[Route], list[int]]:
     """
     Boundary ranks + cross-reconnect perturbation only (no AILS-II).
@@ -383,6 +435,8 @@ def run_bg_ails_perturb(
         partition,
         dissimilarity_matrix,
         rng,
+        pair_selection=pair_selection,
+        n_chains_mode=n_chains_mode,
     )
 
 
@@ -433,6 +487,8 @@ def run_bg_ails(
     small_cluster_alpha: float,
     solver: Ails2Solver | None = None,
     seed: int,
+    pair_selection: PairSelection = "stochastic",
+    n_chains_mode: NChainsMode = "k_minus_1",
 ) -> tuple[list[Route], list[int], list[Route]]:
     """
     Full BG-AILS pipeline: ranks → weighted perturbation → AILS-II with injected
@@ -445,8 +501,8 @@ def run_bg_ails(
     If ``partition`` has at most one cluster, delegates to
     :func:`run_standard_improvement` (same ``time_limit``).
 
-    Cross-reconnect chains per run: ``max(1, len(partition) - 1)`` (``k - 1`` for
-    ``k`` clusters), a lower bound on inter-cluster boundaries without extra tuning.
+    Cross-reconnect chains per run default to ``k - 1`` (``n_chains_mode``), or
+    ``k`` when ``n_chains_mode="k"``. Pair selection is stochastic or greedy.
     """
     pert, perturbed_indices = run_bg_ails_perturb(
         instance,
@@ -457,6 +513,8 @@ def run_bg_ails(
         small_cluster_cap=small_cluster_cap,
         small_cluster_alpha=small_cluster_alpha,
         seed=seed,
+        pair_selection=pair_selection,
+        n_chains_mode=n_chains_mode,
     )
     improved = run_bg_ails_improve(
         instance,
@@ -510,6 +568,8 @@ class BgAilsImprovement(BaseImprovement):
         small_cluster_alpha: float,
         solver: Ails2Solver | None = None,
         seed: int,
+        pair_selection: PairSelection = "stochastic",
+        n_chains_mode: NChainsMode = "k_minus_1",
     ) -> None:
         self._d = np.asarray(dissimilarity_matrix, dtype=np.float64)
         self._partition = partition
@@ -519,6 +579,8 @@ class BgAilsImprovement(BaseImprovement):
         self._small_cluster_alpha = small_cluster_alpha
         self._solver = solver
         self._seed = seed
+        self._pair_selection = pair_selection
+        self._n_chains_mode = n_chains_mode
         self.last_perturbed_route_indices: list[int] = []
 
     def improve(self, solution: Solution, instance: CVRPInstance, time_limit: float) -> Solution:
@@ -534,6 +596,8 @@ class BgAilsImprovement(BaseImprovement):
             small_cluster_alpha=self._small_cluster_alpha,
             solver=self._solver,
             seed=self._seed,
+            pair_selection=self._pair_selection,
+            n_chains_mode=self._n_chains_mode,
         )
         self.last_perturbed_route_indices = perturbed
         total = float(sum(r.cost for r in out_routes))

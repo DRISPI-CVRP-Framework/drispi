@@ -79,6 +79,90 @@ def test_pick_route_pair_by_affinity_distinct_when_two_routes() -> None:
         assert i != j
 
 
+def test_pick_route_pair_greedy_takes_argmax_weight() -> None:
+    seqs = [[2, 3], [4, 5], [6, 7]]
+    partition = [[2, 3], [4, 5], [6, 7]]
+    rc = bg_ails._route_cluster_ids(seqs, partition)
+    customers = [2, 3, 4, 5, 6, 7]
+    cid = {c: i for i, c in enumerate(customers)}
+    d = np.ones((6, 6), dtype=np.float64)
+    np.fill_diagonal(d, 0.0)
+    # Make route 0 closest to cluster 1 so greedy partner is route 1.
+    d[0, 2] = d[2, 0] = 0.1
+    d[0, 3] = d[3, 0] = 0.1
+    d[1, 2] = d[2, 1] = 0.1
+    d[1, 3] = d[3, 1] = 0.1
+    aff = bg_ails.compute_route_boundary_affinities(seqs, rc, partition, d, cid)
+    w = np.array([0.1, 0.2, 10.0], dtype=np.float64)
+    rng = np.random.default_rng(0)
+    for _ in range(20):
+        i, j = bg_ails._pick_route_pair_by_affinity(
+            seqs, rc, w, aff, rng, selection="greedy"
+        )
+        assert i == 2
+        assert i != j
+
+
+def test_pick_route_pair_stochastic_can_pick_non_max() -> None:
+    seqs = [[2, 3], [4, 5]]
+    partition = [[2, 3], [4, 5]]
+    rc = bg_ails._route_cluster_ids(seqs, partition)
+    cid = {c: i for i, c in enumerate([2, 3, 4, 5])}
+    d = np.ones((4, 4), dtype=np.float64)
+    np.fill_diagonal(d, 0.0)
+    aff = bg_ails.compute_route_boundary_affinities(seqs, rc, partition, d, cid)
+    w = np.array([10.0, 1.0], dtype=np.float64)
+    rng = np.random.default_rng(7)
+    seen_i = {bg_ails._pick_route_pair_by_affinity(seqs, rc, w, aff, rng)[0] for _ in range(200)}
+    assert seen_i == {0, 1}
+
+
+def test_n_chains_mode_k_minus_1_vs_k(monkeypatch) -> None:
+    inst = _square_instance()
+    partition = [[2, 3], [4, 5], [6, 7]]
+    assert len(partition) == 3
+    n = len(inst.customers)
+    d = np.ones((n, n), dtype=np.float64) * 2.0
+    np.fill_diagonal(d, 0.0)
+    routes = [
+        Route(customers=[2, 3], cost=0.0),
+        Route(customers=[4, 5], cost=0.0),
+        Route(customers=[6, 7], cost=0.0),
+    ]
+    ranks = np.ones(n, dtype=np.float64)
+    calls: list[int] = []
+
+    def _count_pick(*args, **kwargs):
+        calls.append(1)
+        return 0, 1
+
+    monkeypatch.setattr(bg_ails, "_pick_route_pair_by_affinity", _count_pick)
+
+    calls.clear()
+    bg_ails.perturb_routes(
+        routes,
+        inst,
+        ranks,
+        partition,
+        d,
+        np.random.default_rng(0),
+        n_chains_mode="k_minus_1",
+    )
+    assert len(calls) == 2  # k - 1
+
+    calls.clear()
+    bg_ails.perturb_routes(
+        routes,
+        inst,
+        ranks,
+        partition,
+        d,
+        np.random.default_rng(0),
+        n_chains_mode="k",
+    )
+    assert len(calls) == 3  # k
+
+
 def test_perturb_routes_preserves_all_customers() -> None:
     inst = _square_instance()
     partition = [[2, 3, 4], [5, 6, 7]]

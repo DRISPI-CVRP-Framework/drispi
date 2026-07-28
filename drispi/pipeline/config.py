@@ -33,6 +33,8 @@ class DRISPIConfig:
     bg_ails_boundary_threshold: float = 0.5
     bg_ails_small_cluster_cap: int = 20
     bg_ails_small_cluster_alpha: float = 0.5
+    bg_ails_pair_selection: str = "stochastic"  # "stochastic" | "greedy"
+    bg_ails_n_chains_mode: str = "k_minus_1"  # "k_minus_1" | "k"
 
     # ── Standard improvement ──────────────────────────────────────────
     standard_improvement_time_limit: float = 120.0

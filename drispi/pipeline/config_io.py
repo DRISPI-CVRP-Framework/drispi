@@ -32,6 +32,8 @@ _SECTION_FIELDS: dict[str, list[str]] = {
         "bg_ails_boundary_threshold",
         "bg_ails_small_cluster_cap",
         "bg_ails_small_cluster_alpha",
+        "bg_ails_pair_selection",
+        "bg_ails_n_chains_mode",
     ],
     "standard_improvement": ["standard_improvement_time_limit"],
     "pool": ["max_pool_size", "pool_diversity_weight"],

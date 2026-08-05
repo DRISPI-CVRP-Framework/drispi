@@ -1,0 +1,29 @@
+# C3 — Long convergence / variance characterization (deployed config)
+#
+# Full 7+1 async slice. Orchestrator packs 4 concurrent slices on 32 cores
+# (real contention; contrast with isolated C1). Wall marks are logged by
+# scripts/run_c3_long_convergence.py (not by this YAML alone).
+#
+# Merge on top of configs/default.yaml when passed as --config.
+
+time_limit: 28800.0          # 8 h
+max_no_improve: 1000000000   # disable stagnation stop; time_limit only
+run_analysis: true
+output_dir: "artifacts/c3_long_convergence/runs"
+
+cores:
+  total: 8
+  dri: 7
+  sp: 1
+  # cpu_list supplied per slice via --cpus (orchestrator assigns islands)
+
+sp_sc:
+  mode: async
+  trigger: wallclock
+  interval_minutes: 15.0
+  overlap_policy: skip
+  warmup_iterations: 10
+  sp_interval: 3
+  min_coverage: 5
+  sp_time_limit: 600.0
+  mip_gap: 0.0005

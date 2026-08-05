@@ -18,4 +18,8 @@ From the repo root after installation, run the pipeline via `drispi-pipeline <in
 
 ## Configuration
 
-All pipeline configuration lives in code: `drispi/pipeline/config.py` (`DRISPIConfig`) and `drispi/haos/config.py` (`HAOSConfig`), with CLI overrides exposed by `drispi/pipeline/runner.py` (see `drispi-pipeline --help`).
+All pipeline configuration lives in code: `drispi/pipeline/config.py` (`DRISPIConfig`) and `drispi/haos/config.py` (`HAOSConfig`), with CLI overrides exposed by `drispi/pipeline/runner.py` (see `drispi-pipeline --help`). YAML profiles live under `configs/` and merge on top of `configs/default.yaml`.
+
+### SC/SP sync vs async
+
+SC/SP (+ post-SP standard AILS) is controlled by `sp_sc.mode` (`off` | `sync` | `async`) and `sp_sc.trigger` (`iteration` | `wallclock`). Default is **sync** + **iteration**. Full guide, core pinning, and example commands: [docs/sp_sc_modes.md](docs/sp_sc_modes.md). Ready-to-run profiles: [`configs/sync_example.yaml`](configs/sync_example.yaml), [`configs/async_example.yaml`](configs/async_example.yaml).

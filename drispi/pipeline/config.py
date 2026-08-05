@@ -15,9 +15,20 @@ class DRISPIConfig:
     max_no_improve: int = 100
 
     # ── Parallelism ───────────────────────────────────────────────────
+    # Legacy single-instance worker count when ``cores:`` is absent.
     n_workers: int = 8
+    # Optional ``cores:`` block (source of truth when any/all of these are set).
+    cores_total: int | None = None
+    cores_dri: int | None = None
+    cores_sp: int | None = None
+    cores_cpu_list: list[int] | None = None
 
     # ── SP/SC scheduling ──────────────────────────────────────────────
+    # mode: off | sync | async; trigger: iteration | wallclock
+    sp_sc_mode: str = "sync"
+    sp_sc_trigger: str = "iteration"
+    interval_minutes: float = 20.0
+    overlap_policy: str = "skip"
     warmup_iterations: int = 10
     sp_interval: int = 3
     min_coverage: int = 5

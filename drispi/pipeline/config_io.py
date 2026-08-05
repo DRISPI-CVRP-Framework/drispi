@@ -18,7 +18,12 @@ LOGGER = logging.getLogger(__name__)
 _SECTION_FIELDS: dict[str, list[str]] = {
     "stopping": ["time_limit", "max_no_improve"],
     "parallelism": ["n_workers"],
+    "cores": ["cores_total", "cores_dri", "cores_sp", "cores_cpu_list"],
     "sp_sc": [
+        "sp_sc_mode",
+        "sp_sc_trigger",
+        "interval_minutes",
+        "overlap_policy",
         "warmup_iterations",
         "sp_interval",
         "min_coverage",
@@ -69,7 +74,8 @@ _SECTION_FIELDS: dict[str, list[str]] = {
 
 _SECTION_COMMENTS: dict[str, str] = {
     "stopping": "Stopping criteria",
-    "parallelism": "Parallelism",
+    "parallelism": "Parallelism (legacy n_workers when cores: absent)",
+    "cores": "Cores block (source of truth when present)",
     "sp_sc": "SP/SC scheduling",
     "subcluster": "Subcluster solver",
     "bg_ails": "BG-AILS",
@@ -81,9 +87,68 @@ _SECTION_COMMENTS: dict[str, str] = {
     "output": "Output",
 }
 
+_CORES_NESTED_KEYS = {
+    "total": "cores_total",
+    "dri": "cores_dri",
+    "sp": "cores_sp",
+    "cpu_list": "cores_cpu_list",
+}
+
+_SP_SC_NESTED_KEYS = {
+    "mode": "sp_sc_mode",
+    "trigger": "sp_sc_trigger",
+    "interval_minutes": "interval_minutes",
+    "overlap_policy": "overlap_policy",
+    "warmup_iterations": "warmup_iterations",
+    "sp_interval": "sp_interval",
+    "min_coverage": "min_coverage",
+    "sp_time_limit": "sp_time_limit",
+    "mip_gap": "mip_gap",
+}
+
 _VALID_FIELDS = {f.name for f in fields(DRISPIConfig)}
 
 DEFAULT_CONFIG_FILENAME = "default.yaml"
+
+
+def _coerce_value(field_name: str, value: Any) -> Any:
+    if field_name == "output_dir":
+        return Path(value)
+    if field_name == "cores_cpu_list" and value is not None:
+        if isinstance(value, str):
+            from drispi.pipeline.cores import parse_cpu_list
+
+            return parse_cpu_list(value)
+        return [int(v) for v in value]
+    return value
+
+
+def _expand_nested_cores(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ValueError("cores: must be a mapping with total/dri/sp")
+    out: dict[str, Any] = {}
+    for key, field_name in _CORES_NESTED_KEYS.items():
+        if key not in value:
+            continue
+        out[field_name] = _coerce_value(field_name, value[key])
+    unknown = set(value) - set(_CORES_NESTED_KEYS)
+    for key in sorted(unknown):
+        warnings.warn(f"Unknown cores key ignored: {key!r}", stacklevel=3)
+    return out
+
+
+def _expand_nested_sp_sc(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ValueError("sp_sc: nested block must be a mapping")
+    out: dict[str, Any] = {}
+    for key, field_name in _SP_SC_NESTED_KEYS.items():
+        if key not in value:
+            continue
+        out[field_name] = _coerce_value(field_name, value[key])
+    unknown = set(value) - set(_SP_SC_NESTED_KEYS)
+    for key in sorted(unknown):
+        warnings.warn(f"Unknown sp_sc key ignored: {key!r}", stacklevel=3)
+    return out
 
 
 def _read_yaml_mapping(yaml_path: Path) -> dict[str, Any]:
@@ -98,6 +163,12 @@ def _read_yaml_mapping(yaml_path: Path) -> dict[str, Any]:
     overrides: dict[str, Any] = {}
     for key, value in raw.items():
         if key.startswith("#") or key is None:
+            continue
+        if key == "cores" and isinstance(value, dict):
+            overrides.update(_expand_nested_cores(value))
+            continue
+        if key == "sp_sc" and isinstance(value, dict):
+            overrides.update(_expand_nested_sp_sc(value))
             continue
         if key not in _VALID_FIELDS:
             warnings.warn(f"Unknown config key ignored: {key!r}", stacklevel=3)
@@ -121,12 +192,6 @@ def _apply_yaml_mapping(config: DRISPIConfig, overrides: dict[str, Any]) -> DRIS
     return replace(config, **overrides)
 
 
-def _coerce_value(field_name: str, value: Any) -> Any:
-    if field_name == "output_dir":
-        return Path(value)
-    return value
-
-
 def load_config(yaml_path: Path) -> DRISPIConfig:
     """
     Load DRISPIConfig from a YAML file.
@@ -135,6 +200,7 @@ def load_config(yaml_path: Path) -> DRISPIConfig:
     ``default.yaml`` in the same directory when present. Keys missing from both
     files use ``DRISPIConfig`` dataclass defaults. Unknown keys are ignored with
     a warning. List fields replace entirely; path fields become ``Path`` objects.
+    Nested ``cores:`` / ``sp_sc:`` blocks are expanded into flat fields.
     """
     path = Path(yaml_path).expanduser().resolve()
     config = DRISPIConfig()
@@ -165,6 +231,8 @@ def config_to_dict(config: DRISPIConfig) -> dict[str, Any]:
 def _yaml_scalar(value: Any) -> str:
     if isinstance(value, bool):
         return "true" if value else "false"
+    if value is None:
+        return "null"
     if isinstance(value, int):
         return str(value)
     if isinstance(value, float):
@@ -192,8 +260,23 @@ def save_config(config: DRISPIConfig, yaml_path: Path) -> None:
     for section, keys in _SECTION_FIELDS.items():
         comment = _SECTION_COMMENTS.get(section, section)
         lines.append(f"# {comment}")
+        if section == "cores":
+            if flat.get("cores_total") is not None:
+                lines.append("cores:")
+                lines.append(f"  total: {_yaml_scalar(flat['cores_total'])}")
+                lines.append(f"  dri: {_yaml_scalar(flat['cores_dri'])}")
+                lines.append(f"  sp: {_yaml_scalar(flat['cores_sp'])}")
+                if flat.get("cores_cpu_list") is not None:
+                    lines.append(
+                        f"  cpu_list: {_yaml_scalar(_serialize_value(flat['cores_cpu_list']))}"
+                    )
+            else:
+                lines.append("# cores:  # unset — legacy n_workers path")
+            lines.append("")
+            continue
         for key in keys:
-            lines.append(f"{key}: {_yaml_scalar(_serialize_value(flat[key]))}")
+            value = flat[key]
+            lines.append(f"{key}: {_yaml_scalar(_serialize_value(value))}")
         lines.append("")
     path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 

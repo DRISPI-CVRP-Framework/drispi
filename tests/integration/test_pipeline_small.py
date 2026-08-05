@@ -33,8 +33,8 @@ def _fake_cluster_routes(
     partition: list[list[int]],
     *_args: object,
     **_kwargs: object,
-) -> list[list[list[int]]]:
-    return [[[c] for c in group] for group in partition]
+) -> tuple[list[list[list[int]]], int]:
+    return [[[c] for c in group] for group in partition], 1
 
 
 def test_drispi_pipeline_smoke_one_iteration(small_instance: CVRPInstance, tmp_path: Path) -> None:

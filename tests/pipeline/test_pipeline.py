@@ -18,8 +18,8 @@ def _fake_cluster_routes(
     partition: list[list[int]],
     *_args: object,
     **_kwargs: object,
-) -> list[list[list[int]]]:
-    return [[[c] for c in group] for group in partition]
+) -> tuple[list[list[list[int]]], int]:
+    return [[[c] for c in group] for group in partition], 1
 
 
 def _even_k_partition(instance: CVRPInstance, k: int) -> list[list[int]]:
@@ -172,8 +172,9 @@ def test_pipeline_runs_five_iterations(instance_12: CVRPInstance, tmp_path: Path
         time_per_customer: float,
         n_workers: int,
         seed: int,
-    ) -> list[list[list[int]]]:
-        del solver_name, time_per_customer, n_workers, seed
+        **kwargs: object,
+    ) -> tuple[list[list[list[int]]], int]:
+        del solver_name, time_per_customer, n_workers, seed, kwargs
         return _fake_cluster_routes(instance, partition)
 
     with (

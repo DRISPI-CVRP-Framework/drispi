@@ -216,6 +216,12 @@ def main() -> None:
     parser.add_argument("--time-limit", type=float, default=None)
     parser.add_argument("--max-no-improve", type=int, default=None)
     parser.add_argument("--n-workers", type=int, default=None)
+    parser.add_argument(
+        "--cpus",
+        type=str,
+        default=None,
+        help='CPU list for this slice, e.g. "0-7" or "0,1,2,3" (requires cores: block)',
+    )
     parser.add_argument("--warmup", type=int, default=None)
     parser.add_argument("--sp-interval", type=int, default=None)
     parser.add_argument("--min-coverage", type=int, default=None)
@@ -263,7 +269,9 @@ def main() -> None:
     if args.gui:
         dashboard_app = Path(__file__).resolve().parent.parent / "dashboard" / "app.py"
         _launch_dashboard(run_dir, dashboard_app)
-    DRISPIPipeline(inst, config, bks_cost=bks_cost, run_label=run_label).run()
+    DRISPIPipeline(
+        inst, config, bks_cost=bks_cost, run_label=run_label, cli_cpus=args.cpus
+    ).run()
 
 
 if __name__ == "__main__":

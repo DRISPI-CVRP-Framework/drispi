@@ -69,6 +69,7 @@ def test_config_to_dict_sections() -> None:
     expected = {
         "stopping",
         "parallelism",
+        "cores",
         "sp_sc",
         "subcluster",
         "bg_ails",
@@ -83,6 +84,8 @@ def test_config_to_dict_sections() -> None:
     assert grouped["stopping"]["time_limit"] == 7200.0
     assert grouped["haos"]["haos_decay"] == 0.95
     assert grouped["sp_sc"]["min_coverage"] == 5
+    assert grouped["sp_sc"]["sp_sc_mode"] == "sync"
+    assert grouped["cores"]["cores_total"] is None
 
 
 def test_profile_config_inherits_default_yaml(tmp_path: Path) -> None:

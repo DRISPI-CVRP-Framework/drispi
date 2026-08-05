@@ -34,6 +34,7 @@ from drispi.improvement.bg_ails import (
 )
 from drispi.pipeline.config import DRISPIConfig
 from drispi.pipeline.core_manager import CoreManager
+from drispi.pipeline.cores import CoresConfig, log_current_affinity, resolve_cores, set_affinity
 from drispi.pipeline.logger import PipelineLogger
 from drispi.pipeline.snapshot import SnapshotWriter
 from drispi.pipeline.subproblem import SubclusterSolveError, solve_subclusters_parallel
@@ -41,6 +42,7 @@ from drispi.route_pool.coverage import coverage_counts
 from drispi.route_pool.manager import RoutePoolManager
 from drispi.route_pool.pool import RoutePool
 from drispi.route_pool.post_sp_improvement import add_post_standard_improvement_routes_to_pool
+from drispi.solvers.ails2 import Ails2Solver
 from drispi.sp.policy import should_run_sp_sc
 from drispi.sp.solver import run_sp_sc
 from drispi.utils.io import write_sol
@@ -125,12 +127,33 @@ class DRISPIPipeline:
         run_label: str | None = None,
         core_manager: CoreManager | None = None,
         instance_id: str | None = None,
+        cli_cpus: str | None = None,
     ) -> None:
         self._instance = instance
         self._config = config
         self._bks_cost = bks_cost
-        self._core_manager = core_manager
+        self._cores: CoresConfig = resolve_cores(
+            cores_total=config.cores_total,
+            cores_dri=config.cores_dri,
+            cores_sp=config.cores_sp,
+            cores_cpu_list=config.cores_cpu_list,
+            n_workers=config.n_workers,
+            cli_cpus=cli_cpus,
+        )
+        # CoreManager budget is DRI-only when a cores: block is present.
+        if core_manager is not None:
+            self._core_manager = core_manager
+        elif self._cores.from_cores_block:
+            self._core_manager = CoreManager(self._cores.dri, self._cores.dri)
+        else:
+            self._core_manager = None
         self._instance_id = instance_id if instance_id is not None else instance.name
+        self._batch_rounds_hist: list[int] = []
+
+        if self._cores.dri_cpus is not None:
+            set_affinity(self._cores.dri_cpus, label="pipeline-main-dri")
+        else:
+            log_current_affinity("pipeline-main")
 
         rng = np.random.default_rng(config.seed)
         self._solver_seed = int(rng.integers(0, 2**31))
@@ -325,12 +348,13 @@ class DRISPIPipeline:
         t0 = time.perf_counter()
         n_clusters = len(partition)
         try:
-            cluster_routes = self._solve_subclusters_parallel(
+            cluster_routes, n_rounds = self._solve_subclusters_parallel(
                 partition,
                 selection,
                 iteration,
                 n_clusters,
             )
+            self._batch_rounds_hist.append(n_rounds)
         except SubclusterSolveError as exc:
             self._skip_iteration_subcluster_failure(
                 iteration,
@@ -351,7 +375,7 @@ class DRISPIPipeline:
             "route",
             time.perf_counter() - t0,
             max_budget,
-            {"solver": selection.solver, "k": selection.k},
+            {"solver": selection.solver, "k": selection.k, "batch_rounds": n_rounds},
             cluster_sizes=cluster_sizes,
         )
 
@@ -402,6 +426,7 @@ class DRISPIPipeline:
             self._config.bg_ails_initial_omega,
             time_limit=self._config.bg_ails_time_limit,
             seed=bg_seed,
+            solver=self._ails2_solver(),
         )
         bg_elapsed = time.perf_counter() - t0
         pert_seqs = _solution_routes_to_seqs(perturbed_sol)
@@ -511,6 +536,7 @@ class DRISPIPipeline:
                 sp_input_sol,
                 self._config.standard_improvement_time_limit,
                 seed=self._rng.randint(0, 2**31 - 1),
+                solver=self._ails2_solver(),
             )
             std_elapsed = time.perf_counter() - t0
             final_seqs = _solution_routes_to_seqs(final_sol)
@@ -598,16 +624,28 @@ class DRISPIPipeline:
             duplicates_replaced=replaced,
         )
 
+    def _ails2_solver(self) -> Ails2Solver:
+        """AILS-II with JVM flags; ActiveProcessorCount from cores.sp when set."""
+        if self._cores.from_cores_block and self._cores.sp > 0:
+            return Ails2Solver(active_processor_count=self._cores.sp)
+        return Ails2Solver()
+
     def _solve_subclusters_parallel(
         self,
         partition: list[list[int]],
         selection: HAOSSelection,
         iteration: int,
         n_clusters: int,
-    ) -> list[list[Route]]:
+    ) -> tuple[list[list[Route]], int]:
         seed = self._solver_seed + iteration * 10007
+        dri_cpus = self._cores.dri_cpus
+        request = n_clusters
+        if self._cores.from_cores_block:
+            # Never request more DRI slots than the reserved dri budget when
+            # CoreManager is shared; still ask for n_clusters and let CM grant.
+            pass
         if self._core_manager is not None:
-            n_workers = self._core_manager.acquire(self._instance_id, n_clusters)
+            n_workers = self._core_manager.acquire(self._instance_id, request)
             try:
                 return solve_subclusters_parallel(
                     self._instance,
@@ -616,10 +654,11 @@ class DRISPIPipeline:
                     self._config.subcluster_time_per_customer,
                     n_workers,
                     seed,
+                    dri_cpus=dri_cpus,
                 )
             finally:
                 self._core_manager.release(self._instance_id, n_workers)
-        n_workers = min(self._config.n_workers, n_clusters)
+        n_workers = min(self._cores.dri, n_clusters)
         return solve_subclusters_parallel(
             self._instance,
             partition,
@@ -627,6 +666,7 @@ class DRISPIPipeline:
             self._config.subcluster_time_per_customer,
             n_workers,
             seed,
+            dri_cpus=dri_cpus,
         )
 
     def _skip_iteration_subcluster_failure(

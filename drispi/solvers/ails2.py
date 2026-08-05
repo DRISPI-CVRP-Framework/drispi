@@ -22,6 +22,35 @@ class Ails2Solver(_SubprocessSolver):
     _DEFAULT_REL_PATH = "ext/ails2/build/AILSII.jar"
     name = "ails2"
 
+    # Legacy default when ``cores:`` is absent: treat SP as one logical processor
+    # for ActiveProcessorCount (matches the usual 7+1 production reservation).
+    DEFAULT_ACTIVE_PROCESSOR_COUNT = 1
+    DEFAULT_XMX = "4g"
+
+    def __init__(
+        self,
+        binary_path: str | Path | None = None,
+        *,
+        active_processor_count: int | None = None,
+        xmx: str | None = None,
+    ) -> None:
+        super().__init__(binary_path)
+        self._active_processor_count = (
+            self.DEFAULT_ACTIVE_PROCESSOR_COUNT
+            if active_processor_count is None
+            else int(active_processor_count)
+        )
+        self._xmx = self.DEFAULT_XMX if xmx is None else str(xmx)
+
+    @property
+    def jvm_flags(self) -> list[str]:
+        """Identical flags for sync and async arms (reproducibility / stability)."""
+        return [
+            "-XX:+UseSerialGC",
+            f"-XX:ActiveProcessorCount={self._active_processor_count}",
+            f"-Xmx{self._xmx}",
+        ]
+
     def _build_cmd(
         self,
         vrp_path: Path,
@@ -35,15 +64,16 @@ class Ails2Solver(_SubprocessSolver):
         """
         Invoke AILS-II as::
 
-            java -jar <jar> -file <vrp> -stoppingCriterion Time -limit <sec>
+            java <jvm_flags> -jar <jar> -file <vrp> -stoppingCriterion Time -limit <sec>
                 -rounded true [-initialSolution <path>] [-initialOmega <v>] -outpath <sol_path>
 
-        The ``seed`` argument is ignored (no seed flag in AILS-II). ``sol_path``
-        is the direct output file path.
+        The ``seed`` argument is ignored (no seed flag in AILS-II yet). ``sol_path``
+        is the direct output file path. JVM options precede ``-jar``.
         """
-        _ = seed  # AILS-II has no RNG seed flag; ignored by design.
+        _ = seed  # AILS-II has no RNG seed flag; ignored until -seed lands.
         cmd: list[str] = [
             "java",
+            *self.jvm_flags,
             "-jar",
             str(self.binary),
             "-file",

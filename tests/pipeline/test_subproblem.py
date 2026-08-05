@@ -43,6 +43,7 @@ def test_subcluster_wall_timeout_formula() -> None:
     assert subcluster_wall_timeout(0.0) == 120.0
     assert subcluster_wall_timeout(100.0) == 220.0
     assert subcluster_wall_timeout(489.5) == pytest.approx(979.0)
+    assert subcluster_wall_timeout(100.0, n_rounds=3) == 660.0
 
 
 def test_solve_subclusters_parallel_raises_on_wall_timeout(instance_12: CVRPInstance) -> None:
@@ -97,7 +98,7 @@ def test_solve_subclusters_parallel_wraps_worker_failure(instance_12: CVRPInstan
 def test_solve_subclusters_parallel_real_pyvrp_small(instance_12: CVRPInstance) -> None:
     """Optional smoke: real worker + PyVRP on tiny partition (may be slow)."""
     partition = [instance_12.customers[0:6], instance_12.customers[6:12]]
-    out = solve_subclusters_parallel(
+    out, rounds = solve_subclusters_parallel(
         instance_12,
         partition,
         "pyvrp",
@@ -105,6 +106,7 @@ def test_solve_subclusters_parallel_real_pyvrp_small(instance_12: CVRPInstance) 
         n_workers=2,
         seed=1,
     )
+    assert rounds == 1
     assert len(out) == 2
     seen: set[int] = set()
     for grp in out:

@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+import logging
+import math
+import os
 from concurrent.futures import ALL_COMPLETED, ProcessPoolExecutor, wait
 
 from drispi.core.instance import CVRPInstance
 from drispi.core.solution import Route as SolutionRoute
 from drispi.core.types import Route
+
+LOGGER = logging.getLogger(__name__)
 
 
 class SubclusterSolveError(RuntimeError):
@@ -17,9 +22,31 @@ class SubclusterWallTimeoutError(SubclusterSolveError):
     """Raised when parallel subcluster workers exceed the wall-clock timeout."""
 
 
-def subcluster_wall_timeout(max_budget: float) -> float:
-    """Wall-clock limit for waiting on all subcluster workers (>= per-cluster budgets)."""
-    return max(2.0 * max_budget, max_budget + 120.0)
+def batch_rounds(n_clusters: int, n_workers: int) -> int:
+    """Derived wave count: ``ceil(k / n_workers)`` (observational; scheduler stays implicit)."""
+    workers = max(1, n_workers)
+    return max(1, int(math.ceil(n_clusters / workers)))
+
+
+def subcluster_wall_timeout(max_budget: float, *, n_rounds: int = 1) -> float:
+    """Wall-clock limit scaled by derived batch rounds (>= per-cluster budgets)."""
+    per_wave = max(2.0 * max_budget, max_budget + 120.0)
+    return per_wave * max(1, int(n_rounds))
+
+
+def _dri_worker_initializer(dri_cpus: list[int] | None) -> None:
+    """Set OMP_NUM_THREADS=1, optional affinity, and log effective affinity once."""
+    os.environ.setdefault("OMP_NUM_THREADS", "1")
+    os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+    os.environ.setdefault("MKL_NUM_THREADS", "1")
+    if dri_cpus:
+        os.sched_setaffinity(0, set(dri_cpus))
+    try:
+        aff = sorted(os.sched_getaffinity(0))
+    except AttributeError:
+        aff = []
+    # Use print so it shows even if worker logging is not configured.
+    print(f"[dri-worker pid={os.getpid()}] sched_getaffinity(0)={aff}", flush=True)
 
 
 def make_subinstance(instance: CVRPInstance, cluster: list[int]) -> CVRPInstance:
@@ -97,24 +124,32 @@ def solve_subclusters_parallel(
     time_per_customer: float,
     n_workers: int,
     seed: int,
-) -> list[list[Route]]:
+    *,
+    dri_cpus: list[int] | None = None,
+) -> tuple[list[list[Route]], int]:
     """
-    Solve each cluster in parallel; return one list of routes per cluster
-    (partition order), using parent node IDs.
+    Solve each cluster in parallel; return (routes per cluster, batch_rounds).
+
+    Waves remain implicit in ``ProcessPoolExecutor``; ``batch_rounds`` is derived
+    as ``ceil(k / n_workers)`` for instrumentation. Wall timeout scales with that.
     """
     _ = instance.distance_matrix
     if not partition:
-        return []
+        return [], 1
 
     def budget(cluster: list[int]) -> float:
         return max(10.0, float(len(cluster)) * time_per_customer)
 
     max_workers = max(1, n_workers)
+    n_rounds = batch_rounds(len(partition), max_workers)
     max_budget = max((budget(c) for c in partition), default=0.0)
-    # Parallel wall clock should be ~max_budget; allow model-build / pickle slack.
-    wall_timeout = subcluster_wall_timeout(max_budget)
+    wall_timeout = subcluster_wall_timeout(max_budget, n_rounds=n_rounds)
 
-    executor = ProcessPoolExecutor(max_workers=max_workers)
+    executor = ProcessPoolExecutor(
+        max_workers=max_workers,
+        initializer=_dri_worker_initializer,
+        initargs=(list(dri_cpus) if dri_cpus is not None else None,),
+    )
     clean_shutdown = True
     try:
         futures = [
@@ -135,11 +170,12 @@ def solve_subclusters_parallel(
             sizes = [len(c) for c in partition]
             raise SubclusterWallTimeoutError(
                 f"Subcluster parallel solve exceeded wall timeout {wall_timeout:.0f}s "
-                f"(solver={solver_name!r}, cluster_sizes={sizes}, max_budget={max_budget:.1f}s). "
+                f"(solver={solver_name!r}, cluster_sizes={sizes}, max_budget={max_budget:.1f}s, "
+                f"batch_rounds={n_rounds}). "
                 "A worker may be hung or ignoring its time limit."
             )
         try:
-            return [f.result() for f in futures]
+            return [f.result() for f in futures], n_rounds
         except Exception as exc:
             sizes = [len(c) for c in partition]
             raise SubclusterSolveError(

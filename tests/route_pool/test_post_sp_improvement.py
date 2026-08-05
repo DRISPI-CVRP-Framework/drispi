@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import random
 
-import pytest
-
 from drispi.core.instance import CVRPInstance
 from drispi.haos.config import HAOSConfig
 from drispi.haos.haos import HAOS
@@ -29,52 +27,44 @@ def _tiny_instance() -> CVRPInstance:
     )
 
 
-def test_skip_pool_when_not_new_best() -> None:
+def test_always_adds_even_when_not_new_best() -> None:
     instance = _tiny_instance()
     pool = RoutePool()
     haos = HAOS(config=HAOSConfig(), instance=instance)
     selection = haos.select(iteration=0, rng=random.Random(0))
     sp = [[2, 3], [4, 5]]
     ails = [[2, 3], [4, 5]]
-    best = 100.0
-    final = 100.0
     assert (
         add_post_standard_improvement_routes_to_pool(
             pool,
             instance,
             sp,
             ails,
-            final,
-            best,
             iteration=1,
             selection=selection,
         )
-        is False
+        == 2
     )
-    assert pool.size() == 0
+    assert pool.size() == 2
 
 
-def test_new_best_adds_changed_route_with_improvement_tag() -> None:
+def test_changed_route_gets_improvement_tag() -> None:
     instance = _tiny_instance()
     pool = RoutePool()
     haos = HAOS(config=HAOSConfig(), instance=instance)
     selection = haos.select(iteration=0, rng=random.Random(1))
     sp = [[2, 3], [4, 5]]
     ails = [[2, 3, 4], [5]]  # merged first route -> new customer set vs SP
-    best = 100.0
-    final = 50.0
     assert (
         add_post_standard_improvement_routes_to_pool(
             pool,
             instance,
             sp,
             ails,
-            final,
-            best,
             iteration=2,
             selection=selection,
         )
-        is True
+        == 2
     )
     by_key = {frozenset(e.route): e for e in pool.routes()}
     assert frozenset({2, 3, 4}) in by_key
@@ -93,21 +83,17 @@ def test_unchanged_route_reuses_pool_tag() -> None:
     sp_route = [2, 3, 4]
     pool.add(sp_route, 20.0, haos_tag=original)
     sp = [sp_route, [5]]
-    ails = [sp_route, [5]]  # same sets, lower total if costs drop
-    best = 100.0
-    final = 10.0
+    ails = [sp_route, [5]]
     assert (
         add_post_standard_improvement_routes_to_pool(
             pool,
             instance,
             sp,
             ails,
-            final,
-            best,
             iteration=3,
             selection=selection,
         )
-        is True
+        == 2
     )
     entry = next(e for e in pool.routes() if frozenset(e.route) == frozenset(sp_route))
     assert entry.haos_tag == original

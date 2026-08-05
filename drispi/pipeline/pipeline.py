@@ -644,18 +644,14 @@ class DRISPIPipeline:
             contributing = self._contributing_tags_from_sp_routes(sp_result)
             self._haos.update_deferred(contributing, iteration, deferred)
 
-            prev_best = self._best_cost
-            if final_cost < prev_best:
-                add_post_standard_improvement_routes_to_pool(
-                    self._pool,
-                    self._instance,
-                    sp_result,
-                    final_seqs,
-                    final_cost,
-                    prev_best,
-                    iteration,
-                    selection,
-                )
+            add_post_standard_improvement_routes_to_pool(
+                self._pool,
+                self._instance,
+                sp_result,
+                final_seqs,
+                iteration,
+                selection,
+            )
             self._update_best(final_seqs, iteration, "standard_ails")
             self._last_cost = final_cost
         else:
@@ -769,24 +765,24 @@ class DRISPIPipeline:
                 self._haos_config.rewards,
                 is_deferred=True,
             )
-            if result.sp_routes:
-                contributing = self._contributing_tags_from_sp_routes(result.sp_routes)
+            sp_routes = result.sp_routes or []
+            if sp_routes:
+                contributing = self._contributing_tags_from_sp_routes(sp_routes)
                 self._haos.update_deferred(contributing, iteration, deferred)
+            placeholder = (
+                self._selection_from_sp_routes(sp_routes, log_iter)
+                if sp_routes
+                else self._selection_from_sp_routes(result.final_routes, log_iter)
+            )
+            add_post_standard_improvement_routes_to_pool(
+                self._pool,
+                self._instance,
+                sp_routes,
+                result.final_routes,
+                log_iter,
+                placeholder,
+            )
             if float(result.final_cost) < prev_best:
-                if result.sp_routes:
-                    placeholder = self._selection_from_sp_routes(
-                        result.sp_routes, log_iter
-                    )
-                    add_post_standard_improvement_routes_to_pool(
-                        self._pool,
-                        self._instance,
-                        result.sp_routes,
-                        result.final_routes,
-                        float(result.final_cost),
-                        prev_best,
-                        log_iter,
-                        placeholder,
-                    )
                 self._update_best(result.final_routes, log_iter, "standard_ails")
                 adopted = True
                 self._spsc_adopted += 1

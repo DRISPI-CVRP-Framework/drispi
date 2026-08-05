@@ -37,6 +37,7 @@ from drispi.pipeline.core_manager import CoreManager
 from drispi.pipeline.cores import CoresConfig, log_current_affinity, resolve_cores, set_affinity
 from drispi.pipeline.logger import PipelineLogger
 from drispi.pipeline.snapshot import SnapshotWriter
+from drispi.pipeline.sp_sc_async import AsyncSpScController, SpScResult
 from drispi.pipeline.subproblem import SubclusterSolveError, solve_subclusters_parallel
 from drispi.route_pool.coverage import coverage_counts
 from drispi.route_pool.manager import RoutePoolManager
@@ -193,6 +194,34 @@ class DRISPIPipeline:
         self._snapshot_writer = SnapshotWriter(self.run_dir)
         self._logger.log_init(config, instance)
 
+        mode = (config.sp_sc_mode or "sync").strip().lower()
+        if mode not in ("off", "sync", "async"):
+            raise ValueError(f"Invalid sp_sc_mode: {config.sp_sc_mode!r}")
+        trigger = (config.sp_sc_trigger or "iteration").strip().lower()
+        if trigger not in ("iteration", "wallclock"):
+            raise ValueError(f"Invalid sp_sc_trigger: {config.sp_sc_trigger!r}")
+        self._sp_sc_mode = mode
+        self._sp_sc_trigger = trigger
+        self._sync_next_due_ts: float | None = None
+        self._spsc_adopted = 0
+        self._spsc_invocations = 0
+        self._drain_latencies: list[float] = []
+        self._async_ctrl: AsyncSpScController | None = None
+        if mode == "async":
+            sp = max(1, self._cores.sp if self._cores.from_cores_block else 1)
+            self._async_ctrl = AsyncSpScController(
+                sp_cpus=self._cores.sp_cpus,
+                gurobi_threads=sp,
+                ails_apc=sp,
+                xmx=Ails2Solver.DEFAULT_XMX,
+                overlap_policy=config.overlap_policy,  # type: ignore[arg-type]
+                trigger=trigger,  # type: ignore[arg-type]
+                interval_minutes=config.interval_minutes,
+                warmup_iterations=config.warmup_iterations,
+                sp_interval=config.sp_interval,
+            )
+            self._async_ctrl.start()
+
     @property
     def run_dir(self) -> Path:
         return self._logger.run_dir
@@ -270,6 +299,13 @@ class DRISPIPipeline:
         )
 
     def _run_iteration(self, iteration: int) -> None:
+        iter_t0 = time.perf_counter()
+        # Async results apply only at iteration start (HAOS-safe).
+        if self._async_ctrl is not None:
+            result = self._async_ctrl.poll_result(nonblocking=True)
+            if result is not None:
+                self._apply_async_spsc_result(result, iteration)
+
         selection = self._haos.select(iteration, self._rng)
         best_routes = self._best_solution
         selection = self._haos.coerce_vertex_when_no_routes(
@@ -279,11 +315,7 @@ class DRISPIPipeline:
         )
         if selection.paradigm == "route" and best_routes is not None:
             selection = self._haos.cap_k_for_route_clustering(selection, len(best_routes))
-        is_spsc = should_run_sp_sc(
-            iteration,
-            self._config.warmup_iterations,
-            self._config.sp_interval,
-        )
+        is_spsc = self._should_run_sync_spsc(iteration)
         total_phases = 5 if is_spsc else 3
         joint_prob = self._haos.joint_probability(selection)
         self._logger.log_haos_roll(
@@ -479,23 +511,63 @@ class DRISPIPipeline:
 
         self._manager.maybe_evict(self._pool)
 
+        if self._sp_sc_mode == "off":
+            # Hard tripwire: SC/SP must never run when mode is off.
+            if is_spsc:
+                raise RuntimeError(
+                    "SC/SP scheduled while sp_sc.mode=off — disable path violated"
+                )
+
         sp_result: list[Route] | None = None
         used_sp = False
-        if is_spsc:
+        if self._sp_sc_mode == "async" and self._async_ctrl is not None:
+            best_for_job = (
+                self._best_solution if self._best_solution is not None else bg_seqs
+            )
+            self._async_ctrl.maybe_trigger(
+                pool=self._pool,
+                best_solution=best_for_job,
+                best_cost=float(self._best_cost)
+                if math.isfinite(self._best_cost)
+                else float(bg_cost),
+                instance=self._instance,
+                time_limit=self._config.sp_time_limit,
+                mip_gap=self._config.mip_gap,
+                min_coverage=self._config.min_coverage,
+                std_improve_limit=self._config.standard_improvement_time_limit,
+                seed=self._rng.randint(0, 2**31 - 1),
+                iteration=iteration,
+            )
+        elif is_spsc and self._sp_sc_mode == "sync":
+            if self._sp_sc_trigger == "wallclock":
+                self._sync_next_due_ts = time.time() + self._config.interval_minutes * 60.0
             t0 = time.perf_counter()
+            # Wallclock path already gated via _should_run_sync_spsc; force policy on.
             sp_result, used_sp = run_sp_sc(
                 self._pool,
                 self._instance,
                 self._manager,
-                iteration,
+                iteration
+                if self._sp_sc_trigger == "iteration"
+                else self._config.warmup_iterations,
                 self._best_solution if self._best_solution is not None else bg_seqs,
                 time_limit=self._config.sp_time_limit,
                 mip_gap=self._config.mip_gap,
                 min_coverage=self._config.min_coverage,
-                warmup_iterations=self._config.warmup_iterations,
-                sp_interval=self._config.sp_interval,
+                warmup_iterations=self._config.warmup_iterations
+                if self._sp_sc_trigger == "iteration"
+                else 0,
+                sp_interval=self._config.sp_interval
+                if self._sp_sc_trigger == "iteration"
+                else 1,
+                threads=(
+                    self._cores.sp
+                    if self._cores.from_cores_block and self._cores.sp > 0
+                    else None
+                ),
             )
             sp_elapsed = time.perf_counter() - t0
+            self._spsc_invocations += 1
             mode_done = "SP" if used_sp else "SC"
             if sp_result is not None and len(sp_result) > 0:
                 self._write_phase_snapshot(
@@ -622,6 +694,136 @@ class DRISPIPipeline:
             pool_quality_avg=quality_avg,
             duplicates_rejected=rejected,
             duplicates_replaced=replaced,
+        )
+
+    def _should_run_sync_spsc(self, iteration: int) -> bool:
+        if self._sp_sc_mode != "sync":
+            return False
+        if self._sp_sc_trigger == "iteration":
+            return should_run_sp_sc(
+                iteration,
+                self._config.warmup_iterations,
+                self._config.sp_interval,
+            )
+        now = time.time()
+        return self._sync_next_due_ts is None or now >= self._sync_next_due_ts
+
+    def _apply_async_spsc_result(self, result: SpScResult, iteration: int) -> None:
+        """Apply a drained async SC/SP (+ AILS) result against the live incumbent."""
+        applied_ts = time.time()
+        drain_latency = (
+            applied_ts - result.ready_ts if result.ready_ts else None
+        )
+        if drain_latency is not None:
+            self._drain_latencies.append(drain_latency)
+        self._spsc_invocations += 1
+
+        if result.lp_weights:
+            self._manager.update_scores_after_solve(self._pool, result.lp_weights)
+
+        reason = result.reason
+        adopted = False
+        if result.final_routes and result.final_cost is not None:
+            prev_best = self._best_cost
+            # Deferred HAOS from pre-AILS SP routes
+            deferred = self._haos.compute_reward(
+                float(result.final_cost),
+                self._best_cost,
+                self._last_cost,
+                self._haos_config.rewards,
+                is_deferred=True,
+            )
+            if result.sp_routes:
+                contributing = self._contributing_tags_from_sp_routes(result.sp_routes)
+                self._haos.update_deferred(contributing, iteration, deferred)
+            if float(result.final_cost) < prev_best:
+                if result.sp_routes:
+                    placeholder = self._selection_from_sp_routes(
+                        result.sp_routes, iteration
+                    )
+                    add_post_standard_improvement_routes_to_pool(
+                        self._pool,
+                        self._instance,
+                        result.sp_routes,
+                        result.final_routes,
+                        float(result.final_cost),
+                        prev_best,
+                        iteration,
+                        placeholder,
+                    )
+                self._update_best(result.final_routes, iteration, "standard_ails")
+                adopted = True
+                self._spsc_adopted += 1
+                self._log_improvement(
+                    iteration, float(result.final_cost), result.final_routes, "standard_ails"
+                )
+                reason = "adopted"
+            else:
+                reason = reason or "worse_than_incumbent"
+            self._last_cost = float(result.final_cost)
+        elif reason == "mip_no_solution":
+            pass
+        else:
+            reason = reason or "empty_solution"
+
+        content = (
+            f"async SP/SC apply job={result.job_id} adopted={adopted} "
+            f"reason={reason}"
+        )
+        if drain_latency is not None:
+            content += f" drain_latency={drain_latency:.3f}s"
+        self._logger._emit(  # noqa: SLF001 — structured event for async SP/SC
+            iteration,
+            "ASYNC",
+            content,
+            json_event={
+                "type": "spsc_apply",
+                "iteration": iteration,
+                "job_id": result.job_id,
+                "adopted": adopted,
+                "reason": reason,
+                "snapshot_best_cost": result.snapshot_best_cost,
+                "live_best_cost": self._best_cost,
+                "final_cost": result.final_cost,
+                "result_ready_ts": result.ready_ts,
+                "applied_ts": applied_ts,
+                "drain_latency_s": drain_latency,
+                "metrics": result.metrics,
+                "used_sp": result.used_sp,
+            },
+        )
+
+    def _selection_from_sp_routes(
+        self, sp_routes: list[Route], iteration: int
+    ) -> HAOSSelection:
+        """Build a HAOSSelection for pool tagging without rolling the HAOS RNG."""
+        for r in sp_routes:
+            tag = self._pool.get_haos_tag(r)
+            if tag is not None:
+                return HAOSSelection(
+                    k=tag.k,
+                    lambda_demand=tag.lambda_demand,
+                    paradigm=tag.paradigm,
+                    method=tag.method,
+                    solver=tag.solver,
+                    k_index=0,
+                    lambda_index=0,
+                    paradigm_index=0,
+                    method_index=0,
+                    solver_index=0,
+                )
+        _ = iteration
+        return HAOSSelection(
+            k=1,
+            lambda_demand=0.0,
+            paradigm="vertex",
+            method="kmeans",
+            solver="ails2",
+            k_index=0,
+            lambda_index=0,
+            paradigm_index=0,
+            method_index=0,
+            solver_index=0,
         )
 
     def _ails2_solver(self) -> Ails2Solver:
@@ -791,6 +993,55 @@ class DRISPIPipeline:
 
     def _finalize(self) -> None:
         """Persist HAOS state, best .sol, and final log block."""
+        discarded = False
+        if self._async_ctrl is not None:
+            self._async_ctrl.shutdown()
+            discarded = self._async_ctrl.discarded_in_flight_at_shutdown
+            self._logger._emit(  # noqa: SLF001
+                None,
+                "FINAL",
+                (
+                    f"async SP/SC totals invocations={self._async_ctrl.invocation_count} "
+                    f"adopted={self._spsc_adopted} "
+                    f"skipped={self._async_ctrl.skipped_trigger_count} "
+                    f"discarded_in_flight={discarded} "
+                    f"sp_busy_frac={self._async_ctrl.sp_busy_fraction()}"
+                ),
+                json_event={
+                    "type": "spsc_run_totals",
+                    "invocation_count": self._async_ctrl.invocation_count,
+                    "adopted_count": self._spsc_adopted,
+                    "skipped_trigger_count": self._async_ctrl.skipped_trigger_count,
+                    "discarded_in_flight_at_shutdown": discarded,
+                    "batch_rounds_max": max(self._batch_rounds_hist)
+                    if self._batch_rounds_hist
+                    else None,
+                    "batch_rounds_mean": (
+                        sum(self._batch_rounds_hist) / len(self._batch_rounds_hist)
+                        if self._batch_rounds_hist
+                        else None
+                    ),
+                    "drain_latency_max": max(self._drain_latencies)
+                    if self._drain_latencies
+                    else None,
+                    "drain_latency_mean": (
+                        sum(self._drain_latencies) / len(self._drain_latencies)
+                        if self._drain_latencies
+                        else None
+                    ),
+                    "sp_core_busy_fraction": self._async_ctrl.sp_busy_fraction(),
+                    "cores": {
+                        "total": self._cores.total,
+                        "dri": self._cores.dri,
+                        "sp": self._cores.sp,
+                        "cpu_list": self._cores.cpu_list,
+                        "from_cores_block": self._cores.from_cores_block,
+                    },
+                    "sp_sc_mode": self._sp_sc_mode,
+                    "sp_sc_trigger": self._sp_sc_trigger,
+                    "jvm_flags": self._ails2_solver().jvm_flags,
+                },
+            )
         self._snapshot_writer.stop()
         out = self.run_dir
         out.mkdir(parents=True, exist_ok=True)

@@ -44,8 +44,8 @@ from drispi.pipeline.runner import load_instance_from_vrp_path
 from drispi.route_pool.pool import RoutePool
 from drispi.utils.time import local_now
 
-# In-memory override: no enable_sp_sc flag exists; huge warmup never schedules SP/SC.
-_SP_SC_DISABLED_WARMUP = 10**9
+# mode: off short-circuits SC/SP; tripwire still asserts if it fires anyway.
+_SP_SC_DISABLED_WARMUP = 10**9  # retained only as belt-and-suspenders with mode=off
 _STAGNATION_DISABLED = 10**9
 
 
@@ -193,10 +193,10 @@ def _build_config(
     if resolved_cores < 1:
         raise ValueError(f"--cores must be >= 1, got {resolved_cores}")
 
-    # Disable SC/SP (and thus post-SP AILS + deferred HAOS) without schema changes.
+    # Disable SC/SP via mode: off (hard tripwire remains in the run wrapper).
     config = replace(
         config,
-        warmup_iterations=_SP_SC_DISABLED_WARMUP,
+        sp_sc_mode="off",
         seed=seed,
         n_workers=resolved_cores,
         # Stop promptly after the final mark; small slack for the last iteration.

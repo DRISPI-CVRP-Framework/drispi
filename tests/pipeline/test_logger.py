@@ -151,6 +151,44 @@ def test_sp_sc_phase_shows_avg_coverage(instance_12: CVRPInstance, tmp_path: Pat
     assert "pool=2277" in text
 
 
+def test_async_phase_tag_and_snapshot_iteration(
+    instance_12: CVRPInstance, tmp_path: Path
+) -> None:
+    stream = io.StringIO()
+    logger = PipelineLogger(instance_12.name, tmp_path, stream=stream)
+    logger.log_phase_done(
+        9,
+        1,
+        2,
+        "sp_sc",
+        4.86,
+        600.0,
+        {
+            "sc_or_sp": "SC",
+            "pool_size": 746,
+            "avg_coverage": 13.97,
+            "min_coverage": 5,
+        },
+        tag="ASYNC 1/2",
+    )
+    logger.log_phase_done(
+        9,
+        2,
+        2,
+        "standard_ails",
+        182.39,
+        180.0,
+        tag="ASYNC 2/2",
+    )
+    text = (logger.run_dir / "run.log").read_text(encoding="utf-8")
+    assert "| i 10 |" in text
+    assert "[ASYNC 1/2]" in text
+    assert "sp_sc  4.86s / 600.00s / 0.8%" in text
+    assert "SC  avg_coverage=13.97/5  pool=746" in text
+    assert "[ASYNC 2/2]" in text
+    assert "standard_ails  182.39s / 180.00s / 101.3%" in text
+
+
 def test_logger_creates_run_log_and_jsonl(instance_12: CVRPInstance, tmp_path: Path) -> None:
     stream = io.StringIO()
     logger = PipelineLogger(instance_12.name, tmp_path, stream=stream)

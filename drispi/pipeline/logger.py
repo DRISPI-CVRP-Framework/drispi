@@ -245,11 +245,11 @@ class PipelineLogger:
         file_handler = logging.FileHandler(self._run_dir / "run.log", mode="a", encoding="utf-8")
         file_handler.setFormatter(logging.Formatter("%(message)s"))
 
-        jsonl_handler = JsonlHandler(self._run_dir / "run.jsonl")
+        self._jsonl = JsonlHandler(self._run_dir / "run.jsonl")
 
         self._logger.addHandler(self._terminal)
         self._logger.addHandler(file_handler)
-        self._logger.addHandler(jsonl_handler)
+        self._logger.addHandler(self._jsonl)
 
     @property
     def run_dir(self) -> Path:
@@ -277,6 +277,20 @@ class PipelineLogger:
         record.color_style = color_style  # type: ignore[attr-defined]
         record.json_event = json_event  # type: ignore[attr-defined]
         self._logger.handle(record)
+
+    def _emit_json(self, event: dict[str, Any]) -> None:
+        """Write a structured event to run.jsonl without a console/run.log line."""
+        record = self._logger.makeRecord(
+            self._logger.name,
+            logging.INFO,
+            "",
+            0,
+            "",
+            (),
+            None,
+        )
+        record.json_event = event  # type: ignore[attr-defined]
+        self._jsonl.emit(record)
 
     def log_config(self, config: DRISPIConfig) -> None:
         """Write full config to terminal, run.log, and run.jsonl."""
@@ -376,6 +390,7 @@ class PipelineLogger:
         bg_cost_before: float | None = None,
         bg_cost_after: float | None = None,
         lp_fractionality: float | None = None,
+        tag: str | None = None,
     ) -> None:
         op = operator_info or {}
         elapsed_s = f"{elapsed:.2f}s"
@@ -419,7 +434,7 @@ class PipelineLogger:
                 parts.append(f"pool={pool_size}")
 
         content = "  ".join(parts)
-        tag = _format_phase_tag(phase_num, total_phases)
+        emit_tag = tag if tag is not None else _format_phase_tag(phase_num, total_phases)
         json_event: dict[str, Any] = {
             "type": "phase_done",
             "iteration": iteration,
@@ -430,6 +445,7 @@ class PipelineLogger:
             "budget": budget,
             "load_pct": round(load_pct, 1) if load_pct is not None else None,
             "operator_info": op or None,
+            "tag": emit_tag.strip() if tag is not None else None,
         }
         if cluster_sizes is not None:
             json_event["cluster_sizes"] = cluster_sizes
@@ -439,7 +455,7 @@ class PipelineLogger:
             json_event["bg_cost_after"] = bg_cost_after
         if lp_fractionality is not None:
             json_event["lp_fractionality"] = lp_fractionality
-        self._emit(iteration, tag, content, json_event=json_event)
+        self._emit(iteration, emit_tag, content, json_event=json_event)
 
     def log_improve(self, iteration: int, cost: float, phase_name: str) -> None:
         gap = _format_gap_to_bks(cost, self._bks_cost, self._instance_name)

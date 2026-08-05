@@ -27,6 +27,7 @@ from drispi.core.solution import Route as SolutionRoute
 from drispi.core.types import Route
 from drispi.improvement.bg_ails import run_standard_improvement
 from drispi.pipeline.cores import affinity_logging_enabled, set_affinity
+from drispi.route_pool.coverage import coverage_counts
 from drispi.route_pool.pool import RoutePool
 from drispi.solvers.ails2 import Ails2Solver
 from drispi.sp.deduplicate import remove_duplicates
@@ -60,6 +61,7 @@ class SpScJob:
     std_improve_limit: float
     seed: int
     enqueue_ts: float
+    snapshot_iteration: int
 
 
 @dataclass
@@ -77,6 +79,7 @@ class SpScResult:
     reason: str
     ready_ts: float
     enqueue_ts: float | None = None
+    snapshot_iteration: int = 0
 
 
 @dataclass
@@ -158,6 +161,11 @@ def _metrics_dict(
     metrics: SolveMetrics | None,
     *,
     ails_wall_s: float | None = None,
+    pool_size: int | None = None,
+    avg_coverage: float | None = None,
+    min_coverage: int | None = None,
+    sp_time_limit: float | None = None,
+    std_improve_limit: float | None = None,
 ) -> dict[str, Any]:
     out: dict[str, Any] = {}
     if metrics is not None:
@@ -170,7 +178,25 @@ def _metrics_dict(
         out["sol_count"] = metrics.sol_count
     if ails_wall_s is not None:
         out["ails_wall_s"] = ails_wall_s
+    if pool_size is not None:
+        out["pool_size"] = pool_size
+    if avg_coverage is not None:
+        out["avg_coverage"] = avg_coverage
+    if min_coverage is not None:
+        out["min_coverage"] = min_coverage
+    if sp_time_limit is not None:
+        out["sp_time_limit"] = sp_time_limit
+    if std_improve_limit is not None:
+        out["std_improve_limit"] = std_improve_limit
     return out
+
+
+def _pool_coverage_stats(
+    pool: RoutePool, instance: CVRPInstance
+) -> tuple[int, float]:
+    cov = sorted(coverage_counts(pool, instance).values())
+    avg = sum(cov) / len(cov) if cov else 0.0
+    return pool.size(), avg
 
 
 def _seqs_to_solution_routes(
@@ -203,6 +229,7 @@ def _empty_result(
         reason=reason,
         ready_ts=time.time(),
         enqueue_ts=job.enqueue_ts,
+        snapshot_iteration=job.snapshot_iteration,
     )
 
 
@@ -222,6 +249,15 @@ def _process_job(
     # Materialize distance matrix in the worker before Gurobi / AILS.
     _ = instance.distance_matrix
 
+    pool_size, avg_coverage = _pool_coverage_stats(pool, instance)
+    base_meta = {
+        "pool_size": pool_size,
+        "avg_coverage": avg_coverage,
+        "min_coverage": job.min_coverage,
+        "sp_time_limit": job.time_limit,
+        "std_improve_limit": job.std_improve_limit,
+    }
+
     use_sp = should_use_sp(pool, instance, job.min_coverage)
     lp_weights, raw_solution, timed_out, sol_count, metrics = build_and_solve(
         pool,
@@ -238,7 +274,7 @@ def _process_job(
             used_sp=use_sp,
             reason="mip_no_solution",
             lp_weights=lp_weights,
-            metrics=_metrics_dict(metrics),
+            metrics=_metrics_dict(metrics, **base_meta),
         )
 
     base: list[Route] = [list(r) for r in raw_solution]
@@ -253,7 +289,7 @@ def _process_job(
             used_sp=use_sp,
             reason="empty_sp_routes",
             lp_weights=lp_weights,
-            metrics=_metrics_dict(metrics),
+            metrics=_metrics_dict(metrics, **base_meta),
         )
 
     solver = Ails2Solver(active_processor_count=ails_apc, xmx=xmx)
@@ -277,11 +313,12 @@ def _process_job(
         final_routes=final_seqs,
         final_cost=final_cost,
         lp_weights=lp_weights,
-        metrics=_metrics_dict(metrics, ails_wall_s=ails_wall_s),
+        metrics=_metrics_dict(metrics, ails_wall_s=ails_wall_s, **base_meta),
         snapshot_best_cost=job.best_cost_at_snapshot,
         reason="ok",
         ready_ts=time.time(),
         enqueue_ts=job.enqueue_ts,
+        snapshot_iteration=job.snapshot_iteration,
     )
 
 
@@ -488,6 +525,7 @@ class AsyncSpScController:
         std_improve_limit: float,
         seed: int,
         now: float,
+        snapshot_iteration: int,
     ) -> tuple[SpScJob, float, int]:
         t0 = time.perf_counter()
         pool_bytes = pickle.dumps(pool, protocol=pickle.HIGHEST_PROTOCOL)
@@ -510,6 +548,7 @@ class AsyncSpScController:
             std_improve_limit=float(std_improve_limit),
             seed=int(seed),
             enqueue_ts=now,
+            snapshot_iteration=int(snapshot_iteration),
         )
         return job, serialize_s, payload_bytes
 
@@ -558,6 +597,7 @@ class AsyncSpScController:
             std_improve_limit=std_improve_limit,
             seed=seed,
             now=t,
+            snapshot_iteration=iteration if iteration is not None else 0,
         )
 
         if not self._in_flight:

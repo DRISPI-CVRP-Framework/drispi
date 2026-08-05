@@ -163,9 +163,15 @@ so overlap can occur when SC/SP (+ AILS) runs longer than `interval_minutes`.
 
 ### What to look for in logs / JSONL
 
-- Console: `ASYNC` lines on apply (`adopted=…`, `drain_latency=…`).
-- JSONL events: `spsc_apply` (per drain), `spsc_run_totals` (at finalize:
-  adopted count, drain latency, `sp_core_busy_fraction`, batch_rounds stats).
+- Console: when an async result is drained, phase-style lines attributed to the
+  **snapshot** iteration:
+  - `[ASYNC 1/2] sp_sc  …  SC|SP  avg_coverage=…/…  pool=…`
+  - `[ASYNC 2/2] standard_ails  …` (omitted if AILS did not run)
+  - `[ IMPROVE ] … via standard_ails` when adopted (same snapshot iteration)
+- JSONL: `phase_done` for those lines; `spsc_apply` (structured-only) with
+  `snapshot_iteration`, `apply_iteration`, `adopted`, `drain_latency_s`, metrics.
+- JSONL at finalize: `spsc_run_totals` (adopted count, drain latency,
+  `sp_core_busy_fraction`, batch_rounds stats).
 - Phase logs still include `batch_rounds` for DRI subcluster waves.
 
 ---

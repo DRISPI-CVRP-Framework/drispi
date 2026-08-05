@@ -714,6 +714,46 @@ class DRISPIPipeline:
             self._drain_latencies.append(drain_latency)
         self._spsc_invocations += 1
 
+        log_iter = int(result.snapshot_iteration)
+        metrics = result.metrics or {}
+        sp_elapsed = float(metrics.get("total_wall_s") or 0.0)
+        sp_budget = metrics.get("sp_time_limit")
+        if sp_budget is None:
+            sp_budget = self._config.sp_time_limit
+        mode_done = "SP" if result.used_sp else "SC"
+        self._logger.log_phase_done(
+            log_iter,
+            1,
+            2,
+            "sp_sc",
+            sp_elapsed,
+            float(sp_budget),
+            {
+                "sc_or_sp": mode_done,
+                "pool_size": metrics.get("pool_size"),
+                "avg_coverage": metrics.get("avg_coverage"),
+                "min_coverage": metrics.get(
+                    "min_coverage", self._config.min_coverage
+                ),
+            },
+            tag="ASYNC 1/2",
+        )
+
+        ails_elapsed = metrics.get("ails_wall_s")
+        if ails_elapsed is not None:
+            std_budget = metrics.get("std_improve_limit")
+            if std_budget is None:
+                std_budget = self._config.standard_improvement_time_limit
+            self._logger.log_phase_done(
+                log_iter,
+                2,
+                2,
+                "standard_ails",
+                float(ails_elapsed),
+                float(std_budget),
+                tag="ASYNC 2/2",
+            )
+
         if result.lp_weights:
             self._manager.update_scores_after_solve(self._pool, result.lp_weights)
 
@@ -735,7 +775,7 @@ class DRISPIPipeline:
             if float(result.final_cost) < prev_best:
                 if result.sp_routes:
                     placeholder = self._selection_from_sp_routes(
-                        result.sp_routes, iteration
+                        result.sp_routes, log_iter
                     )
                     add_post_standard_improvement_routes_to_pool(
                         self._pool,
@@ -744,14 +784,14 @@ class DRISPIPipeline:
                         result.final_routes,
                         float(result.final_cost),
                         prev_best,
-                        iteration,
+                        log_iter,
                         placeholder,
                     )
-                self._update_best(result.final_routes, iteration, "standard_ails")
+                self._update_best(result.final_routes, log_iter, "standard_ails")
                 adopted = True
                 self._spsc_adopted += 1
                 self._log_improvement(
-                    iteration, float(result.final_cost), result.final_routes, "standard_ails"
+                    log_iter, float(result.final_cost), result.final_routes, "standard_ails"
                 )
                 reason = "adopted"
             else:
@@ -762,19 +802,13 @@ class DRISPIPipeline:
         else:
             reason = reason or "empty_solution"
 
-        content = (
-            f"async SP/SC apply job={result.job_id} adopted={adopted} "
-            f"reason={reason}"
-        )
-        if drain_latency is not None:
-            content += f" drain_latency={drain_latency:.3f}s"
-        self._logger._emit(  # noqa: SLF001 — structured event for async SP/SC
-            iteration,
-            "ASYNC",
-            content,
-            json_event={
+        # Structured-only apply event (console uses ASYNC 1/2 + 2/2 above).
+        self._logger._emit_json(  # noqa: SLF001
+            {
                 "type": "spsc_apply",
-                "iteration": iteration,
+                "iteration": log_iter,
+                "apply_iteration": iteration,
+                "snapshot_iteration": log_iter,
                 "job_id": result.job_id,
                 "adopted": adopted,
                 "reason": reason,
@@ -786,7 +820,7 @@ class DRISPIPipeline:
                 "drain_latency_s": drain_latency,
                 "metrics": result.metrics,
                 "used_sp": result.used_sp,
-            },
+            }
         )
 
     def _selection_from_sp_routes(

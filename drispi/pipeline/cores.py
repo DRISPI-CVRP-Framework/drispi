@@ -153,19 +153,30 @@ def resolve_cores(
     )
 
 
+def affinity_logging_enabled() -> bool:
+    """Opt-in via ``DRISPI_LOG_AFFINITY=1`` (default: quiet)."""
+    return os.environ.get("DRISPI_LOG_AFFINITY", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+
+
 def log_current_affinity(label: str) -> set[int]:
-    """Log and return ``os.sched_getaffinity(0)`` for verification."""
+    """Return ``os.sched_getaffinity(0)``; log only when ``DRISPI_LOG_AFFINITY`` is set."""
     try:
         aff = os.sched_getaffinity(0)
     except AttributeError:
-        LOGGER.warning("%s: sched_getaffinity not available on this platform", label)
+        if affinity_logging_enabled():
+            LOGGER.warning("%s: sched_getaffinity not available on this platform", label)
         return set()
-    LOGGER.info("%s: sched_getaffinity(0)=%s", label, sorted(aff))
+    if affinity_logging_enabled():
+        LOGGER.info("%s: sched_getaffinity(0)=%s", label, sorted(aff))
     return set(aff)
 
 
 def set_affinity(cpus: list[int], *, label: str) -> None:
-    """Pin the current process to ``cpus`` and log the effective affinity."""
+    """Pin the current process to ``cpus``; optionally log effective affinity."""
     if not cpus:
         raise ValueError("cannot set empty affinity mask")
     os.sched_setaffinity(0, set(cpus))

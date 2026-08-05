@@ -10,6 +10,7 @@ from concurrent.futures import ALL_COMPLETED, ProcessPoolExecutor, wait
 from drispi.core.instance import CVRPInstance
 from drispi.core.solution import Route as SolutionRoute
 from drispi.core.types import Route
+from drispi.pipeline.cores import affinity_logging_enabled
 
 LOGGER = logging.getLogger(__name__)
 
@@ -35,18 +36,19 @@ def subcluster_wall_timeout(max_budget: float, *, n_rounds: int = 1) -> float:
 
 
 def _dri_worker_initializer(dri_cpus: list[int] | None) -> None:
-    """Set OMP_NUM_THREADS=1, optional affinity, and log effective affinity once."""
+    """Set OMP_NUM_THREADS=1 and optional affinity (quiet unless DRISPI_LOG_AFFINITY)."""
     os.environ.setdefault("OMP_NUM_THREADS", "1")
     os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
     os.environ.setdefault("MKL_NUM_THREADS", "1")
     if dri_cpus:
         os.sched_setaffinity(0, set(dri_cpus))
-    try:
-        aff = sorted(os.sched_getaffinity(0))
-    except AttributeError:
-        aff = []
-    # Use print so it shows even if worker logging is not configured.
-    print(f"[dri-worker pid={os.getpid()}] sched_getaffinity(0)={aff}", flush=True)
+    if affinity_logging_enabled():
+        try:
+            aff = sorted(os.sched_getaffinity(0))
+        except AttributeError:
+            aff = []
+        # print: worker logging may not be configured
+        print(f"[dri-worker pid={os.getpid()}] sched_getaffinity(0)={aff}", flush=True)
 
 
 def make_subinstance(instance: CVRPInstance, cluster: list[int]) -> CVRPInstance:

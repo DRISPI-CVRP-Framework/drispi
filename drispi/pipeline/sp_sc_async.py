@@ -26,7 +26,7 @@ from drispi.core.instance import CVRPInstance
 from drispi.core.solution import Route as SolutionRoute
 from drispi.core.types import Route
 from drispi.improvement.bg_ails import run_standard_improvement
-from drispi.pipeline.cores import set_affinity
+from drispi.pipeline.cores import affinity_logging_enabled, set_affinity
 from drispi.route_pool.pool import RoutePool
 from drispi.solvers.ails2 import Ails2Solver
 from drispi.sp.deduplicate import remove_duplicates
@@ -301,10 +301,11 @@ def sp_sc_worker_main(
     """
     if sp_cpus:
         set_affinity(list(sp_cpus), label=f"sp-worker pid={os.getpid()}")
-    else:
+    elif affinity_logging_enabled():
         LOGGER.info("sp-worker: no sp_cpus provided; leaving OS affinity unchanged")
 
-    _probe_java_child_affinity(ails_apc=ails_apc, xmx=xmx)
+    if affinity_logging_enabled():
+        _probe_java_child_affinity(ails_apc=ails_apc, xmx=xmx)
 
     while True:
         job = job_queue.get()

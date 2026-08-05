@@ -30,7 +30,7 @@ class HAOSConfig:
     rewards: HAOSRewardConfig = field(default_factory=HAOSRewardConfig)
 
     k_candidates: list[int] = field(
-        default_factory=lambda: [1, 2, 3, 4, 6, 8, 10, 12, 14, 16]
+        default_factory=lambda: [1, 2, 3, 4, 6, 8, 10, 12, 14]
     )
     min_weight_k: float = 0.025
 

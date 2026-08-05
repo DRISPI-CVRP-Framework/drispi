@@ -10,11 +10,11 @@ cores:
 
 sp_sc:
   mode: async
-  trigger: wallclock
+  trigger: wallclock          # async-only; first fire after warmup
   interval_minutes: 20.0
   overlap_policy: skip
-  warmup_iterations: 10
-  sp_interval: 3
+  warmup_iterations: 10       # always gates every trigger
+  sp_interval: 3              # used if trigger: iteration
   min_coverage: 5
   sp_time_limit: 600.0
   mip_gap: 0.0005

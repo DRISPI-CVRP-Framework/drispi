@@ -85,6 +85,7 @@ def test_config_to_dict_sections() -> None:
     assert grouped["haos"]["haos_decay"] == 0.95
     assert grouped["sp_sc"]["min_coverage"] == 5
     assert grouped["sp_sc"]["sp_sc_mode"] == "sync"
+    assert grouped["sp_sc"]["sp_sc_trigger"] == "iteration"
     assert grouped["cores"]["cores_total"] is None
 
 

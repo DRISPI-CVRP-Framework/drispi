@@ -24,7 +24,9 @@ class DRISPIConfig:
     cores_cpu_list: list[int] | None = None
 
     # ── SP/SC scheduling ──────────────────────────────────────────────
-    # mode: off | sync | async; trigger: iteration | wallclock
+    # mode: off | sync | async
+    # trigger: iteration (sync default / always for sync) | wallclock (async only)
+    # warmup_iterations always gates every trigger.
     sp_sc_mode: str = "sync"
     sp_sc_trigger: str = "iteration"
     interval_minutes: float = 20.0

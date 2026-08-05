@@ -382,7 +382,8 @@ class AsyncSpScController:
         self._next_job_id = 1
         self._in_flight = False
         self._pending: SpScJob | None = None
-        self._next_due_ts: float | None = None  # wallclock; None => due immediately
+        # wallclock: None => due ASAP once past warmup
+        self._next_due_ts: float | None = None
         self._started = False
 
         # Instrumentation (read by pipeline / logger)
@@ -448,13 +449,16 @@ class AsyncSpScController:
         )
 
     def _is_due(self, *, iteration: int | None, now: float) -> bool:
+        if iteration is None:
+            raise ValueError("iteration is required for SP/SC trigger gating")
+        # Warmup trumps every trigger: never fire before the pool has warmed.
+        if iteration < self.warmup_iterations:
+            return False
         if self.trigger == "iteration":
-            if iteration is None:
-                raise ValueError("iteration is required when trigger='iteration'")
             return should_run_sp_sc(
                 iteration, self.warmup_iterations, self.sp_interval
             )
-        # wallclock, start-anchored
+        # wallclock, start-anchored: first fire ASAP after warmup
         if self._next_due_ts is None:
             return True
         return now >= self._next_due_ts
@@ -527,8 +531,11 @@ class AsyncSpScController:
         """
         Possibly enqueue a pool snapshot for the SP worker.
 
-        Start-anchored: after an enqueue (or a busy skip under wallclock), the
-        next wall-clock due time is ``enqueue_ts + interval_minutes``.
+        Warmup always wins: no enqueue while ``iteration < warmup_iterations``.
+
+        Start-anchored wallclock: after an enqueue (or a busy skip under
+        wallclock), the next due time is ``enqueue_ts + interval_minutes``.
+        The first fire after warmup is ASAP (``_next_due_ts is None``).
 
         Overlap: ``skip`` increments ``skipped_trigger_count``; ``queue_latest``
         keeps at most one pending job released when the in-flight result is polled.

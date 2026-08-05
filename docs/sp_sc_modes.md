@@ -1,8 +1,10 @@
 # SC/SP modes: sync, async, and off
 
 Set covering / set partitioning (SC/SP) plus post-SP standard AILS can run in three
-modes. Mode and trigger are **orthogonal**: choose *when* to fire independently of
-*how* it runs.
+modes. Choose *how* it runs (`mode`) and, for async, *when* it fires (`trigger`).
+
+**Warmup always wins.** No SC/SP fires while `iteration < warmup_iterations`,
+regardless of mode or trigger.
 
 | Setting | Values | Default |
 |---------|--------|---------|
@@ -10,6 +12,10 @@ modes. Mode and trigger are **orthogonal**: choose *when* to fire independently 
 | `sp_sc.trigger` | `iteration` \| `wallclock` | `iteration` |
 | `sp_sc.overlap_policy` | `skip` \| `queue_latest` | `skip` |
 | `sp_sc.interval_minutes` | float | `20.0` |
+
+`trigger: wallclock` is **async-only**. Sync always uses `warmup_iterations` +
+`sp_interval` (iteration trigger). Configuring `mode: sync` with
+`trigger: wallclock` raises.
 
 Configure via a nested `sp_sc:` block in YAML (preferred) or flat keys
 (`sp_sc_mode`, `sp_sc_trigger`, …). There is no CLI flag for mode yet — pass a
@@ -33,15 +39,19 @@ same iteration. The DRI loop blocks until the MIP and AILS finish.
 **When to use:** baseline behaviour, debugging, or when you do not reserve a
 dedicated SP core.
 
-### Iteration trigger (default)
+### Scheduling (always iteration)
 
-Fires when `warmup_iterations` / `sp_interval` / coverage gates say so (same
-policy as before).
+Fires when `warmup_iterations` / `sp_interval` / coverage gates say so:
+
+```text
+iteration >= warmup_iterations
+AND (iteration - warmup_iterations) % sp_interval == 0
+```
 
 ```yaml
 sp_sc:
   mode: sync
-  trigger: iteration
+  trigger: iteration          # required / only valid choice for sync
   warmup_iterations: 10
   sp_interval: 3
   min_coverage: 5
@@ -54,23 +64,6 @@ Flat equivalent (also accepted):
 ```yaml
 sp_sc_mode: sync
 sp_sc_trigger: iteration
-```
-
-### Wall-clock trigger
-
-Fires on a **start-anchored** schedule: after an enqueue/run starts, the next due
-time is `now + interval_minutes`. Overlap policy still applies if a previous sync
-run would somehow overlap (mainly relevant for async).
-
-```yaml
-sp_sc:
-  mode: sync
-  trigger: wallclock
-  interval_minutes: 20.0
-  overlap_policy: skip
-  warmup_iterations: 10
-  min_coverage: 5
-  sp_time_limit: 600.0
 ```
 
 ### Cores (optional)
@@ -114,6 +107,13 @@ comparisons of “reserve 1 core for async SP” vs “give that core to DRI” 
 arms typically use `cores: {total: 8, dri: 7, sp: 1}` with sync leaving the SP
 core idle during DRI).
 
+### Triggers
+
+| Trigger | Behaviour after warmup |
+|---------|------------------------|
+| `iteration` | Same as sync: `warmup` + `sp_interval` |
+| `wallclock` | First fire ASAP once past warmup; then start-anchored every `interval_minutes` |
+
 ### Recommended async config
 
 Async is most useful with an explicit `cores:` block so the worker can pin to
@@ -131,7 +131,7 @@ sp_sc:
   trigger: wallclock          # or iteration
   interval_minutes: 20.0
   overlap_policy: skip        # or queue_latest
-  warmup_iterations: 10
+  warmup_iterations: 10       # always respected
   sp_interval: 3              # used when trigger: iteration
   min_coverage: 5
   sp_time_limit: 600.0
@@ -185,6 +185,7 @@ sp_sc:
 ## Behaviour cheat sheet
 
 ```text
+iteration < warmup?  → never fire (any mode / trigger)
 trigger fires
     │
     ├─ mode=off     → never
@@ -199,6 +200,7 @@ trigger fires
 | Who runs MIP / AILS | Main process | SP worker process |
 | DRI blocked? | Yes, during SC/SP | No (except brief pickle) |
 | Result apply | Same iteration, after SP | Next iteration start only |
+| Trigger | `iteration` only | `iteration` or `wallclock` |
 | Needs `cores:`? | Optional | Strongly recommended |
 | Default in `DRISPIConfig` | yes (`sync` + `iteration`) | — |
 

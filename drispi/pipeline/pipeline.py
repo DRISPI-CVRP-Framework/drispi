@@ -133,6 +133,22 @@ class DRISPIPipeline:
         self._instance = instance
         self._config = config
         self._bks_cost = bks_cost
+
+        mode = (config.sp_sc_mode or "sync").strip().lower()
+        if mode not in ("off", "sync", "async"):
+            raise ValueError(f"Invalid sp_sc_mode: {config.sp_sc_mode!r}")
+        trigger = (config.sp_sc_trigger or "iteration").strip().lower()
+        if trigger not in ("iteration", "wallclock"):
+            raise ValueError(f"Invalid sp_sc_trigger: {config.sp_sc_trigger!r}")
+        if mode == "sync" and trigger == "wallclock":
+            raise ValueError(
+                "sp_sc_trigger='wallclock' is only supported with "
+                "sp_sc_mode='async'; use trigger='iteration' for sync "
+                "(warmup + sp_interval)"
+            )
+        self._sp_sc_mode = mode
+        self._sp_sc_trigger = trigger
+
         self._cores: CoresConfig = resolve_cores(
             cores_total=config.cores_total,
             cores_dri=config.cores_dri,
@@ -194,20 +210,11 @@ class DRISPIPipeline:
         self._snapshot_writer = SnapshotWriter(self.run_dir)
         self._logger.log_init(config, instance)
 
-        mode = (config.sp_sc_mode or "sync").strip().lower()
-        if mode not in ("off", "sync", "async"):
-            raise ValueError(f"Invalid sp_sc_mode: {config.sp_sc_mode!r}")
-        trigger = (config.sp_sc_trigger or "iteration").strip().lower()
-        if trigger not in ("iteration", "wallclock"):
-            raise ValueError(f"Invalid sp_sc_trigger: {config.sp_sc_trigger!r}")
-        self._sp_sc_mode = mode
-        self._sp_sc_trigger = trigger
-        self._sync_next_due_ts: float | None = None
         self._spsc_adopted = 0
         self._spsc_invocations = 0
         self._drain_latencies: list[float] = []
         self._async_ctrl: AsyncSpScController | None = None
-        if mode == "async":
+        if self._sp_sc_mode == "async":
             sp = max(1, self._cores.sp if self._cores.from_cores_block else 1)
             self._async_ctrl = AsyncSpScController(
                 sp_cpus=self._cores.sp_cpus,
@@ -215,7 +222,7 @@ class DRISPIPipeline:
                 ails_apc=sp,
                 xmx=Ails2Solver.DEFAULT_XMX,
                 overlap_policy=config.overlap_policy,  # type: ignore[arg-type]
-                trigger=trigger,  # type: ignore[arg-type]
+                trigger=self._sp_sc_trigger,  # type: ignore[arg-type]
                 interval_minutes=config.interval_minutes,
                 warmup_iterations=config.warmup_iterations,
                 sp_interval=config.sp_interval,
@@ -539,27 +546,18 @@ class DRISPIPipeline:
                 iteration=iteration,
             )
         elif is_spsc and self._sp_sc_mode == "sync":
-            if self._sp_sc_trigger == "wallclock":
-                self._sync_next_due_ts = time.time() + self._config.interval_minutes * 60.0
             t0 = time.perf_counter()
-            # Wallclock path already gated via _should_run_sync_spsc; force policy on.
             sp_result, used_sp = run_sp_sc(
                 self._pool,
                 self._instance,
                 self._manager,
-                iteration
-                if self._sp_sc_trigger == "iteration"
-                else self._config.warmup_iterations,
+                iteration,
                 self._best_solution if self._best_solution is not None else bg_seqs,
                 time_limit=self._config.sp_time_limit,
                 mip_gap=self._config.mip_gap,
                 min_coverage=self._config.min_coverage,
-                warmup_iterations=self._config.warmup_iterations
-                if self._sp_sc_trigger == "iteration"
-                else 0,
-                sp_interval=self._config.sp_interval
-                if self._sp_sc_trigger == "iteration"
-                else 1,
+                warmup_iterations=self._config.warmup_iterations,
+                sp_interval=self._config.sp_interval,
                 threads=(
                     self._cores.sp
                     if self._cores.from_cores_block and self._cores.sp > 0
@@ -697,16 +695,14 @@ class DRISPIPipeline:
         )
 
     def _should_run_sync_spsc(self, iteration: int) -> bool:
+        """Sync always uses iteration trigger (warmup + sp_interval)."""
         if self._sp_sc_mode != "sync":
             return False
-        if self._sp_sc_trigger == "iteration":
-            return should_run_sp_sc(
-                iteration,
-                self._config.warmup_iterations,
-                self._config.sp_interval,
-            )
-        now = time.time()
-        return self._sync_next_due_ts is None or now >= self._sync_next_due_ts
+        return should_run_sp_sc(
+            iteration,
+            self._config.warmup_iterations,
+            self._config.sp_interval,
+        )
 
     def _apply_async_spsc_result(self, result: SpScResult, iteration: int) -> None:
         """Apply a drained async SC/SP (+ AILS) result against the live incumbent."""

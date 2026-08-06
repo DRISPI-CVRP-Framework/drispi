@@ -2,7 +2,7 @@
 
 # Stopping criteria
 time_limit: 7200.0
-max_no_improve: 100
+max_no_improve: 1000
 
 # Parallelism
 n_workers: 8
@@ -11,7 +11,7 @@ n_workers: 8
 warmup_iterations: 10
 sp_interval: 3
 min_coverage: 5
-sp_time_limit: 600.0
+sp_time_limit: 720.0
 mip_gap: 0.0005
 
 # Subcluster solver
@@ -27,11 +27,11 @@ bg_ails_pair_selection: stochastic  # stochastic | greedy
 bg_ails_n_chains_mode: k_minus_1  # k_minus_1 | k
 
 # Standard improvement
-standard_improvement_time_limit: 180.0
+standard_improvement_time_limit: 360.0
 
 # Route pool
 max_pool_size: 10000
-pool_diversity_weight: 1.0
+pool_diversity_weight: 0.5
 
 # HAOS
 haos_decay: 0.95
@@ -51,16 +51,16 @@ haos_route_method_values: ["kmeans", "agglomerative_avg", "agglomerative_complet
 haos_solver_values: ["pyvrp", "filo", "filo2", "ails2"]
 
 # HAOS rewards
-haos_reward_new_best: 8.0
-haos_reward_improvement: 3.0
+haos_reward_new_best: 10.0
+haos_reward_improvement: 4.0
 haos_reward_no_improvement: 1.0
 haos_reward_no_solution: 0.0
-haos_deferred_new_best: 5.0
-haos_deferred_improvement: 2.0
+haos_deferred_new_best: 7.0
+haos_deferred_improvement: 3.0
 haos_deferred_no_improvement: 0.0
 
 # Seed (all sub-seeds derived deterministically from this)
-seed: 42
+seed: 4242
 
 # Output
 output_dir: "artifacts/runs"

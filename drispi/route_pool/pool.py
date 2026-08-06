@@ -7,7 +7,7 @@ from collections.abc import Iterator
 from drispi.core.types import Route
 from drispi.haos.tag import HAOSTag
 from drispi.route_pool._entry import RouteEntry
-from drispi.route_pool.diversity import mean_jaccard_diversity
+from drispi.route_pool.diversity import mean_jaccard_diversities
 
 
 class RoutePool:
@@ -89,8 +89,12 @@ class RoutePool:
     def update_diversity_scores(self) -> None:
         """Recompute and append diversity score for each route."""
         all_entries = list(self._entries.values())
-        for entry in all_entries:
-            entry.diversity_scores.append(mean_jaccard_diversity(entry, all_entries))
+        for entry, score in zip(
+            all_entries,
+            mean_jaccard_diversities(all_entries),
+            strict=True,
+        ):
+            entry.diversity_scores.append(score)
 
     def routes(self, elite_only: bool = False) -> list[RouteEntry]:
         """Return all route entries or only elite entries."""

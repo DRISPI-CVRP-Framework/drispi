@@ -64,3 +64,42 @@ def test_select_for_eviction_returns_required_number_of_keys() -> None:
     ]
     selected = select_for_eviction(entries, current_size=4, max_size=2)
     assert len(selected) == 2
+
+
+def test_select_for_eviction_prefers_scored_over_unscored() -> None:
+    """Soft-protect: do not evict unscored when scored can cover overflow."""
+    scored_weak = _entry([2, 3], quality=[0.9], diversity=[0.1])
+    scored_strong = _entry([4, 5], quality=[0.1], diversity=[0.9])
+    unscored_a = _entry([6, 7])
+    unscored_b = _entry([8, 9])
+
+    selected = select_for_eviction(
+        [scored_weak, scored_strong, unscored_a, unscored_b],
+        current_size=4,
+        max_size=2,
+        diversity_weight=1.0,
+    )
+    assert len(selected) == 2
+    assert scored_weak.customer_set in selected
+    assert scored_strong.customer_set in selected
+    assert unscored_a.customer_set not in selected
+    assert unscored_b.customer_set not in selected
+
+
+def test_select_for_eviction_falls_back_to_unscored_when_needed() -> None:
+    """If scored non-elite are insufficient, take remaining from unscored."""
+    scored = _entry([2, 3], quality=[0.5], diversity=[0.5])
+    unscored_a = _entry([4, 5])
+    unscored_b = _entry([6, 7])
+    elite = _entry([8, 9], elite=True, quality=[0.1], diversity=[0.9])
+
+    selected = select_for_eviction(
+        [scored, unscored_a, unscored_b, elite],
+        current_size=4,
+        max_size=1,
+        diversity_weight=1.0,
+    )
+    assert len(selected) == 3
+    assert scored.customer_set in selected
+    assert elite.customer_set not in selected
+    assert {unscored_a.customer_set, unscored_b.customer_set} <= set(selected)

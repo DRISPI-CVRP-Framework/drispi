@@ -87,6 +87,26 @@ def test_config_to_dict_sections() -> None:
     assert grouped["sp_sc"]["sp_sc_mode"] == "sync"
     assert grouped["sp_sc"]["sp_sc_trigger"] == "iteration"
     assert grouped["cores"]["cores_total"] is None
+    assert grouped["bg_ails"]["bg_ails_min_budget"] == 60.0
+    assert grouped["bg_ails"]["bg_ails_divisor"] == 46.5
+    assert grouped["bg_ails"]["bg_ails_divisor_assumes_time_per_customer"] == 0.06
+    assert "bg_ails_time_limit" not in grouped["bg_ails"]
+
+
+def test_load_rejects_removed_bg_ails_time_limit(tmp_path: Path) -> None:
+    path = tmp_path / "cfg.yaml"
+    path.write_text("bg_ails_time_limit: 120.0\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="bg_ails_time_limit was removed"):
+        load_config(path)
+
+
+def test_repo_default_yaml_bg_ails_budget_keys() -> None:
+    repo_root = Path(__file__).resolve().parents[2]
+    loaded = load_config(repo_root / "configs" / "default.yaml")
+    assert loaded.bg_ails_min_budget == 60.0
+    assert loaded.bg_ails_divisor == 46.5
+    assert loaded.bg_ails_divisor_assumes_time_per_customer == 0.06
+    assert loaded.subcluster_time_per_customer == 0.06
 
 
 def test_profile_config_inherits_default_yaml(tmp_path: Path) -> None:

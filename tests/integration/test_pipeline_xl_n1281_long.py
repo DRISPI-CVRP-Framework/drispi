@@ -37,8 +37,10 @@ def test_xl_n1281_pipeline_long_budget(xl_n1281: CVRPInstance) -> None:
         output_dir=out,
         warmup_iterations=10,
         sp_interval=3,
-        subcluster_time_per_customer=0.05,
-        bg_ails_time_limit=60.0,
+        subcluster_time_per_customer=0.06,
+        bg_ails_divisor_assumes_time_per_customer=0.06,
+        bg_ails_min_budget=60.0,
+        bg_ails_divisor=46.5,
         standard_improvement_time_limit=90.0,
         sp_time_limit=300.0,
     )

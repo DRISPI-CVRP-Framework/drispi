@@ -32,7 +32,9 @@ _SECTION_FIELDS: dict[str, list[str]] = {
     ],
     "subcluster": ["subcluster_time_per_customer"],
     "bg_ails": [
-        "bg_ails_time_limit",
+        "bg_ails_min_budget",
+        "bg_ails_divisor",
+        "bg_ails_divisor_assumes_time_per_customer",
         "bg_ails_initial_omega",
         "bg_ails_boundary_threshold",
         "bg_ails_small_cluster_cap",
@@ -170,6 +172,11 @@ def _read_yaml_mapping(yaml_path: Path) -> dict[str, Any]:
         if key == "sp_sc" and isinstance(value, dict):
             overrides.update(_expand_nested_sp_sc(value))
             continue
+        if key == "bg_ails_time_limit":
+            raise ValueError(
+                "bg_ails_time_limit was removed; use bg_ails_min_budget and "
+                "bg_ails_divisor (budget = max(min_budget, n_customers / divisor))"
+            )
         if key not in _VALID_FIELDS:
             warnings.warn(f"Unknown config key ignored: {key!r}", stacklevel=3)
             continue

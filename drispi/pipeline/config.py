@@ -38,10 +38,14 @@ class DRISPIConfig:
     mip_gap: float = 0.0005
 
     # ── Subcluster solver ─────────────────────────────────────────────
-    subcluster_time_per_customer: float = 0.05
+    subcluster_time_per_customer: float = 0.06
 
     # ── BG-AILS ───────────────────────────────────────────────────────
-    bg_ails_time_limit: float = 90.0
+    # budget_seconds = max(bg_ails_min_budget, n_customers / bg_ails_divisor)
+    bg_ails_min_budget: float = 60.0
+    bg_ails_divisor: float = 46.5
+    # Derivation base for bg_ails_divisor; must match subcluster_time_per_customer.
+    bg_ails_divisor_assumes_time_per_customer: float = 0.06
     bg_ails_initial_omega: float = 0.8
     bg_ails_boundary_threshold: float = 0.5
     bg_ails_small_cluster_cap: int = 20
@@ -67,7 +71,7 @@ class DRISPIConfig:
     haos_min_weight_route_method: float = 0.05
     haos_min_weight_solver: float = 0.05
     haos_k_candidates: list[int] = field(
-        default_factory=lambda: [1, 2, 3, 4, 6, 8, 10, 12, 14, 16]
+        default_factory=lambda: [1, 2, 3, 4, 6, 8, 10, 12]
     )
     haos_lambda_demand_values: list[float] = field(
         default_factory=lambda: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]

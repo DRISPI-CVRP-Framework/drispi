@@ -17,8 +17,10 @@ mip_gap: 0.0005
 # Subcluster solver
 subcluster_time_per_customer: 0.06
 
-# BG-AILS
-bg_ails_time_limit: 120.0
+# BG-AILS (budget = max(min_budget, n_customers / divisor))
+bg_ails_min_budget: 60.0
+bg_ails_divisor: 46.5
+bg_ails_divisor_assumes_time_per_customer: 0.06
 bg_ails_initial_omega: 0.8
 bg_ails_boundary_threshold: 0.5
 bg_ails_small_cluster_cap: 20
@@ -43,7 +45,7 @@ haos_min_weight_paradigm: 0.1
 haos_min_weight_vertex_method: 0.05
 haos_min_weight_route_method: 0.05
 haos_min_weight_solver: 0.05
-haos_k_candidates: [1, 2, 3, 4, 6, 8, 10, 12, 14]
+haos_k_candidates: [1, 2, 3, 4, 6, 8, 10, 12]
 haos_lambda_demand_values: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
 haos_paradigm_values: ["vertex", "route"]
 haos_vertex_method_values: ["kmeans", "agglomerative_avg", "agglomerative_complete", "agglomerative_single", "kmedoids", "fcm"]

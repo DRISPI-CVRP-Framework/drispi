@@ -391,6 +391,12 @@ class PipelineLogger:
         bg_cost_after: float | None = None,
         lp_fractionality: float | None = None,
         tag: str | None = None,
+        bg_ails_budget_seconds: float | None = None,
+        bg_ails_actual_wall_seconds: float | None = None,
+        k: int | None = None,
+        n_chains: int | None = None,
+        max_cluster_size: int | None = None,
+        dr_stage_wall_seconds: float | None = None,
     ) -> None:
         op = operator_info or {}
         elapsed_s = f"{elapsed:.2f}s"
@@ -416,11 +422,11 @@ class PipelineLogger:
                 )
         elif phase_name == "route":
             solver = op.get("solver")
-            k = op.get("k")
+            k_op = op.get("k")
             if solver is not None:
                 parts.append(str(solver))
-            if k is not None:
-                parts.append(f"k={k}")
+            if k_op is not None:
+                parts.append(f"k={k_op}")
         elif phase_name == "sp_sc":
             mode = op.get("sc_or_sp")
             pool_size = op.get("pool_size")
@@ -455,6 +461,20 @@ class PipelineLogger:
             json_event["bg_cost_after"] = bg_cost_after
         if lp_fractionality is not None:
             json_event["lp_fractionality"] = lp_fractionality
+        if bg_ails_budget_seconds is not None:
+            json_event["bg_ails_budget_seconds"] = round(bg_ails_budget_seconds, 4)
+        if bg_ails_actual_wall_seconds is not None:
+            json_event["bg_ails_actual_wall_seconds"] = round(
+                bg_ails_actual_wall_seconds, 4
+            )
+        if k is not None:
+            json_event["k"] = k
+        if n_chains is not None:
+            json_event["n_chains"] = n_chains
+        if max_cluster_size is not None:
+            json_event["max_cluster_size"] = max_cluster_size
+        if dr_stage_wall_seconds is not None:
+            json_event["dr_stage_wall_seconds"] = round(dr_stage_wall_seconds, 4)
         self._emit(iteration, emit_tag, content, json_event=json_event)
 
     def log_improve(self, iteration: int, cost: float, phase_name: str) -> None:

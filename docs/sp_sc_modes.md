@@ -216,7 +216,13 @@ trigger fires
 
 - **AILS JVM flags** always include `-XX:+UseSerialGC`,
   `-XX:ActiveProcessorCount={cores.sp|1}`, `-Xmx4g` (heap chosen from XL
-  diagnostics; not a claim of zero handicap vs unpinned G1).
+  diagnostics; not a claim of zero handicap vs unpinned G1). BG-AILS improve
+  uses the same path via ``Pipeline._ails2_solver``. Known follow-ups (not
+  Stage 1): whether APC should track a different allocated core count than
+  ``cores.sp``, and whether ``-Xmx`` should become a live measured requirement
+  rather than the static ``4g`` constant.
+- **BG-AILS time budget** is ``max(bg_ails_min_budget, n_customers / bg_ails_divisor)``
+  (see ``drispi.improvement.bg_ails_budget``). ``bg_ails_time_limit`` was removed.
 - **Subcluster wall-timeout** is scaled by `ceil(k / dri_workers)` so multi-wave
   HAOS rolls get proportional time.
 - Defaults when keys are omitted: see `drispi/pipeline/config.py`.

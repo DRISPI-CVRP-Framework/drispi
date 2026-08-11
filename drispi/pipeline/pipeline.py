@@ -27,10 +27,15 @@ from drispi.haos.haos import HAOS, HAOSSelection
 from drispi.haos.tag import HAOSTag
 from drispi.haos.weights_io import save_weights
 from drispi.improvement.bg_ails import (
+    _resolve_n_chains,
     _route_cluster_ids,
     run_bg_ails_improve,
     run_bg_ails_perturb,
     run_standard_improvement,
+)
+from drispi.improvement.bg_ails_budget import (
+    bg_ails_budget_seconds,
+    check_bg_ails_divisor_coupling,
 )
 from drispi.pipeline.config import DRISPIConfig
 from drispi.pipeline.core_manager import CoreManager
@@ -133,6 +138,13 @@ class DRISPIPipeline:
         self._instance = instance
         self._config = config
         self._bks_cost = bks_cost
+
+        check_bg_ails_divisor_coupling(
+            subcluster_time_per_customer=config.subcluster_time_per_customer,
+            divisor_assumes_time_per_customer=(
+                config.bg_ails_divisor_assumes_time_per_customer
+            ),
+        )
 
         mode = (config.sp_sc_mode or "sync").strip().lower()
         if mode not in ("off", "sync", "async"):
@@ -407,12 +419,13 @@ class DRISPIPipeline:
                 exc,
             )
             return
+        dr_stage_wall_seconds = time.perf_counter() - t0
         self._logger.log_phase_done(
             iteration,
             2,
             total_phases,
             "route",
-            time.perf_counter() - t0,
+            dr_stage_wall_seconds,
             max_budget,
             {"solver": selection.solver, "k": selection.k, "batch_rounds": n_rounds},
             cluster_sizes=cluster_sizes,
@@ -433,6 +446,11 @@ class DRISPIPipeline:
         combined_sol = _seqs_to_solution_routes(self._instance, combined_seqs)
 
         bg_seed = self._bg_seed + iteration
+        n_chains = _resolve_n_chains(
+            partition,
+            n_chains=None,
+            n_chains_mode=self._config.bg_ails_n_chains_mode,  # type: ignore[arg-type]
+        )
         perturbed_sol, perturbed_indices = run_bg_ails_perturb(
             self._instance,
             combined_sol,
@@ -457,13 +475,18 @@ class DRISPIPipeline:
             phase_tag="pre",
         )
 
+        bg_ails_budget = bg_ails_budget_seconds(
+            self._instance.n_customers,
+            min_budget=self._config.bg_ails_min_budget,
+            divisor=self._config.bg_ails_divisor,
+        )
         t0 = time.perf_counter()
         bg_solution = run_bg_ails_improve(
             self._instance,
             perturbed_sol,
             partition,
             self._config.bg_ails_initial_omega,
-            time_limit=self._config.bg_ails_time_limit,
+            time_limit=bg_ails_budget,
             seed=bg_seed,
             solver=self._ails2_solver(),
         )
@@ -493,9 +516,15 @@ class DRISPIPipeline:
             total_phases,
             "bg_ails",
             bg_elapsed,
-            self._config.bg_ails_time_limit,
+            bg_ails_budget,
             bg_cost_before=bg_cost_before,
             bg_cost_after=bg_cost,
+            bg_ails_budget_seconds=bg_ails_budget,
+            bg_ails_actual_wall_seconds=bg_elapsed,
+            k=selection.k,
+            n_chains=n_chains,
+            max_cluster_size=max(cluster_sizes) if cluster_sizes else 0,
+            dr_stage_wall_seconds=dr_stage_wall_seconds,
         )
         if bg_improved:
             self._log_improvement(iteration, bg_cost, bg_seqs, "bg_ails")

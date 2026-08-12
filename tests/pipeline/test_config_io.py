@@ -100,11 +100,75 @@ def test_load_rejects_removed_bg_ails_time_limit(tmp_path: Path) -> None:
         load_config(path)
 
 
+def test_load_nested_bg_ails_block(tmp_path: Path) -> None:
+    path = tmp_path / "cfg.yaml"
+    path.write_text(
+        "bg_ails:\n"
+        "  mode: async\n"
+        "  crash_threshold: 2\n"
+        "  min_budget: 90.0\n",
+        encoding="utf-8",
+    )
+    loaded = load_config(path)
+    assert loaded.bg_ails_mode == "async"
+    assert loaded.bg_ails_crash_threshold == 2
+    assert loaded.bg_ails_min_budget == 90.0
+    # Untouched nested keys fall back to dataclass defaults.
+    assert loaded.bg_ails_divisor == DRISPIConfig().bg_ails_divisor
+
+
+def test_load_nested_bg_ails_rejects_time_limit(tmp_path: Path) -> None:
+    path = tmp_path / "cfg.yaml"
+    path.write_text("bg_ails:\n  time_limit: 120.0\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="bg_ails_time_limit was removed"):
+        load_config(path)
+
+
+def test_load_nested_bg_ails_warns_on_unknown_key(tmp_path: Path) -> None:
+    path = tmp_path / "cfg.yaml"
+    path.write_text("bg_ails:\n  mode: sync\n  bogus: 1\n", encoding="utf-8")
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        loaded = load_config(path)
+    assert loaded.bg_ails_mode == "sync"
+    assert any("bogus" in str(w.message) for w in caught)
+
+
+def test_load_nested_cores_bg(tmp_path: Path) -> None:
+    path = tmp_path / "cfg.yaml"
+    path.write_text(
+        "cores:\n  total: 8\n  dri: 6\n  bg: 1\n  sp: 1\n",
+        encoding="utf-8",
+    )
+    loaded = load_config(path)
+    assert loaded.cores_total == 8
+    assert loaded.cores_dri == 6
+    assert loaded.cores_bg == 1
+    assert loaded.cores_sp == 1
+
+
+def test_save_and_load_round_trip_cores_bg(tmp_path: Path) -> None:
+    original = DRISPIConfig(
+        cores_total=8,
+        cores_dri=6,
+        cores_bg=1,
+        cores_sp=1,
+        bg_ails_mode="async",
+        output_dir=tmp_path / "runs",
+    )
+    path = tmp_path / "cfg.yaml"
+    save_config(original, path)
+    loaded = load_config(path)
+    assert loaded.cores_bg == 1
+    assert loaded.cores_dri == 6
+    assert loaded.bg_ails_mode == "async"
+
+
 def test_repo_default_yaml_bg_ails_budget_keys() -> None:
     repo_root = Path(__file__).resolve().parents[2]
     loaded = load_config(repo_root / "configs" / "default.yaml")
     assert loaded.bg_ails_min_budget == 60.0
-    assert loaded.bg_ails_divisor == 46.5
+    assert loaded.bg_ails_divisor == 31.0
     assert loaded.bg_ails_divisor_assumes_time_per_customer == 0.06
     assert loaded.subcluster_time_per_customer == 0.06
 

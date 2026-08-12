@@ -20,6 +20,7 @@ class DRISPIConfig:
     # Optional ``cores:`` block (source of truth when any/all of these are set).
     cores_total: int | None = None
     cores_dri: int | None = None
+    cores_bg: int | None = None
     cores_sp: int | None = None
     cores_cpu_list: list[int] | None = None
 
@@ -41,6 +42,12 @@ class DRISPIConfig:
     subcluster_time_per_customer: float = 0.06
 
     # ── BG-AILS ───────────────────────────────────────────────────────
+    # mode: sync (inline on main thread, today's behaviour) | async
+    # (perturb+improve on a dedicated BG worker, overlapping decompose+route
+    # of the next iteration; requires cores.bg >= 1 for pinning).
+    bg_ails_mode: str = "sync"
+    # Consecutive/total BG worker crashes tolerated before the run fails.
+    bg_ails_crash_threshold: int = 1
     # budget_seconds = max(bg_ails_min_budget, n_customers / bg_ails_divisor)
     bg_ails_min_budget: float = 60.0
     bg_ails_divisor: float = 46.5

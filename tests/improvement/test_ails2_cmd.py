@@ -11,6 +11,8 @@ def test_build_cmd_routing_phase_no_optional_flags() -> None:
     class T(Ails2Solver):
         def __init__(self) -> None:
             self._binary_path = Path("/fake/AILSII.jar")
+            self._active_processor_count = self.DEFAULT_ACTIVE_PROCESSOR_COUNT
+            self._xmx = self.DEFAULT_XMX
 
     t = T()
     cmd = t._build_cmd(Path("a.vrp"), Path("out.sol"), 60.0, 0)
@@ -23,6 +25,8 @@ def test_build_cmd_with_initial_solution_and_omega() -> None:
     class T(Ails2Solver):
         def __init__(self) -> None:
             self._binary_path = Path("/fake/AILSII.jar")
+            self._active_processor_count = self.DEFAULT_ACTIVE_PROCESSOR_COUNT
+            self._xmx = self.DEFAULT_XMX
 
     t = T()
     cmd = t._build_cmd(

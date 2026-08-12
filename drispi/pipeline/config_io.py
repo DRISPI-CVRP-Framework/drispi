@@ -18,7 +18,7 @@ LOGGER = logging.getLogger(__name__)
 _SECTION_FIELDS: dict[str, list[str]] = {
     "stopping": ["time_limit", "max_no_improve"],
     "parallelism": ["n_workers"],
-    "cores": ["cores_total", "cores_dri", "cores_sp", "cores_cpu_list"],
+    "cores": ["cores_total", "cores_dri", "cores_bg", "cores_sp", "cores_cpu_list"],
     "sp_sc": [
         "sp_sc_mode",
         "sp_sc_trigger",
@@ -32,6 +32,8 @@ _SECTION_FIELDS: dict[str, list[str]] = {
     ],
     "subcluster": ["subcluster_time_per_customer"],
     "bg_ails": [
+        "bg_ails_mode",
+        "bg_ails_crash_threshold",
         "bg_ails_min_budget",
         "bg_ails_divisor",
         "bg_ails_divisor_assumes_time_per_customer",
@@ -92,8 +94,23 @@ _SECTION_COMMENTS: dict[str, str] = {
 _CORES_NESTED_KEYS = {
     "total": "cores_total",
     "dri": "cores_dri",
+    "bg": "cores_bg",
     "sp": "cores_sp",
     "cpu_list": "cores_cpu_list",
+}
+
+_BG_AILS_NESTED_KEYS = {
+    "mode": "bg_ails_mode",
+    "crash_threshold": "bg_ails_crash_threshold",
+    "min_budget": "bg_ails_min_budget",
+    "divisor": "bg_ails_divisor",
+    "divisor_assumes_time_per_customer": "bg_ails_divisor_assumes_time_per_customer",
+    "initial_omega": "bg_ails_initial_omega",
+    "boundary_threshold": "bg_ails_boundary_threshold",
+    "small_cluster_cap": "bg_ails_small_cluster_cap",
+    "small_cluster_alpha": "bg_ails_small_cluster_alpha",
+    "pair_selection": "bg_ails_pair_selection",
+    "n_chains_mode": "bg_ails_n_chains_mode",
 }
 
 _SP_SC_NESTED_KEYS = {
@@ -153,6 +170,25 @@ def _expand_nested_sp_sc(value: Any) -> dict[str, Any]:
     return out
 
 
+def _expand_nested_bg_ails(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ValueError("bg_ails: nested block must be a mapping")
+    if "time_limit" in value:
+        raise ValueError(
+            "bg_ails_time_limit was removed; use bg_ails_min_budget and "
+            "bg_ails_divisor (budget = max(min_budget, n_customers / divisor))"
+        )
+    out: dict[str, Any] = {}
+    for key, field_name in _BG_AILS_NESTED_KEYS.items():
+        if key not in value:
+            continue
+        out[field_name] = _coerce_value(field_name, value[key])
+    unknown = set(value) - set(_BG_AILS_NESTED_KEYS)
+    for key in sorted(unknown):
+        warnings.warn(f"Unknown bg_ails key ignored: {key!r}", stacklevel=3)
+    return out
+
+
 def _read_yaml_mapping(yaml_path: Path) -> dict[str, Any]:
     """Read a YAML file and return a flat field -> value mapping."""
     path = Path(yaml_path).expanduser().resolve()
@@ -171,6 +207,9 @@ def _read_yaml_mapping(yaml_path: Path) -> dict[str, Any]:
             continue
         if key == "sp_sc" and isinstance(value, dict):
             overrides.update(_expand_nested_sp_sc(value))
+            continue
+        if key == "bg_ails" and isinstance(value, dict):
+            overrides.update(_expand_nested_bg_ails(value))
             continue
         if key == "bg_ails_time_limit":
             raise ValueError(
@@ -272,6 +311,8 @@ def save_config(config: DRISPIConfig, yaml_path: Path) -> None:
                 lines.append("cores:")
                 lines.append(f"  total: {_yaml_scalar(flat['cores_total'])}")
                 lines.append(f"  dri: {_yaml_scalar(flat['cores_dri'])}")
+                if flat.get("cores_bg") is not None:
+                    lines.append(f"  bg: {_yaml_scalar(flat['cores_bg'])}")
                 lines.append(f"  sp: {_yaml_scalar(flat['cores_sp'])}")
                 if flat.get("cores_cpu_list") is not None:
                     lines.append(

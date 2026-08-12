@@ -1,41 +1,67 @@
-# DRISPI Configuration
+# DRISPI Configuration — complete reference default.
+#
+# Every flag is listed here with its deployed default. Profile configs in this
+# directory merge on top of this file (keys they set win); anything omitted
+# falls back to these values.
 
-# Stopping criteria
-time_limit: 7200.0
-max_no_improve: 1000
+# ── Stopping criteria ────────────────────────────────────────────────
+time_limit: 7200.0           # wall-clock cap in seconds
+max_no_improve: 1000         # stagnation stop (iterations without a new S*)
 
-# Parallelism
+# ── Parallelism ──────────────────────────────────────────────────────
+# Legacy DRI worker count, used only when the cores: block is absent.
 n_workers: 8
 
-# SP/SC scheduling
-warmup_iterations: 5
-sp_interval: 3
-min_coverage: 5
-sp_time_limit: 720.0
-mip_gap: 0.00025
+# ── Cores block (source of truth when present; overrides n_workers) ──
+# Reserved split of the CPU budget; pinned order in cpu_list is dri | bg | sp.
+# bg is optional (default 0) and only needed with bg_ails.mode: async.
+# Unset by default (legacy n_workers path). Uncomment for the 6+1+1 layout:
+# cores:
+#   total: 8
+#   dri: 6
+#   bg: 1
+#   sp: 1
+#   # cpu_list: [0, 1, 2, 3, 4, 5, 6, 7]   # optional explicit pin; or pass --cpus 0-7
 
-# Subcluster solver
+# ── SP/SC scheduling ─────────────────────────────────────────────────
+sp_sc:
+  mode: sync                 # off | sync | async
+  trigger: iteration         # iteration | wallclock (wallclock is async-only)
+  interval_minutes: 20.0     # wallclock trigger period (start-anchored)
+  overlap_policy: skip       # skip | queue_latest (async, when worker is busy)
+  warmup_iterations: 5       # gates every trigger
+  sp_interval: 3             # every Nth iteration (iteration trigger)
+  min_coverage: 5            # pool coverage needed to switch from SC to SP
+  sp_time_limit: 720.0       # Gurobi wall limit per SC/SP solve (seconds)
+  mip_gap: 0.00025
+
+# ── Subcluster solver ────────────────────────────────────────────────
 subcluster_time_per_customer: 0.06
 
-# BG-AILS (budget = max(min_budget, n_customers / divisor))
-bg_ails_min_budget: 60.0
-bg_ails_divisor: 31.0
-bg_ails_divisor_assumes_time_per_customer: 0.06
-bg_ails_initial_omega: 0.8
-bg_ails_boundary_threshold: 0.5
-bg_ails_small_cluster_cap: 20
-bg_ails_small_cluster_alpha: 0.5
-bg_ails_pair_selection: greedy  # stochastic | greedy
-bg_ails_n_chains_mode: k  # k_minus_1 | k
+# ── BG-AILS (budget = max(min_budget, n_customers / divisor)) ────────
+bg_ails:
+  mode: sync                 # sync (inline on main thread) | async (dedicated
+                             # BG worker, pipelined with next decompose+route;
+                             # requires cores.bg >= 1 for pinning)
+  crash_threshold: 1         # BG worker crashes tolerated before the run fails
+  min_budget: 60.0
+  divisor: 31.0
+  divisor_assumes_time_per_customer: 0.06  # must match subcluster_time_per_customer
+  initial_omega: 0.8
+  boundary_threshold: 0.5
+  small_cluster_cap: 20
+  small_cluster_alpha: 0.5
+  pair_selection: greedy     # stochastic | greedy
+  n_chains_mode: k           # k_minus_1 | k
 
-# Standard improvement
+# ── Standard improvement (post-SP AILS) ──────────────────────────────
 standard_improvement_time_limit: 300.0
 
-# Route pool
+# ── Route pool ───────────────────────────────────────────────────────
 max_pool_size: 10000
 pool_diversity_weight: 0.5
 
-# HAOS
+# ── HAOS ─────────────────────────────────────────────────────────────
 haos_decay: 0.95
 haos_warmup: 10
 haos_starting_weight: 10.0
@@ -52,7 +78,7 @@ haos_vertex_method_values: ["kmeans", "agglomerative_avg", "agglomerative_comple
 haos_route_method_values: ["kmeans", "agglomerative_avg", "agglomerative_complete", "agglomerative_single"]
 haos_solver_values: ["pyvrp", "filo", "filo2", "ails2"]
 
-# HAOS rewards
+# ── HAOS rewards ─────────────────────────────────────────────────────
 haos_reward_new_best: 10.0
 haos_reward_improvement: 4.0
 haos_reward_no_improvement: 1.0
@@ -61,9 +87,9 @@ haos_deferred_new_best: 7.0
 haos_deferred_improvement: 3.0
 haos_deferred_no_improvement: 0.0
 
-# Seed (all sub-seeds derived deterministically from this)
+# ── Seed (all sub-seeds derived deterministically from this) ─────────
 seed: 42
 
-# Output
+# ── Output ───────────────────────────────────────────────────────────
 output_dir: "artifacts/runs"
 run_analysis: true

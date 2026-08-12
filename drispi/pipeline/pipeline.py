@@ -8,6 +8,7 @@ This module is the single narrative entry point for how subsystems connect.
 from __future__ import annotations
 
 import json
+import logging
 import math
 import random
 import time
@@ -42,6 +43,7 @@ from drispi.pipeline.core_manager import CoreManager
 from drispi.pipeline.cores import CoresConfig, log_current_affinity, resolve_cores, set_affinity
 from drispi.pipeline.logger import PipelineLogger
 from drispi.pipeline.snapshot import SnapshotWriter
+from drispi.pipeline.bg_ails_async import AsyncBgAilsController, BgAilsResult
 from drispi.pipeline.sp_sc_async import AsyncSpScController, SpScResult
 from drispi.pipeline.subproblem import SubclusterSolveError, solve_subclusters_parallel
 from drispi.route_pool.coverage import coverage_counts
@@ -161,9 +163,15 @@ class DRISPIPipeline:
         self._sp_sc_mode = mode
         self._sp_sc_trigger = trigger
 
+        bg_mode = (config.bg_ails_mode or "sync").strip().lower()
+        if bg_mode not in ("sync", "async"):
+            raise ValueError(f"Invalid bg_ails_mode: {config.bg_ails_mode!r}")
+        self._bg_mode = bg_mode
+
         self._cores: CoresConfig = resolve_cores(
             cores_total=config.cores_total,
             cores_dri=config.cores_dri,
+            cores_bg=config.cores_bg,
             cores_sp=config.cores_sp,
             cores_cpu_list=config.cores_cpu_list,
             n_workers=config.n_workers,
@@ -240,6 +248,26 @@ class DRISPIPipeline:
                 sp_interval=config.sp_interval,
             )
             self._async_ctrl.start()
+
+        self._bg_ctrl: AsyncBgAilsController | None = None
+        self._bg_inflight_iteration: int | None = None
+        self._bg_crash_count = 0
+        self._bg_adopted = 0
+        self._bg_applied = 0
+        self._bg_launched = 0
+        self._bg_launch_skipped_cap = 0
+        self._bg_block_wait_total_s = 0.0
+        if self._bg_mode == "async":
+            if self._cores.from_cores_block and self._cores.bg < 1:
+                logging.getLogger(__name__).warning(
+                    "bg_ails.mode=async without cores.bg >= 1: the BG worker "
+                    "runs unpinned and will contend with DRI/SP cores"
+                )
+            self._bg_ctrl = AsyncBgAilsController(
+                bg_cpus=self._cores.bg_cpus,
+                xmx=Ails2Solver.DEFAULT_XMX,
+            )
+            self._bg_ctrl.start(instance)
 
     @property
     def run_dir(self) -> Path:
@@ -324,6 +352,14 @@ class DRISPIPipeline:
             result = self._async_ctrl.poll_result(nonblocking=True)
             if result is not None:
                 self._apply_async_spsc_result(result, iteration)
+        # Optional early consume-drain of a finished BG job (the mandatory
+        # drain is the pre-launch block later in this iteration).
+        if self._bg_ctrl is not None:
+            bg_result = self._bg_ctrl.poll_result()
+            if bg_result is not None:
+                self._handle_bg_result(
+                    bg_result, apply_iteration=iteration, drain_point="iteration_start"
+                )
 
         selection = self._haos.select(iteration, self._rng)
         best_routes = self._best_solution
@@ -344,13 +380,22 @@ class DRISPIPipeline:
             joint_prob,
             levels=None,
         )
+        # RNG pin: the offset is drawn in the same stream position in both
+        # bg_ails modes, so sync and async stay stream-order identical up to
+        # the first apply divergence (and dissim is bit-identically testable).
         angular_offset = self._rng.uniform(0.0, 2.0 * math.pi)
 
         t0 = time.perf_counter()
-        dissim = compute_dissimilarity_matrix(
-            self._instance,
-            selection.lambda_demand,
-            angular_offset,
+        # In async mode the BG worker rebuilds this matrix from the same
+        # (instance, lambda, offset) inputs; skip the main-thread copy.
+        dissim = (
+            compute_dissimilarity_matrix(
+                self._instance,
+                selection.lambda_demand,
+                angular_offset,
+            )
+            if self._bg_mode == "sync"
+            else None
         )
 
         routes_for_cluster = (
@@ -443,107 +488,176 @@ class DRISPIPipeline:
             route_cluster_ids=route_cluster_ids,
         )
 
-        combined_sol = _seqs_to_solution_routes(self._instance, combined_seqs)
-
         bg_seed = self._bg_seed + iteration
-        n_chains = _resolve_n_chains(
-            partition,
-            n_chains=None,
-            n_chains_mode=self._config.bg_ails_n_chains_mode,  # type: ignore[arg-type]
-        )
-        perturbed_sol, perturbed_indices = run_bg_ails_perturb(
-            self._instance,
-            combined_sol,
-            dissim,
-            partition,
-            boundary_threshold=self._config.bg_ails_boundary_threshold,
-            small_cluster_cap=self._config.bg_ails_small_cluster_cap,
-            small_cluster_alpha=self._config.bg_ails_small_cluster_alpha,
-            seed=bg_seed,
-            pair_selection=self._config.bg_ails_pair_selection,
-            n_chains_mode=self._config.bg_ails_n_chains_mode,
-        )
-        self._write_phase_snapshot(
-            iteration,
-            3,
-            is_spsc,
-            total_phases,
-            cluster_assignments=cluster_assignments,
-            routes=combined_seqs,
-            route_cluster_ids=route_cluster_ids,
-            perturbed_route_indices=perturbed_indices,
-            phase_tag="pre",
-        )
-
+        op_tag = selection.to_tag(iteration)
         bg_ails_budget = bg_ails_budget_seconds(
             self._instance.n_customers,
             min_budget=self._config.bg_ails_min_budget,
             divisor=self._config.bg_ails_divisor,
         )
-        t0 = time.perf_counter()
-        bg_solution = run_bg_ails_improve(
-            self._instance,
-            perturbed_sol,
-            partition,
-            self._config.bg_ails_initial_omega,
-            time_limit=bg_ails_budget,
-            seed=bg_seed,
-            solver=self._ails2_solver(),
-        )
-        bg_elapsed = time.perf_counter() - t0
-        pert_seqs = _solution_routes_to_seqs(perturbed_sol)
-        bg_seqs = _solution_routes_to_seqs(bg_solution)
-        bg_changed = _changed_route_indices(pert_seqs, bg_seqs)
-        bg_cost = sum(self._instance.route_cost(r) for r in bg_seqs)
-        bg_improved = bg_cost < self._best_cost
 
-        self._write_phase_snapshot(
-            iteration,
-            3,
-            is_spsc,
-            total_phases,
-            cluster_assignments=cluster_assignments,
-            routes=bg_seqs,
-            route_cluster_ids=route_cluster_ids,
-            changed_route_indices=bg_changed,
-            phase_tag="post",
-        )
+        if self._bg_mode == "async":
+            assert self._bg_ctrl is not None
+            self._haos.register_selection(iteration, selection)
+            # Handoff: block until the worker is free, consume-drain the
+            # previous result, then launch — BG lag stays exactly 1 iteration.
+            block_t0 = time.perf_counter()
+            prev_result = self._bg_ctrl.wait_result()
+            handoff_block_wait_s = time.perf_counter() - block_t0
+            self._bg_block_wait_total_s += handoff_block_wait_s
+            if prev_result is not None:
+                self._handle_bg_result(
+                    prev_result,
+                    apply_iteration=iteration,
+                    drain_point="pre_launch",
+                    block_wait_s=handoff_block_wait_s,
+                )
+            remaining = self._config.time_limit - (
+                time.perf_counter() - self._start_time
+            )
+            if remaining >= bg_ails_budget:
+                job_id = self._bg_ctrl.launch(
+                    launch_iteration=iteration,
+                    combined_seqs=combined_seqs,
+                    partition=partition,
+                    lambda_demand=selection.lambda_demand,
+                    angular_offset=angular_offset,
+                    initial_omega=self._config.bg_ails_initial_omega,
+                    time_limit=bg_ails_budget,
+                    seed=bg_seed,
+                    boundary_threshold=self._config.bg_ails_boundary_threshold,
+                    small_cluster_cap=self._config.bg_ails_small_cluster_cap,
+                    small_cluster_alpha=self._config.bg_ails_small_cluster_alpha,
+                    pair_selection=self._config.bg_ails_pair_selection,
+                    n_chains_mode=self._config.bg_ails_n_chains_mode,
+                    op_tag=op_tag,
+                )
+                self._bg_launched += 1
+                self._bg_inflight_iteration = iteration
+                self._logger._emit_json(  # noqa: SLF001
+                    {
+                        "type": "bg_launch",
+                        "iteration": iteration,
+                        "job_id": job_id,
+                        "bg_ails_budget_seconds": bg_ails_budget,
+                        "handoff_block_wait_s": handoff_block_wait_s,
+                    }
+                )
+            else:
+                # Wall-clock cap: a full BG budget no longer fits, so skip the
+                # launch and drop this iteration's pending HAOS selection.
+                self._bg_launch_skipped_cap += 1
+                self._haos.clear_pending(iteration)
+                self._logger._emit_json(  # noqa: SLF001
+                    {
+                        "type": "bg_launch_skipped_cap",
+                        "iteration": iteration,
+                        "remaining_s": remaining,
+                        "bg_ails_budget_seconds": bg_ails_budget,
+                        "handoff_block_wait_s": handoff_block_wait_s,
+                    }
+                )
+            candidate_seqs = combined_seqs
+            candidate_cost = float(
+                sum(self._instance.route_cost(r) for r in combined_seqs)
+            )
+        else:
+            combined_sol = _seqs_to_solution_routes(self._instance, combined_seqs)
+            n_chains = _resolve_n_chains(
+                partition,
+                n_chains=None,
+                n_chains_mode=self._config.bg_ails_n_chains_mode,  # type: ignore[arg-type]
+            )
+            assert dissim is not None
+            perturbed_sol, perturbed_indices = run_bg_ails_perturb(
+                self._instance,
+                combined_sol,
+                dissim,
+                partition,
+                boundary_threshold=self._config.bg_ails_boundary_threshold,
+                small_cluster_cap=self._config.bg_ails_small_cluster_cap,
+                small_cluster_alpha=self._config.bg_ails_small_cluster_alpha,
+                seed=bg_seed,
+                pair_selection=self._config.bg_ails_pair_selection,
+                n_chains_mode=self._config.bg_ails_n_chains_mode,
+            )
+            self._write_phase_snapshot(
+                iteration,
+                3,
+                is_spsc,
+                total_phases,
+                cluster_assignments=cluster_assignments,
+                routes=combined_seqs,
+                route_cluster_ids=route_cluster_ids,
+                perturbed_route_indices=perturbed_indices,
+                phase_tag="pre",
+            )
 
-        bg_cost_before = sum(self._instance.route_cost(r) for r in combined_seqs)
-        self._logger.log_phase_done(
-            iteration,
-            3,
-            total_phases,
-            "bg_ails",
-            bg_elapsed,
-            bg_ails_budget,
-            bg_cost_before=bg_cost_before,
-            bg_cost_after=bg_cost,
-            bg_ails_budget_seconds=bg_ails_budget,
-            bg_ails_actual_wall_seconds=bg_elapsed,
-            k=selection.k,
-            n_chains=n_chains,
-            max_cluster_size=max(cluster_sizes) if cluster_sizes else 0,
-            dr_stage_wall_seconds=dr_stage_wall_seconds,
-        )
-        if bg_improved:
-            self._log_improvement(iteration, bg_cost, bg_seqs, "bg_ails")
+            t0 = time.perf_counter()
+            bg_solution = run_bg_ails_improve(
+                self._instance,
+                perturbed_sol,
+                partition,
+                self._config.bg_ails_initial_omega,
+                time_limit=bg_ails_budget,
+                seed=bg_seed,
+                solver=self._ails2_solver(),
+            )
+            bg_elapsed = time.perf_counter() - t0
+            pert_seqs = _solution_routes_to_seqs(perturbed_sol)
+            bg_seqs = _solution_routes_to_seqs(bg_solution)
+            bg_changed = _changed_route_indices(pert_seqs, bg_seqs)
+            bg_cost = float(sum(self._instance.route_cost(r) for r in bg_seqs))
 
-        imm = self._haos.compute_reward(
-            bg_cost,
-            self._best_cost,
-            self._last_cost,
-            self._haos_config.rewards,
-            is_deferred=False,
-        )
-        self._haos.update_immediate(selection, iteration, imm)
+            self._write_phase_snapshot(
+                iteration,
+                3,
+                is_spsc,
+                total_phases,
+                cluster_assignments=cluster_assignments,
+                routes=bg_seqs,
+                route_cluster_ids=route_cluster_ids,
+                changed_route_indices=bg_changed,
+                phase_tag="post",
+            )
 
-        op_tag = selection.to_tag(iteration)
-        for seq in bg_seqs:
-            self._pool.add(seq, self._instance.route_cost(seq), haos_tag=op_tag)
+            bg_cost_before = sum(self._instance.route_cost(r) for r in combined_seqs)
+            self._logger.log_phase_done(
+                iteration,
+                3,
+                total_phases,
+                "bg_ails",
+                bg_elapsed,
+                bg_ails_budget,
+                bg_cost_before=bg_cost_before,
+                bg_cost_after=bg_cost,
+                bg_ails_budget_seconds=bg_ails_budget,
+                bg_ails_actual_wall_seconds=bg_elapsed,
+                k=selection.k,
+                n_chains=n_chains,
+                max_cluster_size=max(cluster_sizes) if cluster_sizes else 0,
+                dr_stage_wall_seconds=dr_stage_wall_seconds,
+            )
 
-        if bg_improved:
-            self._update_best(bg_seqs, iteration, "bg_ails")
+            # HAOS immediate reward against pre-apply best/last (sync path:
+            # credit-then-decay happens in update_final at end of iteration).
+            imm = self._haos.compute_reward(
+                bg_cost,
+                self._best_cost,
+                self._last_cost,
+                self._haos_config.rewards,
+                is_deferred=False,
+            )
+            self._haos.update_immediate(selection, iteration, imm)
+
+            self._apply_candidate_solution(
+                bg_seqs,
+                iteration=iteration,
+                phase_name="bg_ails",
+                op_tag=op_tag,
+            )
+            candidate_seqs = bg_seqs
+            candidate_cost = bg_cost
 
         self._manager.maybe_evict(self._pool)
 
@@ -558,14 +672,14 @@ class DRISPIPipeline:
         used_sp = False
         if self._sp_sc_mode == "async" and self._async_ctrl is not None:
             best_for_job = (
-                self._best_solution if self._best_solution is not None else bg_seqs
+                self._best_solution if self._best_solution is not None else candidate_seqs
             )
             self._async_ctrl.maybe_trigger(
                 pool=self._pool,
                 best_solution=best_for_job,
                 best_cost=float(self._best_cost)
                 if math.isfinite(self._best_cost)
-                else float(bg_cost),
+                else float(candidate_cost),
                 instance=self._instance,
                 time_limit=self._config.sp_time_limit,
                 mip_gap=self._config.mip_gap,
@@ -581,7 +695,7 @@ class DRISPIPipeline:
                 self._instance,
                 self._manager,
                 iteration,
-                self._best_solution if self._best_solution is not None else bg_seqs,
+                self._best_solution if self._best_solution is not None else candidate_seqs,
                 time_limit=self._config.sp_time_limit,
                 mip_gap=self._config.mip_gap,
                 min_coverage=self._config.min_coverage,
@@ -626,7 +740,7 @@ class DRISPIPipeline:
                 lp_fractionality=self._manager.last_lp_fractionality,
             )
 
-        iter_cost = bg_cost
+        iter_cost = candidate_cost
         if sp_result is not None and len(sp_result) > 0:
             sp_input_sol = _seqs_to_solution_routes(self._instance, sp_result)
             t0 = time.perf_counter()
@@ -639,7 +753,7 @@ class DRISPIPipeline:
             )
             std_elapsed = time.perf_counter() - t0
             final_seqs = _solution_routes_to_seqs(final_sol)
-            final_cost = sum(self._instance.route_cost(r) for r in final_seqs)
+            final_cost = float(sum(self._instance.route_cost(r) for r in final_seqs))
             iter_cost = final_cost
             std_changed = _changed_route_indices(sp_result, final_seqs)
 
@@ -660,8 +774,6 @@ class DRISPIPipeline:
                 std_elapsed,
                 self._config.standard_improvement_time_limit,
             )
-            if final_cost < self._best_cost:
-                self._log_improvement(iteration, final_cost, final_seqs, "standard_ails")
 
             deferred = self._haos.compute_reward(
                 final_cost,
@@ -673,22 +785,31 @@ class DRISPIPipeline:
             contributing = self._contributing_tags_from_sp_routes(sp_result)
             self._haos.update_deferred(contributing, iteration, deferred)
 
-            add_post_standard_improvement_routes_to_pool(
-                self._pool,
-                self._instance,
-                sp_result,
+            self._apply_candidate_solution(
                 final_seqs,
-                iteration,
-                selection,
+                iteration=iteration,
+                phase_name="standard_ails",
+                contribute=lambda: add_post_standard_improvement_routes_to_pool(
+                    self._pool,
+                    self._instance,
+                    sp_result,
+                    final_seqs,
+                    iteration,
+                    selection,
+                ),
             )
-            self._update_best(final_seqs, iteration, "standard_ails")
             self._last_cost = final_cost
-        else:
-            if not bg_improved:
-                self._update_best(bg_seqs, iteration, "bg_ails")
-            self._last_cost = bg_cost
+        elif self._bg_mode == "sync":
+            # Async mode: _last_cost is updated at BG/SP apply time instead.
+            self._last_cost = candidate_cost
 
-        self._haos.update_final(selection, iteration)
+        if self._bg_mode == "async":
+            # Decay policy (b): deferred rewards + global decay on schedule at
+            # end of iteration i; BG(i)'s immediate reward lands later via
+            # apply_pending_immediate without a second decay.
+            self._haos.decay_on_schedule(iteration, selection)
+        else:
+            self._haos.update_final(selection, iteration)
         self._logger.log_haos_roll(
             iteration,
             selection,
@@ -785,7 +906,7 @@ class DRISPIPipeline:
         reason = result.reason
         adopted = False
         if result.final_routes and result.final_cost is not None:
-            prev_best = self._best_cost
+            final_routes = result.final_routes
             # Deferred HAOS from pre-AILS SP routes
             deferred = self._haos.compute_reward(
                 float(result.final_cost),
@@ -801,23 +922,23 @@ class DRISPIPipeline:
             placeholder = (
                 self._selection_from_sp_routes(sp_routes, log_iter)
                 if sp_routes
-                else self._selection_from_sp_routes(result.final_routes, log_iter)
+                else self._selection_from_sp_routes(final_routes, log_iter)
             )
-            add_post_standard_improvement_routes_to_pool(
-                self._pool,
-                self._instance,
-                sp_routes,
-                result.final_routes,
-                log_iter,
-                placeholder,
+            adopted = self._apply_candidate_solution(
+                final_routes,
+                iteration=log_iter,
+                phase_name="standard_ails",
+                contribute=lambda: add_post_standard_improvement_routes_to_pool(
+                    self._pool,
+                    self._instance,
+                    sp_routes,
+                    final_routes,
+                    log_iter,
+                    placeholder,
+                ),
             )
-            if float(result.final_cost) < prev_best:
-                self._update_best(result.final_routes, log_iter, "standard_ails")
-                adopted = True
+            if adopted:
                 self._spsc_adopted += 1
-                self._log_improvement(
-                    log_iter, float(result.final_cost), result.final_routes, "standard_ails"
-                )
                 reason = "adopted"
             else:
                 reason = reason or "worse_than_incumbent"
@@ -847,6 +968,137 @@ class DRISPIPipeline:
                 "used_sp": result.used_sp,
             }
         )
+
+    def _handle_bg_result(
+        self,
+        result: BgAilsResult,
+        *,
+        apply_iteration: int,
+        drain_point: str,
+        block_wait_s: float | None = None,
+    ) -> None:
+        """Consume-once apply of a drained async BG-AILS result.
+
+        Failures (worker exception or worker death) are infrastructure
+        failures: clear the pending HAOS selection with no reward, count the
+        crash, and fail the run once ``bg_ails_crash_threshold`` is reached.
+        """
+        applied_ts = time.time()
+        launch_iter = (
+            result.launch_iteration
+            if result.launch_iteration >= 0
+            else (self._bg_inflight_iteration if self._bg_inflight_iteration is not None else -1)
+        )
+        self._bg_inflight_iteration = None
+        drain_latency = applied_ts - result.ready_ts if result.ready_ts else None
+
+        failed = result.reason != "ok" or result.bg_seqs is None or result.bg_cost is None
+        adopted = False
+        credited_iteration: int | None = None
+        if failed:
+            if launch_iter >= 0:
+                self._haos.clear_pending(launch_iter)
+            self._bg_crash_count += 1
+            self._logger._emit(  # noqa: SLF001
+                apply_iteration,
+                "ERROR",
+                (
+                    f"BG-AILS worker failure ({result.reason}) for launch_iteration="
+                    f"{launch_iter}; pending HAOS selection cleared "
+                    f"(crash {self._bg_crash_count}/{self._config.bg_ails_crash_threshold})"
+                ),
+            )
+        else:
+            assert result.bg_seqs is not None and result.bg_cost is not None
+            bg_cost = float(result.bg_cost)
+            # Immediate HAOS reward vs the live incumbent at apply time,
+            # credited to the arms rolled at launch (decay (b): no re-decay).
+            imm = self._haos.compute_reward(
+                bg_cost,
+                self._best_cost,
+                self._last_cost,
+                self._haos_config.rewards,
+                is_deferred=False,
+            )
+            credited_iteration = self._haos.apply_pending_immediate(launch_iter, imm)
+            adopted = self._apply_candidate_solution(
+                result.bg_seqs,
+                iteration=launch_iter,
+                phase_name="bg_ails",
+                op_tag=result.op_tag,
+            )
+            self._bg_applied += 1
+            if adopted:
+                self._bg_adopted += 1
+            self._last_cost = bg_cost
+
+            bg_budget = bg_ails_budget_seconds(
+                self._instance.n_customers,
+                min_budget=self._config.bg_ails_min_budget,
+                divisor=self._config.bg_ails_divisor,
+            )
+            self._logger.log_phase_done(
+                launch_iter,
+                3,
+                3,
+                "bg_ails",
+                result.total_wall_s,
+                bg_budget,
+                bg_cost_before=result.cost_before,
+                bg_cost_after=bg_cost,
+                bg_ails_budget_seconds=bg_budget,
+                bg_ails_actual_wall_seconds=result.improve_wall_s,
+                tag="ASYNC BG",
+            )
+
+        if adopted:
+            apply_reason = "adopted"
+        elif failed:
+            apply_reason = result.reason
+        else:
+            apply_reason = "worse_than_incumbent"
+
+        # Structured-only apply event.
+        self._logger._emit_json(  # noqa: SLF001
+            {
+                "type": "bg_apply",
+                "iteration": launch_iter,
+                "bg_ails_launch_iteration": launch_iter,
+                "bg_ails_apply_iteration": apply_iteration,
+                "job_id": result.job_id,
+                "drain_point": drain_point,
+                "adopted": adopted,
+                "reason": apply_reason,
+                "bg_cost": result.bg_cost,
+                "bg_cost_before": result.cost_before,
+                "live_best_cost": self._best_cost,
+                "haos_credited_iteration": credited_iteration,
+                "perturb_wall_s": result.perturb_wall_s,
+                "improve_wall_s": result.improve_wall_s,
+                "total_wall_s": result.total_wall_s,
+                "result_ready_ts": result.ready_ts,
+                "applied_ts": applied_ts,
+                "drain_latency_s": drain_latency,
+                "handoff_block_wait_s": block_wait_s,
+                "error": result.error,
+            }
+        )
+
+        if failed:
+            if self._bg_crash_count >= self._config.bg_ails_crash_threshold:
+                raise RuntimeError(
+                    f"BG-AILS worker crashed {self._bg_crash_count} time(s) "
+                    f"(threshold {self._config.bg_ails_crash_threshold}); "
+                    "failing the run (infrastructure failure)"
+                )
+            if result.reason == "worker_died" and self._bg_ctrl is not None:
+                # Below threshold with a dead worker: respawn a fresh one.
+                self._bg_ctrl.shutdown(discard=True)
+                self._bg_ctrl = AsyncBgAilsController(
+                    bg_cpus=self._cores.bg_cpus,
+                    xmx=Ails2Solver.DEFAULT_XMX,
+                )
+                self._bg_ctrl.start(self._instance)
 
     def _selection_from_sp_routes(
         self, sp_routes: list[Route], iteration: int
@@ -1020,11 +1272,46 @@ class DRISPIPipeline:
                 tags.append(tag)
         return tags
 
-    def _update_best(self, solution: list[Route], iteration: int, phase_name: str) -> None:
+    def _apply_candidate_solution(
+        self,
+        routes: list[Route],
+        *,
+        iteration: int,
+        phase_name: str,
+        op_tag: HAOSTag | None = None,
+        contribute: object | None = None,
+    ) -> bool:
+        """Unified consume-once apply path for BG-AILS and SP/standard-AILS.
+
+        Contract (identical for sync and async producers):
+        1. pool-contribute the candidate routes (always, before any adopt
+           decision) — either each route with ``op_tag`` or via a custom
+           ``contribute`` callable;
+        2. compare against the live incumbent and adopt via ``_update_best``
+           (the sole S* mutator), which also drives ``_no_improve_count``
+           independently per producer: improve -> reset, non-improve ->
+           increment;
+        3. log the improvement when adopted.
+
+        Returns True when the candidate strictly improved the incumbent.
+        """
+        if op_tag is not None:
+            for seq in routes:
+                self._pool.add(seq, self._instance.route_cost(seq), haos_tag=op_tag)
+        elif callable(contribute):
+            contribute()
+
+        adopted = self._update_best(routes, iteration, phase_name)
+        if adopted:
+            self._log_improvement(iteration, self._best_cost, routes, phase_name)
+        return adopted
+
+    def _update_best(self, solution: list[Route], iteration: int, phase_name: str) -> bool:
         """Track global best S*, mark elite pool rows, and stagnation.
 
         Callers must ensure ``solution`` routes are already present in the pool
         (with correct HAOS tags) before invoking this on an improvement.
+        Returns True when the solution strictly improved the incumbent.
         """
         recomputed = float(sum(self._instance.route_cost(list(r)) for r in solution))
         if self._initial_cost is None and math.isfinite(recomputed):
@@ -1043,11 +1330,47 @@ class DRISPIPipeline:
                 phase_name,
                 self._instance,
             )
-        else:
-            self._no_improve_count += 1
+            return True
+        self._no_improve_count += 1
+        return False
 
     def _finalize(self) -> None:
         """Persist HAOS state, best .sol, and final log block."""
+        if self._bg_ctrl is not None:
+            bg_discarded = self._bg_ctrl.in_flight
+            if bg_discarded and self._bg_inflight_iteration is not None:
+                # Always-discard at cap: kill worker+JVM, drop the result, and
+                # clear the pending HAOS selection (no reward).
+                self._haos.clear_pending(self._bg_inflight_iteration)
+            self._bg_ctrl.shutdown(discard=bg_discarded)
+            self._logger._emit(  # noqa: SLF001
+                None,
+                "FINAL",
+                (
+                    f"async BG-AILS totals launched={self._bg_launched} "
+                    f"applied={self._bg_applied} adopted={self._bg_adopted} "
+                    f"launch_skipped_cap={self._bg_launch_skipped_cap} "
+                    f"crashes={self._bg_crash_count} "
+                    f"discarded_in_flight={bg_discarded} "
+                    f"block_wait_total_s={self._bg_block_wait_total_s:.1f}"
+                ),
+                json_event={
+                    "type": "bg_run_totals",
+                    "launched": self._bg_launched,
+                    "applied": self._bg_applied,
+                    "adopted": self._bg_adopted,
+                    "launch_skipped_cap": self._bg_launch_skipped_cap,
+                    "crash_count": self._bg_crash_count,
+                    "discarded_in_flight_at_shutdown": bg_discarded,
+                    "discarded_launch_iteration": self._bg_inflight_iteration
+                    if bg_discarded
+                    else None,
+                    "handoff_block_wait_total_s": self._bg_block_wait_total_s,
+                    "bg_ails_mode": self._bg_mode,
+                    "cores_bg": self._cores.bg,
+                    "bg_cpus": self._cores.bg_cpus,
+                },
+            )
         discarded = False
         if self._async_ctrl is not None:
             self._async_ctrl.shutdown()
@@ -1088,6 +1411,7 @@ class DRISPIPipeline:
                     "cores": {
                         "total": self._cores.total,
                         "dri": self._cores.dri,
+                        "bg": self._cores.bg,
                         "sp": self._cores.sp,
                         "cpu_list": self._cores.cpu_list,
                         "from_cores_block": self._cores.from_cores_block,

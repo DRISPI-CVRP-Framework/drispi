@@ -81,6 +81,7 @@ class HAOS:
 
         self._immediate_rewards: dict[int, float] = {}
         self._deferred_rewards: dict[int, dict[HAOSTag, float]] = {}
+        self._pending_selections: dict[int, HAOSSelection] = {}
 
     def select(self, iteration: int, rng: random.Random) -> HAOSSelection:
         k_index, k = self.wheel_1_k.select(rng)
@@ -187,6 +188,88 @@ class HAOS:
             f"P≈{p_joint:.6f}"
         )
 
+    def register_selection(self, iteration: int, selection: HAOSSelection) -> None:
+        """Retain the rolled selection so a late reward credits iteration i's arms."""
+        self._pending_selections[iteration] = selection
+
+    def clear_pending(self, iteration: int) -> None:
+        """Drop pending selection and reward accumulators with no wheel credit.
+
+        Used for infra failures (worker crash, discard-at-cap, launch skipped):
+        clear-on-flush is unconditional so the registry never leaks.
+        """
+        self._pending_selections.pop(iteration, None)
+        self._immediate_rewards.pop(iteration, None)
+        self._deferred_rewards.pop(iteration, None)
+
+    def apply_pending_immediate(self, iteration: int, reward: float) -> int | None:
+        """
+        Credit ``reward`` to the stored selection for ``iteration`` (immediate only).
+
+        Pops the pending selection (consume-once). Returns the iteration credited,
+        or ``None`` when nothing was credited (no pending entry, or warmup).
+        During warmup the entry is still cleared but no wheel is updated.
+        """
+        selection = self._pending_selections.pop(iteration, None)
+        self._immediate_rewards.pop(iteration, None)
+        if selection is None:
+            return None
+        if iteration < self.config.haos_warmup:
+            return None
+        self._credit_selection(selection, float(reward))
+        return iteration
+
+    def decay_on_schedule(self, iteration: int, selection: HAOSSelection | None = None) -> None:
+        """
+        Apply deferred rewards for ``iteration``, then run global decay (post-warmup).
+
+        The immediate component is NOT handled here — it lands via
+        :meth:`apply_pending_immediate` (async) or was already credited through
+        it (sync). Uses ``selection`` if given, otherwise the pending registry
+        (without popping — async still needs the entry for the late immediate).
+        During warmup: clear deferred with no credit and no decay, matching the
+        old ``update_final`` early return.
+        """
+        deferred_map = self._deferred_rewards.pop(iteration, {})
+        sel = selection if selection is not None else self._pending_selections.get(iteration)
+
+        if iteration < self.config.haos_warmup:
+            self._pending_selections.pop(iteration, None)
+            self._immediate_rewards.pop(iteration, None)
+            return
+
+        if sel is not None:
+            current_tag = sel.to_tag(iteration)
+            current_deferred = float(deferred_map.pop(current_tag, 0.0))
+            if current_deferred:
+                self._credit_selection(sel, current_deferred)
+        for tag, reward in deferred_map.items():
+            self._update_by_tag_all_levels(tag, float(reward))
+
+        self._decay_all_wheels()
+
+    def _credit_selection(self, selection: HAOSSelection, reward: float) -> None:
+        self.wheel_1_k.update(selection.k_index, reward)
+        self.wheel_2_lambda.update(selection.lambda_index, reward)
+        self.wheel_3_paradigm.update(selection.paradigm_index, reward)
+        if selection.paradigm == "vertex":
+            self.wheel_4a_vertex_method.update(selection.method_index, reward)
+        else:
+            self.wheel_4b_route_method.update(selection.method_index, reward)
+        self.wheel_5_solver.update(selection.solver_index, reward)
+
+    def _decay_all_wheels(self) -> None:
+        decay = self.config.decay
+        for wheel in (
+            self.wheel_1_k,
+            self.wheel_2_lambda,
+            self.wheel_3_paradigm,
+            self.wheel_4a_vertex_method,
+            self.wheel_4b_route_method,
+            self.wheel_5_solver,
+        ):
+            wheel.decay_all(decay)
+
     def update_immediate(self, selection: HAOSSelection, iteration: int, reward: float) -> None:
         del selection
         if iteration < self.config.haos_warmup:
@@ -252,41 +335,22 @@ class HAOS:
             self.wheel_5_solver.update(solver_index, reward)
 
     def update_final(self, selection: HAOSSelection, iteration: int) -> None:
+        """Sync-path flush: immediate credit, then deferred + decay.
+
+        Equivalent to the old combined update because wheel updates are additive
+        with a floor and all configured rewards are >= 0 (floor cannot bind
+        between the two component updates).
+        """
+        self._pending_selections.pop(iteration, None)
         if iteration < self.config.haos_warmup:
             self._immediate_rewards.pop(iteration, None)
             self._deferred_rewards.pop(iteration, None)
             return
 
         immediate_reward = self._immediate_rewards.pop(iteration, 0.0)
-        deferred_map = self._deferred_rewards.pop(iteration, {})
-        current_tag = selection.to_tag(iteration)
-        current_deferred = deferred_map.pop(current_tag, 0.0)
-        total_reward = immediate_reward + current_deferred
-
-        self.wheel_1_k.update(selection.k_index, total_reward)
-        self.wheel_2_lambda.update(selection.lambda_index, total_reward)
-        self.wheel_3_paradigm.update(selection.paradigm_index, total_reward)
-        if selection.paradigm == "vertex":
-            self.wheel_4a_vertex_method.update(selection.method_index, total_reward)
-        else:
-            self.wheel_4b_route_method.update(selection.method_index, total_reward)
-        self.wheel_5_solver.update(selection.solver_index, total_reward)
-
-        for tag, reward in deferred_map.items():
-            self._update_by_tag_all_levels(tag, reward)
-
-        # Global end-of-iteration decay: every weight on every wheel decays,
-        # but never below the WEIGHT_FLOOR baseline.
-        decay = self.config.decay
-        for wheel in (
-            self.wheel_1_k,
-            self.wheel_2_lambda,
-            self.wheel_3_paradigm,
-            self.wheel_4a_vertex_method,
-            self.wheel_4b_route_method,
-            self.wheel_5_solver,
-        ):
-            wheel.decay_all(decay)
+        if immediate_reward:
+            self._credit_selection(selection, immediate_reward)
+        self.decay_on_schedule(iteration, selection)
 
     def compute_reward(
         self,

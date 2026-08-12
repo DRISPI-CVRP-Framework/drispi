@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""C3 long convergence / variance campaign (deployed 7+1 async).
+"""C3 long convergence / variance campaign (deployed 6+1+1 async).
 
 Packs 3 instances × 4 seeds = 12 runs into 3 fully packed waves of 4 concurrent
 8-core slices on a 32-core machine. Each slice gets a disjoint CPU island
-(``--cpus``) so affinity matches the deployed 7+1 layout under real contention.
+(``--cpus``) so affinity matches the deployed 6+1+1 layout under real contention.
 
 Wall-clock marks (default 1h/2h/4h/6h/8h) are written to each run's ``run.jsonl``
 and to a campaign-level summary JSONL for trajectory / HAOS cold-start analysis.
@@ -341,7 +341,7 @@ def _build_jobs(
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description=(
-            "C3 long convergence/variance campaign: 3×4 runs, 7+1×4 packed "
+            "C3 long convergence/variance campaign: 3×4 runs, 6+1+1×4 packed "
             "slices, wall-clock marks for trajectory."
         )
     )
@@ -398,7 +398,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--cores-per-slice",
         type=int,
         default=8,
-        help="Cores per 7+1 slice (default: 8)",
+        help="Cores per 6+1+1 slice (default: 8)",
     )
     p.add_argument(
         "--duration-hours",
@@ -533,7 +533,7 @@ def main(argv: list[str] | None = None) -> None:
         f"= {len(jobs)} runs, {args.duration_hours:g}h each"
     )
     log.info(
-        f"Packing: {slices_per_wave} concurrent 7+1 slices "
+        f"Packing: {slices_per_wave} concurrent 6+1+1 slices "
         f"(cpu_base={args.cpu_base}, {args.total_cores} cores) → "
         f"{n_waves} wave(s), est. wall {_format_wall_time(est_s)}"
     )

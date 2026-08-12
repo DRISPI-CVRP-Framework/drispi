@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # C3 long convergence/variance campaign on dantzig.
 #
-# Full 32 cores, 7+1 × 4 concurrent slices (real deployed contention).
+# Full 32 cores, 6+1+1 × 4 concurrent slices (real deployed contention).
 # 3 instances × 4 seeds = 12 runs → 3 waves × 8h ≈ 24h wall.
 # Intermediate marks (1h/2h/4h/6h/8h) logged into each run.jsonl + campaign.jsonl.
 #

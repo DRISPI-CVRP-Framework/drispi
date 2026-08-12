@@ -1,12 +1,17 @@
-# Example: async SC/SP on a reserved core
+# Example: async SC/SP + async BG-AILS on reserved cores (6+1+1)
 # Merge on top of configs/default.yaml when passed as --config.
 
 cores:
   total: 8
-  dri: 7
+  dri: 6
+  bg: 1
   sp: 1
   # Optional explicit pin; otherwise pass --cpus 0-7
   # cpu_list: [0, 1, 2, 3, 4, 5, 6, 7]
+
+bg_ails:
+  mode: async                 # perturb+improve pipelined on the bg core
+  crash_threshold: 1
 
 sp_sc:
   mode: async

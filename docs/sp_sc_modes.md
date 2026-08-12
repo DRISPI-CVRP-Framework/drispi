@@ -74,14 +74,17 @@ default thread behaviour (AILS still gets SerialGC + `ActiveProcessorCount=1` +
 
 With a `cores:` block, DRI uses `cores.dri` workers and sync Gurobi is limited to
 `cores.sp` threads. In sync mode the SP core(s) are **idle during DRI** and only
-busy during the blocking SC/SP phase.
+busy during the blocking SC/SP phase. `cores.bg` (optional, default 0) reserves
+a core for the async BG-AILS worker (`bg_ails.mode: async`); the pinned CPU
+order is `dri | bg | sp`.
 
 ```yaml
 n_workers: 8   # ignored for worker count when cores: is present
 
 cores:
   total: 8
-  dri: 7
+  dri: 6
+  bg: 1        # only needed with bg_ails.mode: async
   sp: 1
   # cpu_list: [0, 1, 2, 3, 4, 5, 6, 7]   # optional; or pass --cpus 0-7
 ```
@@ -104,8 +107,8 @@ result reason is `mip_no_solution` (no fallback to a previous best).
 
 **When to use:** keep DRI moving while SC/SP runs on a reserved core; A/B
 comparisons of “reserve 1 core for async SP” vs “give that core to DRI” (both
-arms typically use `cores: {total: 8, dri: 7, sp: 1}` with sync leaving the SP
-core idle during DRI).
+arms typically use `cores: {total: 8, dri: 6, bg: 1, sp: 1}` with sync leaving
+the SP core idle during DRI).
 
 ### Triggers
 
@@ -122,9 +125,13 @@ Async is most useful with an explicit `cores:` block so the worker can pin to
 ```yaml
 cores:
   total: 8
-  dri: 7
+  dri: 6
+  bg: 1
   sp: 1
   cpu_list: [0, 1, 2, 3, 4, 5, 6, 7]
+
+bg_ails:
+  mode: async                 # BG perturb+improve pipelined on the bg core
 
 sp_sc:
   mode: async

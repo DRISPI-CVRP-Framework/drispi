@@ -1,6 +1,6 @@
 # C3 — Long convergence / variance characterization (deployed config)
 #
-# Full 7+1 async slice. Orchestrator packs 4 concurrent slices on 32 cores
+# Full 6+1+1 async slice. Orchestrator packs 4 concurrent slices on 32 cores
 # (real contention; contrast with isolated C1). Wall marks are logged by
 # scripts/run_c3_long_convergence.py (not by this YAML alone).
 #
@@ -13,9 +13,14 @@ output_dir: "artifacts/c3_long_convergence/runs"
 
 cores:
   total: 8
-  dri: 7
+  dri: 6
+  bg: 1
   sp: 1
   # cpu_list supplied per slice via --cpus (orchestrator assigns islands)
+
+bg_ails:
+  mode: async
+  crash_threshold: 1
 
 sp_sc:
   mode: async

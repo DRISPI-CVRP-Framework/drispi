@@ -67,3 +67,56 @@ def test_resolve_cores_cli_cpus() -> None:
     assert cfg.cpu_list == [4, 5, 6, 7]
     assert cfg.dri_cpus == [4, 5, 6]
     assert cfg.sp_cpus == [7]
+
+
+def test_resolve_cores_6_1_1_split_cpu_order_dri_bg_sp() -> None:
+    cfg = resolve_cores(
+        cores_total=8,
+        cores_dri=6,
+        cores_bg=1,
+        cores_sp=1,
+        cores_cpu_list=list(range(8)),
+        n_workers=8,
+    )
+    assert (cfg.dri, cfg.bg, cfg.sp) == (6, 1, 1)
+    assert cfg.dri_cpus == [0, 1, 2, 3, 4, 5]
+    assert cfg.bg_cpus == [6]
+    assert cfg.sp_cpus == [7]
+    assert cfg.idle_cpus == []
+
+
+def test_resolve_cores_bg_defaults_to_zero() -> None:
+    cfg = resolve_cores(
+        cores_total=8,
+        cores_dri=7,
+        cores_sp=1,
+        cores_cpu_list=list(range(8)),
+        n_workers=8,
+    )
+    assert cfg.bg == 0
+    assert cfg.bg_cpus == []
+    assert cfg.sp_cpus == [7]
+
+
+def test_resolve_cores_bg_counts_against_total() -> None:
+    with pytest.raises(AssertionError, match="exceeds"):
+        resolve_cores(
+            cores_total=8,
+            cores_dri=7,
+            cores_bg=1,
+            cores_sp=1,
+            cores_cpu_list=None,
+            n_workers=8,
+        )
+
+
+def test_resolve_cores_bg_alone_requires_full_block() -> None:
+    with pytest.raises(ValueError, match="requires all"):
+        resolve_cores(
+            cores_total=None,
+            cores_dri=None,
+            cores_bg=1,
+            cores_sp=None,
+            cores_cpu_list=None,
+            n_workers=8,
+        )

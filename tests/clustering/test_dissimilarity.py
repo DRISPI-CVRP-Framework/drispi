@@ -58,3 +58,18 @@ def test_off_diagonal_entries_positive() -> None:
     matrix = compute_dissimilarity_matrix(instance)
     off_diagonal = matrix[~np.eye(instance.n_customers, dtype=bool)]
     assert np.all(off_diagonal > 0.0)
+
+
+def test_bit_identical_recompute_across_pickle_round_trip() -> None:
+    """Option 3' contract: the async BG worker rebuilds the matrix from a
+    pickled instance copy and must get a bit-identical float64 result."""
+    import pickle
+
+    instance = _build_instance_10()
+    lam, offset = 0.4, 1.2345
+    main_thread = compute_dissimilarity_matrix(instance, lam, offset)
+    worker_copy = pickle.loads(pickle.dumps(instance, protocol=pickle.HIGHEST_PROTOCOL))
+    worker_side = compute_dissimilarity_matrix(worker_copy, lam, offset)
+    assert main_thread.dtype == np.float64
+    assert worker_side.dtype == np.float64
+    assert np.array_equal(main_thread, worker_side)  # bitwise, not allclose

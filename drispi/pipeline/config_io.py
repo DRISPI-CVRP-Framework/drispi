@@ -139,6 +139,16 @@ def _coerce_value(field_name: str, value: Any) -> Any:
 
             return parse_cpu_list(value)
         return [int(v) for v in value]
+    # YAML 1.1 (PyYAML) parses off/on/yes/no as booleans. Unquoted
+    # ``sp_sc.mode: off`` would otherwise become False, then
+    # ``(False or "sync")`` in the pipeline silently re-enables SP/SC.
+    if field_name == "sp_sc_mode" and isinstance(value, bool):
+        if value is False:
+            return "off"
+        raise ValueError(
+            "sp_sc.mode parsed as boolean true; quote the mode string "
+            '(e.g. mode: "off")'
+        )
     return value
 
 

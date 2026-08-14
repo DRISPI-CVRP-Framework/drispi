@@ -100,6 +100,14 @@ def test_load_rejects_removed_bg_ails_time_limit(tmp_path: Path) -> None:
         load_config(path)
 
 
+def test_load_nested_sp_sc_unquoted_off_is_mode_off(tmp_path: Path) -> None:
+    """YAML 1.1 parses bare ``off`` as false; loader must not re-enable SP/SC."""
+    path = tmp_path / "cfg.yaml"
+    path.write_text("sp_sc:\n  mode: off\n", encoding="utf-8")
+    loaded = load_config(path)
+    assert loaded.sp_sc_mode == "off"
+
+
 def test_load_nested_bg_ails_block(tmp_path: Path) -> None:
     path = tmp_path / "cfg.yaml"
     path.write_text(

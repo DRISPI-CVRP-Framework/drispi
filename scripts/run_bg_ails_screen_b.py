@@ -2,11 +2,11 @@
 """Screen B — BG-AILS initial_omega ∈ {1, 10, 30} on 32 cores.
 
 Greedy + k frozen (Screen A winner). Three omega variants, SP/SC off,
-async 6+1+1. Packs each ``(instance, seed)`` as one wave of 3 slices so the
-omega cells share the same machine contention; the fourth 8-core island is idle.
+async 6+1+1. Jobs fill every 8-core slice (4 concurrent); pairing is by
+``(instance, seed)`` in the summary, not contemporaneous waves.
 
-Default: 3 instances × 4 seeds × 3 variants = 36 runs, 2 h each → 12 waves
-≈ 24 h wall on 32 cores.
+Default: 3 instances × 4 seeds × 3 variants = 36 runs, 2 h each → 9 waves
+≈ 18 h wall on 32 cores.
 
 Usage (orchestrator)::
 
@@ -67,7 +67,7 @@ _DEFAULT_SEEDS = [42, 43, 44, 45]
 _DEFAULT_MARKS_MIN = [30, 60, 90, 120]
 _DEFAULT_CONFIG = _ROOT / "configs/bg_ails_screen_b.yaml"
 
-# Three omega cells; slot 3 of a 4-slice wave stays idle.
+# Three omega cells packed densely onto 4-slice waves.
 VARIANT_ORDER = ("omega_1", "omega_10", "omega_30")
 VARIANTS: dict[str, dict[str, float]] = {
     "omega_1": {"bg_ails_initial_omega": 1.0},
@@ -346,30 +346,30 @@ def _build_jobs(
     cores_per_slice: int,
     slices_per_wave: int,
 ) -> list[dict[str, Any]]:
-    """One wave per (instance, seed); omega cells occupy the first slots."""
-    if slices_per_wave < len(VARIANT_ORDER):
-        raise ValueError(
-            f"Need at least {len(VARIANT_ORDER)} slices per wave to pack the "
-            f"omega cells (got {slices_per_wave})"
-        )
-    jobs: list[dict[str, Any]] = []
-    wave_idx = 0
+    """Fill every slice: flatten (instance, seed, omega) and chunk into waves."""
+    if slices_per_wave < 1:
+        raise ValueError(f"slices_per_wave must be >= 1, got {slices_per_wave}")
+    flat: list[tuple[Path, int, str]] = []
     for inst in instances:
         for seed in seeds:
-            wave_idx += 1
-            for slot, variant in enumerate(VARIANT_ORDER):
-                cpus = _slice_cpus(cpu_base, slot, cores_per_slice)
-                jobs.append(
-                    {
-                        "wave": wave_idx,
-                        "slot": slot,
-                        "instance_path": str(inst),
-                        "instance": inst.stem,
-                        "seed": int(seed),
-                        "variant": variant,
-                        "cpus": _cpu_spec(cpus),
-                    }
-                )
+            for variant in VARIANT_ORDER:
+                flat.append((inst, int(seed), variant))
+    jobs: list[dict[str, Any]] = []
+    for i, (inst, seed, variant) in enumerate(flat):
+        wave_idx = i // slices_per_wave + 1
+        slot = i % slices_per_wave
+        cpus = _slice_cpus(cpu_base, slot, cores_per_slice)
+        jobs.append(
+            {
+                "wave": wave_idx,
+                "slot": slot,
+                "instance_path": str(inst),
+                "instance": inst.stem,
+                "seed": seed,
+                "variant": variant,
+                "cpus": _cpu_spec(cpus),
+            }
+        )
     return jobs
 
 
@@ -458,7 +458,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description=(
             "Screen B: BG-AILS initial_omega ∈ {1, 10, 30}, greedy+k frozen, "
-            "6+1+1 packed slices (1 idle), 2 h, SP/SC off."
+            "6+1+1×4 packed slices, 2 h, SP/SC off."
         )
     )
     p.add_argument(
@@ -596,12 +596,6 @@ def main(argv: list[str] | None = None) -> None:
             f"--cores-per-slice ({args.cores_per_slice})"
         )
         sys.exit(1)
-    if slices_per_wave < len(VARIANT_ORDER):
-        log.error(
-            f"Need at least {len(VARIANT_ORDER)} slices per wave to pack omega "
-            f"cells (got {slices_per_wave}). Adjust --total-cores / --cores-per-slice."
-        )
-        sys.exit(1)
     if len(instances) < 1 or len(seeds) < 1:
         log.error("Need at least one instance and one seed")
         sys.exit(1)
@@ -613,7 +607,7 @@ def main(argv: list[str] | None = None) -> None:
         cores_per_slice=args.cores_per_slice,
         slices_per_wave=slices_per_wave,
     )
-    n_waves = len(instances) * len(seeds)
+    n_waves = math.ceil(len(jobs) / slices_per_wave) if jobs else 0
     est_s = n_waves * float(args.duration_hours) * 3600.0
 
     log.info(
@@ -621,10 +615,8 @@ def main(argv: list[str] | None = None) -> None:
         f"{len(VARIANT_ORDER)} variants = {len(jobs)} runs, "
         f"{args.duration_hours:g}h each"
     )
-    idle = slices_per_wave - len(VARIANT_ORDER)
     log.info(
-        f"Packing: {len(VARIANT_ORDER)} of {slices_per_wave} concurrent 6+1+1 "
-        f"slices ({idle} idle) "
+        f"Packing: {slices_per_wave} concurrent 6+1+1 slices "
         f"(cpu_base={args.cpu_base}, {args.total_cores} cores) → "
         f"{n_waves} wave(s), est. wall {_format_wall_time(est_s)}"
     )

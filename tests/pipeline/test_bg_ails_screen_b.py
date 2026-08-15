@@ -24,7 +24,7 @@ def test_repo_screen_b_config_freezes_greedy_k_async_sp_off() -> None:
     assert loaded.bg_ails_divisor == 35.0
 
 
-def test_build_jobs_packs_three_omegas_and_idles_fourth_slice() -> None:
+def test_build_jobs_fills_four_slices_per_wave() -> None:
     instances = [
         Path("data/instances/xl/XL-n2307-k34.vrp"),
         Path("data/instances/xl/XL-n3975-k687.vrp"),
@@ -39,18 +39,19 @@ def test_build_jobs_packs_three_omegas_and_idles_fourth_slice() -> None:
         slices_per_wave=4,
     )
     assert len(jobs) == 36
-    assert max(j["wave"] for j in jobs) == 12
+    assert max(j["wave"] for j in jobs) == 9
+    assert all(len([j for j in jobs if j["wave"] == w]) == 4 for w in range(1, 10))
 
-    wave1 = [j for j in jobs if j["wave"] == 1]
-    assert len(wave1) == 3
-    assert {j["variant"] for j in wave1} == set(screen_b.VARIANT_ORDER)
-    assert all(j["seed"] == 42 and j["instance"] == "XL-n2307-k34" for j in wave1)
-    by_slot = sorted(wave1, key=lambda j: j["slot"])
-    assert [j["variant"] for j in by_slot] == list(screen_b.VARIANT_ORDER)
-    assert [j["cpus"] for j in by_slot] == ["0-7", "8-15", "16-23"]
+    wave1 = sorted(
+        [j for j in jobs if j["wave"] == 1], key=lambda j: j["slot"]
+    )
+    assert [j["cpus"] for j in wave1] == ["0-7", "8-15", "16-23", "24-31"]
+    assert [j["variant"] for j in wave1] == ["omega_1", "omega_10", "omega_30", "omega_1"]
+    assert [j["seed"] for j in wave1] == [42, 42, 42, 43]
+    assert all(j["instance"] == "XL-n2307-k34" for j in wave1)
 
-    last = [j for j in jobs if j["wave"] == 12]
-    assert all(j["seed"] == 45 and j["instance"] == "XL-n8389-k2028" for j in last)
+    last = [j for j in jobs if j["wave"] == 9]
+    assert all(j["instance"] == "XL-n8389-k2028" for j in last)
 
 
 def test_dry_run_prints_plan(capsys) -> None:
@@ -69,9 +70,9 @@ def test_dry_run_prints_plan(capsys) -> None:
     screen_b.main(argv)
     out = capsys.readouterr().out
     assert "36 runs" in out
-    assert "12 wave" in out
-    assert "1 idle" in out
+    assert "9 wave" in out
     assert "omega_1" in out
     assert "omega_30" in out
-    assert "est. wall 24h" in out
+    assert "est. wall 18h" in out
     assert "pair_selection=greedy" in out
+    assert "idle" not in out

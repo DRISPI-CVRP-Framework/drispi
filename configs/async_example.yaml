@@ -1,5 +1,5 @@
-# Example: async SC/SP + async BG-AILS on reserved cores (6+1+1)
-# Merge on top of configs/default.yaml when passed as --config.
+# Production 8-core slice: 6 DRI + 1 BG-AILS + 1 SP.
+# Merges on top of configs/default.yaml (greedy + k, initial_omega 10, divisor 35).
 
 cores:
   total: 8
@@ -10,16 +10,16 @@ cores:
   # cpu_list: [0, 1, 2, 3, 4, 5, 6, 7]
 
 bg_ails:
-  mode: async                 # perturb+improve pipelined on the bg core
+  mode: async
   crash_threshold: 1
 
 sp_sc:
   mode: async
-  trigger: wallclock          # async-only; first fire after warmup
+  trigger: wallclock
   interval_minutes: 20.0
   overlap_policy: skip
-  warmup_iterations: 5       # always gates every trigger
-  sp_interval: 3              # used if trigger: iteration
+  warmup_iterations: 5
+  sp_interval: 3
   min_coverage: 5
-  sp_time_limit: 600.0
-  mip_gap: 0.0005
+  sp_time_limit: 720.0
+  mip_gap: 0.00025

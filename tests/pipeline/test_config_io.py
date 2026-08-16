@@ -176,7 +176,7 @@ def test_repo_default_yaml_bg_ails_budget_keys() -> None:
     repo_root = Path(__file__).resolve().parents[2]
     loaded = load_config(repo_root / "configs" / "default.yaml")
     assert loaded.bg_ails_min_budget == 60.0
-    assert loaded.bg_ails_divisor == 31.0
+    assert loaded.bg_ails_divisor == 35.0
     assert loaded.bg_ails_divisor_assumes_time_per_customer == 0.06
     assert loaded.subcluster_time_per_customer == 0.06
 
@@ -214,4 +214,21 @@ def test_repo_benchmark_yaml_inherits_seed_from_default() -> None:
     repo_root = Path(__file__).resolve().parents[2]
     loaded = load_config(repo_root / "configs" / "benchmark.yaml")
     assert loaded.seed == 42
-    assert loaded.max_no_improve == 100
+    assert loaded.max_no_improve == 1000
+    assert loaded.output_dir == Path("artifacts/benchmark")
+
+
+def test_repo_async_example_yaml_is_six_plus_one_plus_one() -> None:
+    repo_root = Path(__file__).resolve().parents[2]
+    loaded = load_config(repo_root / "configs" / "async_example.yaml")
+    assert loaded.cores_total == 8
+    assert loaded.cores_dri == 6
+    assert loaded.cores_bg == 1
+    assert loaded.cores_sp == 1
+    assert loaded.bg_ails_mode == "async"
+    assert loaded.sp_sc_mode == "async"
+    assert loaded.sp_sc_trigger == "wallclock"
+    assert loaded.bg_ails_pair_selection == "greedy"
+    assert loaded.bg_ails_n_chains_mode == "k"
+    assert loaded.bg_ails_initial_omega == 10.0
+    assert loaded.bg_ails_divisor == 35.0

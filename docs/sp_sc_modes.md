@@ -52,11 +52,11 @@ AND (iteration - warmup_iterations) % sp_interval == 0
 sp_sc:
   mode: sync
   trigger: iteration          # required / only valid choice for sync
-  warmup_iterations: 10
+  warmup_iterations: 5
   sp_interval: 3
   min_coverage: 5
-  sp_time_limit: 600.0
-  mip_gap: 0.0005
+  sp_time_limit: 720.0
+  mip_gap: 0.00025
 ```
 
 Flat equivalent (also accepted):
@@ -138,11 +138,11 @@ sp_sc:
   trigger: wallclock          # or iteration
   interval_minutes: 20.0
   overlap_policy: skip        # or queue_latest
-  warmup_iterations: 10       # always respected
+  warmup_iterations: 5        # always respected
   sp_interval: 3              # used when trigger: iteration
   min_coverage: 5
-  sp_time_limit: 600.0
-  mip_gap: 0.0005
+  sp_time_limit: 720.0
+  mip_gap: 0.00025
 ```
 
 Run example:
@@ -190,7 +190,7 @@ SP code is entered while mode is `off`.
 
 ```yaml
 sp_sc:
-  mode: off
+  mode: "off"                 # quote it — YAML 1.1 turns bare off into False
 ```
 
 ---
@@ -224,14 +224,17 @@ trigger fires
 - **AILS JVM flags** always include `-XX:+UseSerialGC`,
   `-XX:ActiveProcessorCount={cores.sp|1}`, `-Xmx4g` (heap chosen from XL
   diagnostics; not a claim of zero handicap vs unpinned G1). BG-AILS improve
-  uses the same path via ``Pipeline._ails2_solver``. Known follow-ups (not
-  Stage 1): whether APC should track a different allocated core count than
-  ``cores.sp``, and whether ``-Xmx`` should become a live measured requirement
-  rather than the static ``4g`` constant.
+  uses the same path via ``Pipeline._ails2_solver``. Follow-ups: whether APC
+  should track a different allocated core count than ``cores.sp``, and whether
+  ``-Xmx`` should become a live measured requirement rather than the static
+  ``4g`` constant.
 - **BG-AILS time budget** is ``max(bg_ails_min_budget, n_customers / bg_ails_divisor)``
   (see ``drispi.improvement.bg_ails_budget``). ``bg_ails_time_limit`` was removed.
 - **Subcluster wall-timeout** is scaled by `ceil(k / dri_workers)` so multi-wave
   HAOS rolls get proportional time.
 - Defaults when keys are omitted: see `drispi/pipeline/config.py`.
-  `configs/default.yaml` may omit `sp_sc.mode`; missing keys fall back to
-  dataclass defaults (`sync` / `iteration`).
+  `configs/default.yaml` lists every flag. Profiles such as
+  `configs/async_example.yaml` merge on top (6 DRI + 1 BG + 1 SP, both async).
+- **YAML 1.1:** quote `sp_sc.mode: "off"`. Bare `off` parses as boolean `False`,
+  and the loader maps that back to `"off"` only after a defensive fix — do not
+  rely on unquoted `off`.

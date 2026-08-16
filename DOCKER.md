@@ -34,6 +34,23 @@ Instance files live under `data/instances/…` (e.g. `data/instances/x/X-n106-k1
 
 If you used `instances/` and `output/` in a previous project, the idea is the same — only the directory names differ.
 
+### Non-root and entrypoint
+
+The image default is `uv run python -m drispi.pipeline.runner`. **Do not** set
+`--entrypoint uv` when running as a non-root `--user`: `uv` tries to rewrite
+`/app/.venv` and fails with permission denied. For a script other than the
+pipeline runner, use the venv interpreter:
+
+```bash
+docker run ... --user "$(id -u):$(id -g)" \
+  --entrypoint /app/.venv/bin/python \
+  IMAGE scripts/run_benchmark.py ...
+```
+
+Mount `data/` (instances are not in the image). Production 8-core slice is
+6 DRI + 1 BG + 1 SP via `configs/async_example.yaml` and `--cpus` matching an
+exclusive 8-core island. `--cpuset-cpus` must not be shared (AILS is time-stopped).
+
 ---
 
 ## 1. Creating Docker Images
@@ -230,6 +247,11 @@ docker images zorroy/drispi
 DRISPI runs are **batch jobs**: the container starts, solves, writes to `artifacts/`, and exits. You typically do **not** use `--restart unless-stopped` (unlike a long-lived web service).
 
 On a shared server, pin CPUs and encode the range in the container name — see [section 9](#9-cpu-pinning-and-container-naming).
+
+Use `--user "$(id -u):$(id -g)"` so artifacts are owned by you. For a 6+1+1
+slice, pass `--config configs/async_example.yaml` and `--cpus` equal to the
+pinned 8-core island (not `--n-workers`). `configs/benchmark.yaml` is the older
+`n_workers` / `CoreManager` overlay used by `scripts/run_benchmark.py`.
 
 Use `$(pwd)` or `/home/altendeitering/drispi` for volume paths (not `/altendeitering/drispi` unless that path exists on your host).
 

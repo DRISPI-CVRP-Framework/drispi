@@ -1,0 +1,53 @@
+\chapter{Computational Study}\label{chapter:study}
+xyz?
+
+\section{Experimental Design}\label{sec:stu-experiment}
+xyz?
+
+\subsection{Framework Implementation}\label{sec:stu-implementation}
+Write which hardware is used and which external components/implementations are used in the utilized framework (Solvers, Gurobi, etc.).
+
+\subsection{Dataset}\label{sec:stu-dataset}
+Mention the new XL dataset, how it is generated and composed (the different levers n, k, dep, customer distribution, demand distribution, Q, r). 
+
+Also explain how they were initially evaluated and what existing solutions are used for the later benchmarking (AILS-II, FILO, FILO2, and HGS-CVRP, maybe DRSCI). Explain how current BKS were found through the BKS challenge and that they serve as the baseline instead of the numbers from the original paper. (Provide link and date to the official website from which the BKS values were obtained before the final benchmark).
+
+\subsection{Repititions}\label{sec:stu-repititions}
+Explain the number of seeds used and why. Reference Law and Kelton here and show the statistics behind why this is clean and answers the research question properly.
+
+Name of the chapter is object to change.
+
+\subsection{Hyperparameters}\label{sec:stu-hyperparameters}
+Show the hyperparameters used for the benchmark run. Explain the impact of the different hyperparameters on the performance.
+
+\section{Results}\label{sec:stu-results}
+Short introduction.
+
+\subsection{Performance Comparison against State-of-the-Art Monolotithic Solvers}\label{sec:stu-comparison}
+Show the results of the 100 runs a 2h with 3 seeds each. Make a big table with the avg. and best results for each instance. Next to it take the values from the Queiroga et al. (2026) paper and show the difference.
+
+This answers the primary research question.
+
+\subsection{Performance by Instance Characteristics}\label{sec:stu-characteristics}
+Show how DRISPI performs by instance characteristics. This should be a simple plot showing the performance by instance size, depot position, customer distribution, and demand distribution.
+
+\subsection{HAOS Weights}\label{sec:stu-haos}
+Investigate how HAOS weights are converging and if there are obvious tendencies. Interpret the results. 
+
+Are some HAOS levels converging always to the same result? Are some HAOS levels always converging in a similar way subject to the instance characteristics? Whats the variance in HAOS weight convergence? Do they differ a lot from seed to seed and are sensitive to randomness?
+
+Are the results interpretable in general?
+
+\subsection{Convergence Behavior}\label{sec:stu-convergence}
+Show how the convergence behavior is like for DRISPI by wallclock time and iterations. Use this chapter to also investigate improvement sources (quantitatively and qualitatively).
+
+\subsection{Optional: Long-Run Study}\label{sec:stu-long}
+Another study to show the performance of DRISPI with more time budget. This should focus especially on instances with solutions close to the BKS.
+
+\subsection{Optional: Salability Study}\label{sec:stu-scalability}
+Another study to show the diminishing returns of the scalability through parallelization. Use the same approach as in the scalability chapter of the literature.
+
+\section{Limitations}\label{sec:stu-limitations}
+Lay out the limitations of the study. It should include the difficulty of comparing single-threaded monolithic solvers to the parallelized framework (CPU time vs. wallclock time, different hardware, etc.).
+
+Also mention limitations and variations during the run when it comes to harware and number of seeds. Computation was a limiting factor here and definitely influenced performance.

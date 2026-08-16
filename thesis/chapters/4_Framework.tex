@@ -1,0 +1,52 @@
+\chapter{Framework}\label{chapter:framework}
+General introduction to the framework. Build a figure to show how the framework would work sequentially here maybe (since this is easier to understand). It is just a short introduction.
+
+The first part should also drop the name DRISPI for the first time and explain its components in one paragraph.
+
+Pseudocode and a figure of the finally used framework architecture should come at the end of this chapter, since it won't be understandable at this point.
+
+Instead, explain the main ideas behind the framework and namedrop important aspects for the later chapters (such as the route pool).
+
+Maybe some of the following sections deserve subsection, but I am finding it quite clean to have it all on the same hierarchy level.
+
+\section{Hierarchical Adaptive Operator Selection (HAOS)}\label{sec:fra-haos}
+Explain the general approach of HAOS. Explain the online learning and make the connection to the bandit and ML literature. 
+
+Outline the different levels and the reward system. Maybe already mention warm-up periods, etc.
+
+
+\section{Decomposition}\label{sec:fra-decomposition}
+This has to outline route-based and vertex-based clustering. And it has to outline the different methods used within each of these paragraphs. 
+
+This also has to include dissimilarity measures and the impact of demand in addition to spatial proximity.
+
+Some nice figures would be helpful here (maybe show the impact of how clustering differs on the same instance with fixed HAOS operators (except for levels 2-4)).
+
+\section{Routing}\label{sec:fra-routing}
+Explain how the subclusters are solved. Quickly mention parallelization of this stage. Also include recombination and compare with other decompose and solve parallely approaches.
+
+Also explain the hyperparameters for this stage. Should be quite short (1-2 pages at most).
+
+\section{Boundary-Guided Adaptive Iterated Local Search}\label{sec:fra-bg-ails}
+Explain the logic of BG AILS. Show the important parameters and some nice plots to illustrate the approach.
+
+I want one plot to explain route selection and perturbation.
+
+And I want one plot that shows the difference between BG-AILS and AILS. (Highlight the nodes that were touched, intensify color by number of touches)
+
+Since this is one of my novelties, it can be a longer section.
+
+\section{Set Partitioning}\label{sec:fra-sp}
+Explain SP and the SC fallback. Give the formal problem statement of SP and its LP Relaxation. Do the same for SC, but maybe in the appendix.
+
+Explain the role of SP and min coverage. 
+
+\section{Improvement}\label{sec:fra-improve}
+This section can be super short. It should just explain the purpose.
+
+\section{Pipeline Orchestration}\label{sec:fra-pipeline}
+This section should lead all previous sections together. 
+
+Here I need to explain with a figure how the pipeline is parallelized (the 6+1+1 approach) to minimize idle cores.
+
+I also need to write a long pseudocode explaining the entire pipeline logic. This could be hard if done in the parallelized setting. Will decide how to do this later.

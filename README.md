@@ -39,14 +39,16 @@ drispi-pipeline data/instances/xl/XL-n2307-k34.vrp \
 Equivalent: `python -m drispi.pipeline.runner …`. See `--help` for time limits,
 `--gui`, and `--analysis`.
 
-Multi-instance campaign (legacy `n_workers` / `CoreManager` packing):
+Final 100-XL × 3-seed campaign (6+1+1, 4 slices on 32 cores, ~150 h):
 
 ```bash
-python scripts/run_benchmark.py "data/instances/xl/*.vrp" \
-  --config configs/benchmark.yaml \
-  --total-cores 32 \
-  --cores-per-instance 8
+python scripts/run_final_benchmark.py --dry-run
+python scripts/run_final_benchmark.py --cpu-base 0 --total-cores 32
 ```
+
+Resume is the default: already-`ok` `(instance, seed)` rows in
+`artifacts/final_benchmark/campaign.jsonl` are skipped. SP is on, so mount a
+Gurobi license. Pin an exclusive 32-core island.
 
 ## Configuration
 

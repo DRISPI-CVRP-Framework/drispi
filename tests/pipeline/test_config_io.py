@@ -210,12 +210,11 @@ def test_loading_default_yaml_does_not_double_merge(tmp_path: Path) -> None:
     assert loaded.seed == 42
 
 
-def test_repo_benchmark_yaml_inherits_seed_from_default() -> None:
+def test_repo_default_yaml_exposes_seed() -> None:
     repo_root = Path(__file__).resolve().parents[2]
-    loaded = load_config(repo_root / "configs" / "benchmark.yaml")
+    loaded = load_config(repo_root / "configs" / "default.yaml")
     assert loaded.seed == 42
     assert loaded.max_no_improve == 1000
-    assert loaded.output_dir == Path("artifacts/benchmark")
 
 
 def test_repo_async_example_yaml_is_six_plus_one_plus_one() -> None:

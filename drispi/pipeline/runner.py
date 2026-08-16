@@ -210,7 +210,7 @@ def main() -> None:
         "--config",
         type=Path,
         default=None,
-        help="Path to YAML config file (e.g. configs/benchmark.yaml). "
+        help="Path to YAML config file (e.g. configs/final_benchmark.yaml). "
         "CLI args override YAML values.",
     )
     parser.add_argument("--time-limit", type=float, default=None)

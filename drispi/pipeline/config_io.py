@@ -252,7 +252,7 @@ def load_config(yaml_path: Path) -> DRISPIConfig:
     """
     Load DRISPIConfig from a YAML file.
 
-    Profile configs (e.g. ``configs/benchmark.yaml``) merge on top of sibling
+    Profile configs (e.g. ``configs/final_benchmark.yaml``) merge on top of sibling
     ``default.yaml`` in the same directory when present. Keys missing from both
     files use ``DRISPIConfig`` dataclass defaults. Unknown keys are ignored with
     a warning. List fields replace entirely; path fields become ``Path`` objects.

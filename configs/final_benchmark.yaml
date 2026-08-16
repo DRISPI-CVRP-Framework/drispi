@@ -1,0 +1,32 @@
+# Final benchmark — 100 XL instances, 2 h, 6+1+1 async, SP on.
+# Merges on top of configs/default.yaml (greedy + k, initial_omega 10, divisor 35).
+#
+# Orchestrator: scripts/run_final_benchmark.py (3 seeds, 4 packed 8-core slices).
+# max_no_improve is disabled; time_limit is the only stop.
+
+time_limit: 7200.0
+max_no_improve: 1000000000
+run_analysis: false
+output_dir: "artifacts/final_benchmark/runs"
+
+cores:
+  total: 8
+  dri: 6
+  bg: 1
+  sp: 1
+  # cpu_list supplied per slice via --cpus
+
+bg_ails:
+  mode: async
+  crash_threshold: 1
+
+sp_sc:
+  mode: async
+  trigger: wallclock
+  interval_minutes: 20.0
+  overlap_policy: skip
+  warmup_iterations: 5
+  sp_interval: 3
+  min_coverage: 5
+  sp_time_limit: 720.0
+  mip_gap: 0.00025

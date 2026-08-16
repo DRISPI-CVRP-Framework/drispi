@@ -249,9 +249,8 @@ DRISPI runs are **batch jobs**: the container starts, solves, writes to `artifac
 On a shared server, pin CPUs and encode the range in the container name — see [section 9](#9-cpu-pinning-and-container-naming).
 
 Use `--user "$(id -u):$(id -g)"` so artifacts are owned by you. For a 6+1+1
-slice, pass `--config configs/async_example.yaml` and `--cpus` equal to the
-pinned 8-core island (not `--n-workers`). `configs/benchmark.yaml` is the older
-`n_workers` / `CoreManager` overlay used by `scripts/run_benchmark.py`.
+slice, pass `--config configs/async_example.yaml` (or `configs/final_benchmark.yaml`)
+and `--cpus` equal to the pinned 8-core island (not `--n-workers`).
 
 Use `$(pwd)` or `/home/altendeitering/drispi` for volume paths (not `/altendeitering/drispi` unless that path exists on your host).
 

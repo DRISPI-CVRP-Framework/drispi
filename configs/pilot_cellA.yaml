@@ -1,0 +1,37 @@
+# Stage-1 pilot — cell A: drop-low only (k_lo filter active, extend-high OFF).
+# Run on the stage-1 image. Identical to final_benchmark.yaml except for the
+# k_domain override; merges on top of configs/default.yaml.
+#
+# Resulting k domains for the pilot instances:
+#   XL-n8028-k294   -> [6, 8, 10, 12]
+#   XL-n10001-k1570 -> [8, 10, 12]
+
+time_limit: 7200.0
+max_no_improve: 1000000000
+run_analysis: false
+output_dir: "artifacts/pilot/cellA/runs"
+
+cores:
+  total: 8
+  dri: 6
+  bg: 1
+  sp: 1
+
+decomposition:
+  k_domain:
+    ext_per_1000: 0   # disable geometric extension; keep the k_lo drop-low filter
+
+bg_ails:
+  mode: async
+  crash_threshold: 1
+
+sp_sc:
+  mode: async
+  trigger: wallclock
+  interval_minutes: 20.0
+  overlap_policy: skip
+  warmup_iterations: 5
+  sp_interval: 3
+  min_coverage: 5
+  sp_time_limit: 720.0
+  mip_gap: 0.00025

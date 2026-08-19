@@ -38,8 +38,22 @@ class DRISPIConfig:
     sp_time_limit: float = 300.0
     mip_gap: float = 0.0005
 
-    # ── Subcluster solver ─────────────────────────────────────────────
-    subcluster_time_per_customer: float = 0.06
+    # ── Decomposition (k domain + subcluster budget) ──────────────────
+    # Scale-adaptive HAOS level-1 k domain, computed once per instance at
+    # init (see drispi.haos.k_domain). base_arms are filtered by k_lo (from
+    # the imbalance law and s_hi) and extended geometrically up to
+    # k_ext = ext_per_1000 * round(n/1000), clamped by K_min.
+    decomp_k_base_arms: list[int] = field(
+        default_factory=lambda: [2, 3, 4, 6, 8, 10, 12]
+    )
+    decomp_k_max_arms: int = 10
+    decomp_k_s_hi: float = 2500.0
+    decomp_k_ext_per_1000: int = 6
+    decomp_k_imbalance_c: float = 0.980
+    decomp_k_imbalance_beta: float = 0.725
+    # Per-cluster solver budget = max(floor_s, size * rate_s_per_customer).
+    subcluster_rate_s_per_customer: float = 0.06
+    subcluster_floor_s: float = 5.0
 
     # ── BG-AILS ───────────────────────────────────────────────────────
     # mode: sync (inline on main thread, today's behaviour) | async
@@ -48,17 +62,19 @@ class DRISPIConfig:
     bg_ails_mode: str = "sync"
     # Consecutive/total BG worker crashes tolerated before the run fails.
     bg_ails_crash_threshold: int = 1
-    # budget_seconds = max(bg_ails_min_budget, n_customers / bg_ails_divisor)
-    bg_ails_min_budget: float = 60.0
-    bg_ails_divisor: float = 46.5
-    # Derivation base for bg_ails_divisor; must match subcluster_time_per_customer.
-    bg_ails_divisor_assumes_time_per_customer: float = 0.06
+    # budget = max(floor_s, margin * predicted_dr_wall) where
+    # predicted_dr_wall = slope * sum_over_waves(max budget in wave) + intercept
+    # (wall model fitted on the 100-instance XL campaign, R² = 0.976).
+    bg_ails_budget_floor_s: float = 60.0
+    bg_ails_budget_margin: float = 0.95
+    bg_ails_wall_model_slope: float = 0.991
+    bg_ails_wall_model_intercept: float = -2.0
     bg_ails_initial_omega: float = 0.8
     bg_ails_boundary_threshold: float = 0.5
     bg_ails_small_cluster_cap: int = 20
     bg_ails_small_cluster_alpha: float = 0.5
-    bg_ails_pair_selection: str = "stochastic"  # "stochastic" | "greedy"
-    bg_ails_n_chains_mode: str = "k_minus_1"  # "k_minus_1" | "k"
+    bg_ails_pair_selection: str = "greedy"  # "stochastic" | "greedy"
+    bg_ails_n_chains_mode: str = "k"  # "k_minus_1" | "k"
 
     # ── Standard improvement ──────────────────────────────────────────
     standard_improvement_time_limit: float = 120.0
@@ -77,9 +93,6 @@ class DRISPIConfig:
     haos_min_weight_vertex_method: float = 0.05
     haos_min_weight_route_method: float = 0.05
     haos_min_weight_solver: float = 0.05
-    haos_k_candidates: list[int] = field(
-        default_factory=lambda: [1, 2, 3, 4, 6, 8, 10, 12]
-    )
     haos_lambda_demand_values: list[float] = field(
         default_factory=lambda: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
     )
@@ -91,7 +104,6 @@ class DRISPIConfig:
             "kmeans",
             "agglomerative_avg",
             "agglomerative_complete",
-            "agglomerative_single",
             "kmedoids",
             "fcm",
         ]
@@ -101,7 +113,6 @@ class DRISPIConfig:
             "kmeans",
             "agglomerative_avg",
             "agglomerative_complete",
-            "agglomerative_single",
         ]
     )
     haos_solver_values: list[str] = field(

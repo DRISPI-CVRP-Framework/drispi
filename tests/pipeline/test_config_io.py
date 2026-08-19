@@ -20,7 +20,9 @@ def test_save_and_load_round_trip(tmp_path: Path) -> None:
     original = DRISPIConfig(
         time_limit=100.0,
         seed=42,
-        haos_k_candidates=[1, 2, 4],
+        decomp_k_base_arms=[2, 4, 8],
+        decomp_k_s_hi=2000.0,
+        bg_ails_budget_margin=0.9,
         output_dir=tmp_path / "runs",
     )
     path = tmp_path / "cfg.yaml"
@@ -28,7 +30,9 @@ def test_save_and_load_round_trip(tmp_path: Path) -> None:
     loaded = load_config(path)
     assert loaded.time_limit == 100.0
     assert loaded.seed == 42
-    assert loaded.haos_k_candidates == [1, 2, 4]
+    assert loaded.decomp_k_base_arms == [2, 4, 8]
+    assert loaded.decomp_k_s_hi == 2000.0
+    assert loaded.bg_ails_budget_margin == 0.9
     assert loaded.output_dir == tmp_path / "runs"
 
 
@@ -71,7 +75,7 @@ def test_config_to_dict_sections() -> None:
         "parallelism",
         "cores",
         "sp_sc",
-        "subcluster",
+        "decomposition",
         "bg_ails",
         "standard_improvement",
         "pool",
@@ -87,10 +91,14 @@ def test_config_to_dict_sections() -> None:
     assert grouped["sp_sc"]["sp_sc_mode"] == "sync"
     assert grouped["sp_sc"]["sp_sc_trigger"] == "iteration"
     assert grouped["cores"]["cores_total"] is None
-    assert grouped["bg_ails"]["bg_ails_min_budget"] == 60.0
-    assert grouped["bg_ails"]["bg_ails_divisor"] == 46.5
-    assert grouped["bg_ails"]["bg_ails_divisor_assumes_time_per_customer"] == 0.06
+    assert grouped["decomposition"]["decomp_k_base_arms"] == [2, 3, 4, 6, 8, 10, 12]
+    assert grouped["decomposition"]["subcluster_floor_s"] == 5.0
+    assert grouped["bg_ails"]["bg_ails_budget_floor_s"] == 60.0
+    assert grouped["bg_ails"]["bg_ails_budget_margin"] == 0.95
+    assert grouped["bg_ails"]["bg_ails_wall_model_slope"] == 0.991
+    assert grouped["bg_ails"]["bg_ails_wall_model_intercept"] == -2.0
     assert "bg_ails_time_limit" not in grouped["bg_ails"]
+    assert "bg_ails_divisor" not in grouped["bg_ails"]
 
 
 def test_load_rejects_removed_bg_ails_time_limit(tmp_path: Path) -> None:
@@ -114,22 +122,70 @@ def test_load_nested_bg_ails_block(tmp_path: Path) -> None:
         "bg_ails:\n"
         "  mode: async\n"
         "  crash_threshold: 2\n"
-        "  min_budget: 90.0\n",
+        "  budget:\n"
+        "    floor_s: 90.0\n"
+        "    margin: 0.9\n",
         encoding="utf-8",
     )
     loaded = load_config(path)
     assert loaded.bg_ails_mode == "async"
     assert loaded.bg_ails_crash_threshold == 2
-    assert loaded.bg_ails_min_budget == 90.0
+    assert loaded.bg_ails_budget_floor_s == 90.0
+    assert loaded.bg_ails_budget_margin == 0.9
     # Untouched nested keys fall back to dataclass defaults.
-    assert loaded.bg_ails_divisor == DRISPIConfig().bg_ails_divisor
+    assert loaded.bg_ails_wall_model_slope == DRISPIConfig().bg_ails_wall_model_slope
 
 
 def test_load_nested_bg_ails_rejects_time_limit(tmp_path: Path) -> None:
     path = tmp_path / "cfg.yaml"
     path.write_text("bg_ails:\n  time_limit: 120.0\n", encoding="utf-8")
-    with pytest.raises(ValueError, match="bg_ails_time_limit was removed"):
+    with pytest.raises(ValueError, match="bg_ails.time_limit was removed"):
         load_config(path)
+
+
+@pytest.mark.parametrize("key", ["min_budget", "divisor", "divisor_assumes_time_per_customer"])
+def test_load_nested_bg_ails_rejects_removed_static_budget_keys(
+    tmp_path: Path, key: str
+) -> None:
+    path = tmp_path / "cfg.yaml"
+    path.write_text(f"bg_ails:\n  {key}: 35.0\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="was removed"):
+        load_config(path)
+
+
+def test_load_rejects_removed_flat_keys(tmp_path: Path) -> None:
+    for body, match in (
+        ("subcluster_time_per_customer: 0.06\n", "subcluster_time_per_customer was removed"),
+        ("haos_k_candidates: [1, 2]\n", "haos_k_candidates was removed"),
+        ("bg_ails_divisor: 35.0\n", "was removed"),
+    ):
+        path = tmp_path / "cfg.yaml"
+        path.write_text(body, encoding="utf-8")
+        with pytest.raises(ValueError, match=match):
+            load_config(path)
+
+
+def test_load_nested_decomposition_block(tmp_path: Path) -> None:
+    path = tmp_path / "cfg.yaml"
+    path.write_text(
+        "decomposition:\n"
+        "  k_domain:\n"
+        "    base_arms: [2, 4, 8]\n"
+        "    max_arms: 8\n"
+        "    s_hi: 2000\n"
+        "  subcluster_budget:\n"
+        "    rate_s_per_customer: 0.05\n"
+        "    floor_s: 4.0\n",
+        encoding="utf-8",
+    )
+    loaded = load_config(path)
+    assert loaded.decomp_k_base_arms == [2, 4, 8]
+    assert loaded.decomp_k_max_arms == 8
+    assert loaded.decomp_k_s_hi == 2000
+    assert loaded.subcluster_rate_s_per_customer == 0.05
+    assert loaded.subcluster_floor_s == 4.0
+    # Untouched nested keys fall back to dataclass defaults.
+    assert loaded.decomp_k_ext_per_1000 == DRISPIConfig().decomp_k_ext_per_1000
 
 
 def test_load_nested_bg_ails_warns_on_unknown_key(tmp_path: Path) -> None:
@@ -175,10 +231,15 @@ def test_save_and_load_round_trip_cores_bg(tmp_path: Path) -> None:
 def test_repo_default_yaml_bg_ails_budget_keys() -> None:
     repo_root = Path(__file__).resolve().parents[2]
     loaded = load_config(repo_root / "configs" / "default.yaml")
-    assert loaded.bg_ails_min_budget == 60.0
-    assert loaded.bg_ails_divisor == 35.0
-    assert loaded.bg_ails_divisor_assumes_time_per_customer == 0.06
-    assert loaded.subcluster_time_per_customer == 0.06
+    assert loaded.bg_ails_budget_floor_s == 60.0
+    assert loaded.bg_ails_budget_margin == 0.95
+    assert loaded.bg_ails_wall_model_slope == 0.991
+    assert loaded.bg_ails_wall_model_intercept == -2.0
+    assert loaded.subcluster_rate_s_per_customer == 0.06
+    assert loaded.subcluster_floor_s == 5.0
+    assert loaded.decomp_k_base_arms == [2, 3, 4, 6, 8, 10, 12]
+    assert loaded.decomp_k_s_hi == 2500
+    assert loaded.decomp_k_ext_per_1000 == 6
 
 
 def test_profile_config_inherits_default_yaml(tmp_path: Path) -> None:
@@ -230,4 +291,4 @@ def test_repo_async_example_yaml_is_six_plus_one_plus_one() -> None:
     assert loaded.bg_ails_pair_selection == "greedy"
     assert loaded.bg_ails_n_chains_mode == "k"
     assert loaded.bg_ails_initial_omega == 10.0
-    assert loaded.bg_ails_divisor == 35.0
+    assert loaded.bg_ails_budget_floor_s == 60.0

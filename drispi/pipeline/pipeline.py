@@ -36,7 +36,8 @@ from drispi.improvement.bg_ails import (
 )
 from drispi.improvement.bg_ails_budget import (
     bg_ails_budget_seconds,
-    check_bg_ails_divisor_coupling,
+    predicted_dr_wall_seconds,
+    subcluster_budget_seconds,
 )
 from drispi.pipeline.config import DRISPIConfig
 from drispi.pipeline.core_manager import CoreManager
@@ -105,7 +106,12 @@ def _build_haos_config(config: DRISPIConfig) -> HAOSConfig:
             deferred_improvement=config.haos_deferred_improvement,
             deferred_no_improvement=config.haos_deferred_no_improvement,
         ),
-        k_candidates=list(config.haos_k_candidates),
+        k_base_arms=list(config.decomp_k_base_arms),
+        k_max_arms=config.decomp_k_max_arms,
+        k_s_hi=config.decomp_k_s_hi,
+        k_ext_per_1000=config.decomp_k_ext_per_1000,
+        k_imbalance_c=config.decomp_k_imbalance_c,
+        k_imbalance_beta=config.decomp_k_imbalance_beta,
         min_weight_k=config.haos_min_weight_k,
         lambda_demand_values=list(config.haos_lambda_demand_values),
         min_weight_lambda=config.haos_min_weight_lambda,
@@ -140,13 +146,6 @@ class DRISPIPipeline:
         self._instance = instance
         self._config = config
         self._bks_cost = bks_cost
-
-        check_bg_ails_divisor_coupling(
-            subcluster_time_per_customer=config.subcluster_time_per_customer,
-            divisor_assumes_time_per_customer=(
-                config.bg_ails_divisor_assumes_time_per_customer
-            ),
-        )
 
         mode = (config.sp_sc_mode or "sync").strip().lower()
         if mode not in ("off", "sync", "async"):
@@ -228,7 +227,7 @@ class DRISPIPipeline:
             bks=bks_cost,
         )
         self._snapshot_writer = SnapshotWriter(self.run_dir)
-        self._logger.log_init(config, instance)
+        self._logger.log_init(config, instance, k_domain=self._haos.k_values)
 
         self._spsc_adopted = 0
         self._spsc_invocations = 0
@@ -369,7 +368,18 @@ class DRISPIPipeline:
             rng=self._rng,
         )
         if selection.paradigm == "route" and best_routes is not None:
-            selection = self._haos.cap_k_for_route_clustering(selection, len(best_routes))
+            clipped = self._haos.cap_k_for_route_clustering(selection, len(best_routes))
+            if clipped.k != selection.k:
+                self._logger._emit_json(  # noqa: SLF001
+                    {
+                        "type": "k_clipped_to_routes",
+                        "iteration": iteration,
+                        "k_rolled": selection.k,
+                        "k_used": clipped.k,
+                        "n_routes": len(best_routes),
+                    }
+                )
+            selection = clipped
         is_spsc = self._should_run_sync_spsc(iteration)
         total_phases = 5 if is_spsc else 3
         joint_prob = self._haos.joint_probability(selection)
@@ -438,13 +448,20 @@ class DRISPIPipeline:
 
         cluster_sizes = [len(c) for c in partition]
         max_budget = max(
-            (max(10.0, float(sz) * self._config.subcluster_time_per_customer) for sz in cluster_sizes),
+            (
+                subcluster_budget_seconds(
+                    sz,
+                    rate=self._config.subcluster_rate_s_per_customer,
+                    floor=self._config.subcluster_floor_s,
+                )
+                for sz in cluster_sizes
+            ),
             default=0.0,
         )
         t0 = time.perf_counter()
         n_clusters = len(partition)
         try:
-            cluster_routes, n_rounds = self._solve_subclusters_parallel(
+            cluster_routes, n_rounds, granted_workers = self._solve_subclusters_parallel(
                 partition,
                 selection,
                 iteration,
@@ -465,6 +482,16 @@ class DRISPIPipeline:
             )
             return
         dr_stage_wall_seconds = time.perf_counter() - t0
+        # Predicted vs actual DR wall: the lockstep wave model the BG budget
+        # rests on was fitted at <=2 waves; logging both makes drift visible.
+        predicted_dr_wall_s = predicted_dr_wall_seconds(
+            cluster_sizes,
+            n_workers=granted_workers,
+            rate=self._config.subcluster_rate_s_per_customer,
+            sub_floor=self._config.subcluster_floor_s,
+            slope=self._config.bg_ails_wall_model_slope,
+            intercept=self._config.bg_ails_wall_model_intercept,
+        )
         self._logger.log_phase_done(
             iteration,
             2,
@@ -472,7 +499,13 @@ class DRISPIPipeline:
             "route",
             dr_stage_wall_seconds,
             max_budget,
-            {"solver": selection.solver, "k": selection.k, "batch_rounds": n_rounds},
+            {
+                "solver": selection.solver,
+                "k": selection.k,
+                "batch_rounds": n_rounds,
+                "n_workers_granted": granted_workers,
+                "predicted_dr_wall_s": round(predicted_dr_wall_s, 3),
+            },
             cluster_sizes=cluster_sizes,
         )
 
@@ -490,10 +523,18 @@ class DRISPIPipeline:
 
         bg_seed = self._bg_seed + iteration
         op_tag = selection.to_tag(iteration)
+        # BG budget tracks the predicted DR wall of THIS iteration's partition
+        # (the async worker runs pipelined with the next decompose+route, whose
+        # duration this is the best available estimate for).
         bg_ails_budget = bg_ails_budget_seconds(
-            self._instance.n_customers,
-            min_budget=self._config.bg_ails_min_budget,
-            divisor=self._config.bg_ails_divisor,
+            cluster_sizes,
+            n_workers=granted_workers,
+            rate=self._config.subcluster_rate_s_per_customer,
+            sub_floor=self._config.subcluster_floor_s,
+            floor=self._config.bg_ails_budget_floor_s,
+            margin=self._config.bg_ails_budget_margin,
+            slope=self._config.bg_ails_wall_model_slope,
+            intercept=self._config.bg_ails_wall_model_intercept,
         )
 
         if self._bg_mode == "async":
@@ -1032,11 +1073,9 @@ class DRISPIPipeline:
                 self._bg_adopted += 1
             self._last_cost = bg_cost
 
-            bg_budget = bg_ails_budget_seconds(
-                self._instance.n_customers,
-                min_budget=self._config.bg_ails_min_budget,
-                divisor=self._config.bg_ails_divisor,
-            )
+            # Budget the worker actually ran with (persisted on the job at
+            # launch; per-iteration now that it tracks the predicted DR wall).
+            bg_budget = result.time_limit
             self._logger.log_phase_done(
                 launch_iter,
                 3,
@@ -1120,8 +1159,10 @@ class DRISPIPipeline:
                     solver_index=0,
                 )
         _ = iteration
+        # Domain-legal fallback tag: k=1 is no longer in the k domain, so use
+        # the smallest arm (k_index=0 stays consistent with the wheel).
         return HAOSSelection(
-            k=1,
+            k=self._haos.k_values[0],
             lambda_demand=0.0,
             paradigm="vertex",
             method="kmeans",
@@ -1145,7 +1186,8 @@ class DRISPIPipeline:
         selection: HAOSSelection,
         iteration: int,
         n_clusters: int,
-    ) -> tuple[list[list[Route]], int]:
+    ) -> tuple[list[list[Route]], int, int]:
+        """Solve subclusters; return (routes, batch_rounds, granted workers)."""
         seed = self._solver_seed + iteration * 10007
         dri_cpus = self._cores.dri_cpus
         request = n_clusters
@@ -1156,27 +1198,31 @@ class DRISPIPipeline:
         if self._core_manager is not None:
             n_workers = self._core_manager.acquire(self._instance_id, request)
             try:
-                return solve_subclusters_parallel(
+                routes, n_rounds = solve_subclusters_parallel(
                     self._instance,
                     partition,
                     selection.solver,
-                    self._config.subcluster_time_per_customer,
+                    self._config.subcluster_rate_s_per_customer,
                     n_workers,
                     seed,
+                    floor_s=self._config.subcluster_floor_s,
                     dri_cpus=dri_cpus,
                 )
+                return routes, n_rounds, n_workers
             finally:
                 self._core_manager.release(self._instance_id, n_workers)
         n_workers = min(self._cores.dri, n_clusters)
-        return solve_subclusters_parallel(
+        routes, n_rounds = solve_subclusters_parallel(
             self._instance,
             partition,
             selection.solver,
-            self._config.subcluster_time_per_customer,
+            self._config.subcluster_rate_s_per_customer,
             n_workers,
             seed,
+            floor_s=self._config.subcluster_floor_s,
             dri_cpus=dri_cpus,
         )
+        return routes, n_rounds, n_workers
 
     def _skip_iteration_subcluster_failure(
         self,

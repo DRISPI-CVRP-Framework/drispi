@@ -30,13 +30,23 @@ _SECTION_FIELDS: dict[str, list[str]] = {
         "sp_time_limit",
         "mip_gap",
     ],
-    "subcluster": ["subcluster_time_per_customer"],
+    "decomposition": [
+        "decomp_k_base_arms",
+        "decomp_k_max_arms",
+        "decomp_k_s_hi",
+        "decomp_k_ext_per_1000",
+        "decomp_k_imbalance_c",
+        "decomp_k_imbalance_beta",
+        "subcluster_rate_s_per_customer",
+        "subcluster_floor_s",
+    ],
     "bg_ails": [
         "bg_ails_mode",
         "bg_ails_crash_threshold",
-        "bg_ails_min_budget",
-        "bg_ails_divisor",
-        "bg_ails_divisor_assumes_time_per_customer",
+        "bg_ails_budget_floor_s",
+        "bg_ails_budget_margin",
+        "bg_ails_wall_model_slope",
+        "bg_ails_wall_model_intercept",
         "bg_ails_initial_omega",
         "bg_ails_boundary_threshold",
         "bg_ails_small_cluster_cap",
@@ -56,7 +66,6 @@ _SECTION_FIELDS: dict[str, list[str]] = {
         "haos_min_weight_vertex_method",
         "haos_min_weight_route_method",
         "haos_min_weight_solver",
-        "haos_k_candidates",
         "haos_lambda_demand_values",
         "haos_paradigm_values",
         "haos_vertex_method_values",
@@ -81,7 +90,7 @@ _SECTION_COMMENTS: dict[str, str] = {
     "parallelism": "Parallelism (legacy n_workers when cores: absent)",
     "cores": "Cores block (source of truth when present)",
     "sp_sc": "SP/SC scheduling",
-    "subcluster": "Subcluster solver",
+    "decomposition": "Decomposition (k domain + subcluster budget)",
     "bg_ails": "BG-AILS",
     "standard_improvement": "Standard improvement",
     "pool": "Route pool",
@@ -102,15 +111,33 @@ _CORES_NESTED_KEYS = {
 _BG_AILS_NESTED_KEYS = {
     "mode": "bg_ails_mode",
     "crash_threshold": "bg_ails_crash_threshold",
-    "min_budget": "bg_ails_min_budget",
-    "divisor": "bg_ails_divisor",
-    "divisor_assumes_time_per_customer": "bg_ails_divisor_assumes_time_per_customer",
     "initial_omega": "bg_ails_initial_omega",
     "boundary_threshold": "bg_ails_boundary_threshold",
     "small_cluster_cap": "bg_ails_small_cluster_cap",
     "small_cluster_alpha": "bg_ails_small_cluster_alpha",
     "pair_selection": "bg_ails_pair_selection",
     "n_chains_mode": "bg_ails_n_chains_mode",
+}
+
+_BG_AILS_BUDGET_NESTED_KEYS = {
+    "floor_s": "bg_ails_budget_floor_s",
+    "margin": "bg_ails_budget_margin",
+    "wall_model_slope": "bg_ails_wall_model_slope",
+    "wall_model_intercept": "bg_ails_wall_model_intercept",
+}
+
+_DECOMP_K_DOMAIN_NESTED_KEYS = {
+    "base_arms": "decomp_k_base_arms",
+    "max_arms": "decomp_k_max_arms",
+    "s_hi": "decomp_k_s_hi",
+    "ext_per_1000": "decomp_k_ext_per_1000",
+    "imbalance_c": "decomp_k_imbalance_c",
+    "imbalance_beta": "decomp_k_imbalance_beta",
+}
+
+_DECOMP_SUBCLUSTER_BUDGET_NESTED_KEYS = {
+    "rate_s_per_customer": "subcluster_rate_s_per_customer",
+    "floor_s": "subcluster_floor_s",
 }
 
 _SP_SC_NESTED_KEYS = {
@@ -180,22 +207,74 @@ def _expand_nested_sp_sc(value: Any) -> dict[str, Any]:
     return out
 
 
+_BG_BUDGET_REMOVED_MSG = (
+    "the static BG-AILS budget was removed; use bg_ails.budget "
+    "(floor_s / margin / wall_model_slope / wall_model_intercept — "
+    "budget = max(floor_s, margin * predicted_dr_wall))"
+)
+
+
+def _expand_flat_block(
+    value: Any,
+    key_map: dict[str, str],
+    block_name: str,
+) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ValueError(f"{block_name}: nested block must be a mapping")
+    out: dict[str, Any] = {}
+    for key, field_name in key_map.items():
+        if key not in value:
+            continue
+        out[field_name] = _coerce_value(field_name, value[key])
+    unknown = set(value) - set(key_map)
+    for key in sorted(unknown):
+        warnings.warn(f"Unknown {block_name} key ignored: {key!r}", stacklevel=4)
+    return out
+
+
 def _expand_nested_bg_ails(value: Any) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ValueError("bg_ails: nested block must be a mapping")
-    if "time_limit" in value:
-        raise ValueError(
-            "bg_ails_time_limit was removed; use bg_ails_min_budget and "
-            "bg_ails_divisor (budget = max(min_budget, n_customers / divisor))"
-        )
+    removed = {"time_limit", "min_budget", "divisor", "divisor_assumes_time_per_customer"}
+    present = removed & set(value)
+    if present:
+        raise ValueError(f"bg_ails.{sorted(present)[0]} was removed; {_BG_BUDGET_REMOVED_MSG}")
     out: dict[str, Any] = {}
+    if "budget" in value:
+        out.update(
+            _expand_flat_block(value["budget"], _BG_AILS_BUDGET_NESTED_KEYS, "bg_ails.budget")
+        )
     for key, field_name in _BG_AILS_NESTED_KEYS.items():
         if key not in value:
             continue
         out[field_name] = _coerce_value(field_name, value[key])
-    unknown = set(value) - set(_BG_AILS_NESTED_KEYS)
+    unknown = set(value) - set(_BG_AILS_NESTED_KEYS) - {"budget"}
     for key in sorted(unknown):
         warnings.warn(f"Unknown bg_ails key ignored: {key!r}", stacklevel=3)
+    return out
+
+
+def _expand_nested_decomposition(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ValueError("decomposition: nested block must be a mapping")
+    out: dict[str, Any] = {}
+    if "k_domain" in value:
+        out.update(
+            _expand_flat_block(
+                value["k_domain"], _DECOMP_K_DOMAIN_NESTED_KEYS, "decomposition.k_domain"
+            )
+        )
+    if "subcluster_budget" in value:
+        out.update(
+            _expand_flat_block(
+                value["subcluster_budget"],
+                _DECOMP_SUBCLUSTER_BUDGET_NESTED_KEYS,
+                "decomposition.subcluster_budget",
+            )
+        )
+    unknown = set(value) - {"k_domain", "subcluster_budget"}
+    for key in sorted(unknown):
+        warnings.warn(f"Unknown decomposition key ignored: {key!r}", stacklevel=3)
     return out
 
 
@@ -221,10 +300,21 @@ def _read_yaml_mapping(yaml_path: Path) -> dict[str, Any]:
         if key == "bg_ails" and isinstance(value, dict):
             overrides.update(_expand_nested_bg_ails(value))
             continue
-        if key == "bg_ails_time_limit":
+        if key == "decomposition" and isinstance(value, dict):
+            overrides.update(_expand_nested_decomposition(value))
+            continue
+        if key in ("bg_ails_time_limit", "bg_ails_min_budget", "bg_ails_divisor",
+                   "bg_ails_divisor_assumes_time_per_customer"):
+            raise ValueError(f"{key} was removed; {_BG_BUDGET_REMOVED_MSG}")
+        if key == "subcluster_time_per_customer":
             raise ValueError(
-                "bg_ails_time_limit was removed; use bg_ails_min_budget and "
-                "bg_ails_divisor (budget = max(min_budget, n_customers / divisor))"
+                "subcluster_time_per_customer was removed; use "
+                "decomposition.subcluster_budget (rate_s_per_customer / floor_s)"
+            )
+        if key == "haos_k_candidates":
+            raise ValueError(
+                "haos_k_candidates was removed; the k domain is computed per "
+                "instance — tune decomposition.k_domain instead"
             )
         if key not in _VALID_FIELDS:
             warnings.warn(f"Unknown config key ignored: {key!r}", stacklevel=3)

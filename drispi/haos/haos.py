@@ -52,7 +52,7 @@ class HAOS:
         self.instance = instance
         self.rng = rng or random.Random()
 
-        self.k_values = HAOSConfig.compute_k_values(instance, config.k_candidates)
+        self.k_values = config.compute_k_values(instance)
         sw = config.starting_weight
         self.wheel_1_k = RouletteWheel(self.k_values, config.min_weight_k, starting_weight=sw)
         self.wheel_2_lambda = RouletteWheel(
@@ -134,22 +134,16 @@ class HAOS:
         selection: HAOSSelection,
         n_routes: int,
     ) -> HAOSSelection:
-        """Ensure k does not exceed the number of S* routes used for clustering."""
-        if selection.paradigm != "route":
+        """Clip k to the live route count for route-paradigm clustering.
+
+        Never raises: with a scale-adaptive domain the rolled k can exceed the
+        incumbent's route count, so the partition just uses fewer clusters.
+        ``k_index`` is kept so HAOS credit still lands on the arm that was
+        actually rolled.
+        """
+        if selection.paradigm != "route" or selection.k <= n_routes:
             return selection
-
-        feasible = [k for k in self.wheel_1_k.choices if k <= n_routes]
-        if not feasible:
-            raise ValueError(
-                f"No HAOS k candidate is feasible for route clustering with {n_routes} routes."
-            )
-
-        k_used = min(selection.k, feasible[-1])
-        if k_used == selection.k:
-            return selection
-
-        k_index = self.wheel_1_k.choices.index(k_used)
-        return replace(selection, k=k_used, k_index=k_index)
+        return replace(selection, k=max(1, n_routes))
 
     def joint_probability(self, selection: HAOSSelection) -> float:
         """Product of per-level roulette probabilities for the current selection."""

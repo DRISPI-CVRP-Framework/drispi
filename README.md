@@ -61,8 +61,15 @@ Uncomment the `cores:` block in `default.yaml` or pass that profile with
 `--cpus 0-7`.
 
 BG-AILS quality knobs currently in default: `pair_selection: greedy`,
-`n_chains_mode: k`, `initial_omega: 10`, `divisor: 35`. Budget is
-`max(min_budget, n_customers / divisor)`.
+`n_chains_mode: k`, `initial_omega: 10`. The time budget tracks the predicted
+decompose-route wall of the current partition:
+`max(floor_s, margin * (slope * sum_over_waves(max budget in wave) + intercept))`
+with knobs under `bg_ails.budget` in `default.yaml`.
+
+The HAOS level-1 k domain is no longer a fixed candidate list — it is computed
+once per instance at init from `(n, K_min)` in the instance name (tunables
+under `decomposition.k_domain`; see `drispi/haos/k_domain.py`). The computed
+domain is logged on the run's init JSONL event.
 
 SC/SP modes, pinning, and YAML `off` quoting: [docs/sp_sc_modes.md](docs/sp_sc_modes.md).
 

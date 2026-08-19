@@ -68,10 +68,11 @@ def test_xl_n1281_pipeline_smoke_short(xl_n1281: CVRPInstance) -> None:
         haos_warmup=10,
         warmup_iterations=1000,
         sp_interval=1000,
-        subcluster_time_per_customer=0.06,
-        bg_ails_divisor_assumes_time_per_customer=0.06,
-        bg_ails_min_budget=1.0,
-        bg_ails_divisor=10000.0,
+        subcluster_rate_s_per_customer=0.06,
+        # Keep the smoke run fast: floor 1 s and margin 0 pin the BG budget
+        # at the floor regardless of the predicted DR wall.
+        bg_ails_budget_floor_s=1.0,
+        bg_ails_budget_margin=0.0,
         standard_improvement_time_limit=1.0,
         sp_time_limit=1.0,
     )

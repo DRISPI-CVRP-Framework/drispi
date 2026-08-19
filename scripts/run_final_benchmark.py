@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Final benchmark — 100 XL instances × 3 seeds, 6+1+1 packed on 32 cores.
 
-Production knobs (greedy + k, ω=10, divisor 35, async BG + async SP). Four
+Production knobs (greedy + k, ω=10, predicted-DR-wall BG budget, async BG +
+async SP). Four
 exclusive 8-core slices per wave. Jobs are ordered by instance size then seed
 so three copies of XL-n10001 never share a wave.
 

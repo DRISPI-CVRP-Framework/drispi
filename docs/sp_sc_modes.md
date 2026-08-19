@@ -228,10 +228,15 @@ trigger fires
   should track a different allocated core count than ``cores.sp``, and whether
   ``-Xmx`` should become a live measured requirement rather than the static
   ``4g`` constant.
-- **BG-AILS time budget** is ``max(bg_ails_min_budget, n_customers / bg_ails_divisor)``
-  (see ``drispi.improvement.bg_ails_budget``). ``bg_ails_time_limit`` was removed.
-- **Subcluster wall-timeout** is scaled by `ceil(k / dri_workers)` so multi-wave
-  HAOS rolls get proportional time.
+- **BG-AILS time budget** is ``max(floor_s, margin * predicted_dr_wall)`` where
+  ``predicted_dr_wall = slope * sum_over_waves(max budget in wave) + intercept``
+  over the current partition's per-cluster budgets in submit order (see
+  ``drispi.improvement.bg_ails_budget``; knobs under ``bg_ails.budget``). The
+  static ``max(min_budget, n / divisor)`` rule and ``bg_ails_time_limit`` were
+  removed. Per-iteration predicted vs actual ``dr_wall_s`` is logged on the
+  route phase event.
+- **Subcluster wall-timeout** (hang detector) is anchored to the lockstep wave
+  sum of per-cluster budgets: ``max(2 * wave_sum, wave_sum + 120)``.
 - Defaults when keys are omitted: see `drispi/pipeline/config.py`.
   `configs/default.yaml` lists every flag. Profiles such as
   `configs/async_example.yaml` merge on top (6 DRI + 1 BG + 1 SP, both async).

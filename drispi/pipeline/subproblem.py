@@ -10,6 +10,7 @@ from concurrent.futures import ALL_COMPLETED, ProcessPoolExecutor, wait
 from drispi.core.instance import CVRPInstance
 from drispi.core.solution import Route as SolutionRoute
 from drispi.core.types import Route
+from drispi.improvement.bg_ails_budget import lockstep_wave_sum, subcluster_budget_seconds
 from drispi.pipeline.cores import affinity_logging_enabled
 
 LOGGER = logging.getLogger(__name__)
@@ -29,10 +30,14 @@ def batch_rounds(n_clusters: int, n_workers: int) -> int:
     return max(1, int(math.ceil(n_clusters / workers)))
 
 
-def subcluster_wall_timeout(max_budget: float, *, n_rounds: int = 1) -> float:
-    """Wall-clock limit scaled by derived batch rounds (>= per-cluster budgets)."""
-    per_wave = max(2.0 * max_budget, max_budget + 120.0)
-    return per_wave * max(1, int(n_rounds))
+def subcluster_wall_timeout(wave_sum: float) -> float:
+    """Hang detector: wall-clock limit over the lockstep wave sum.
+
+    The slack (2x or +120 s, whichever is larger) is applied once over the
+    whole predicted lockstep wall, not per wave — the old per-wave scaling
+    grew uselessly loose at 10+ waves.
+    """
+    return max(2.0 * wave_sum, wave_sum + 120.0)
 
 
 def _dri_worker_initializer(dri_cpus: list[int] | None) -> None:
@@ -123,29 +128,36 @@ def solve_subclusters_parallel(
     instance: CVRPInstance,
     partition: list[list[int]],
     solver_name: str,
-    time_per_customer: float,
+    rate_s_per_customer: float,
     n_workers: int,
     seed: int,
     *,
+    floor_s: float = 5.0,
     dri_cpus: list[int] | None = None,
 ) -> tuple[list[list[Route]], int]:
     """
     Solve each cluster in parallel; return (routes per cluster, batch_rounds).
 
     Waves remain implicit in ``ProcessPoolExecutor``; ``batch_rounds`` is derived
-    as ``ceil(k / n_workers)`` for instrumentation. Wall timeout scales with that.
+    as ``ceil(k / n_workers)`` for instrumentation. The wall timeout is anchored
+    to the lockstep wave sum of per-cluster budgets (submit order).
     """
+    # Warm the parent matrix in-process for route_cost; CVRPInstance.__getstate__
+    # strips it from worker pickles, so this never crosses a process boundary.
     _ = instance.distance_matrix
     if not partition:
         return [], 1
 
     def budget(cluster: list[int]) -> float:
-        return max(10.0, float(len(cluster)) * time_per_customer)
+        return subcluster_budget_seconds(
+            len(cluster), rate=rate_s_per_customer, floor=floor_s
+        )
 
     max_workers = max(1, n_workers)
     n_rounds = batch_rounds(len(partition), max_workers)
-    max_budget = max((budget(c) for c in partition), default=0.0)
-    wall_timeout = subcluster_wall_timeout(max_budget, n_rounds=n_rounds)
+    budgets = [budget(c) for c in partition]
+    max_budget = max(budgets, default=0.0)
+    wall_timeout = subcluster_wall_timeout(lockstep_wave_sum(budgets, max_workers))
 
     executor = ProcessPoolExecutor(
         max_workers=max_workers,

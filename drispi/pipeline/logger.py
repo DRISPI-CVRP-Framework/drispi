@@ -311,7 +311,13 @@ class PipelineLogger:
                 json_event = {"type": "config", "config": grouped}
             self._emit(None, _TAG_INIT, line, json_event=json_event)
 
-    def log_init(self, config: DRISPIConfig, instance: CVRPInstance) -> None:
+    def log_init(
+        self,
+        config: DRISPIConfig,
+        instance: CVRPInstance,
+        *,
+        k_domain: list[int] | None = None,
+    ) -> None:
         bks_display = f"{self._bks_cost:.2f}" if self._bks_cost is not None else "N/A"
         header_lines = [
             _HRULE,
@@ -320,6 +326,8 @@ class PipelineLogger:
                 f"capacity={instance.capacity}"
             ),
         ]
+        if k_domain is not None:
+            header_lines.append(f"k domain (computed at init): {k_domain}")
         for line in header_lines:
             self._emit(None, _TAG_INIT, line)
 
@@ -336,6 +344,8 @@ class PipelineLogger:
                     "config": _config_to_json(config),
                     "bks": self._bks_cost,
                 }
+                if k_domain is not None:
+                    json_event["k_domain"] = list(k_domain)
             self._emit(None, _TAG_INIT, line, json_event=json_event)
 
     def log_haos_roll(

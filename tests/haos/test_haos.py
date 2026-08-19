@@ -34,12 +34,12 @@ def test_coerce_vertex_when_no_routes_switches_paradigm_and_method() -> None:
         k=2,
         lambda_demand=0.4,
         paradigm="route",
-        method="agglomerative_single",
+        method="agglomerative_complete",
         solver="pyvrp",
-        k_index=1,
+        k_index=0,
         lambda_index=2,
         paradigm_index=1,
-        method_index=3,
+        method_index=2,
         solver_index=0,
     )
     coerced = haos.coerce_vertex_when_no_routes(
@@ -77,7 +77,7 @@ def test_coerce_vertex_when_no_routes_noop_if_best_solution_available() -> None:
     assert unchanged is route_selection
 
 
-def test_cap_k_for_route_clustering_reduces_k_to_route_count() -> None:
+def test_cap_k_for_route_clustering_clips_k_and_keeps_k_index() -> None:
     haos = HAOS(config=HAOSConfig(), instance=make_instance_20())
     route_selection = HAOSSelection(
         k=4,
@@ -85,7 +85,7 @@ def test_cap_k_for_route_clustering_reduces_k_to_route_count() -> None:
         paradigm="route",
         method="kmeans",
         solver="pyvrp",
-        k_index=3,
+        k_index=2,
         lambda_index=2,
         paradigm_index=1,
         method_index=0,
@@ -93,7 +93,28 @@ def test_cap_k_for_route_clustering_reduces_k_to_route_count() -> None:
     )
     capped = haos.cap_k_for_route_clustering(route_selection, n_routes=2)
     assert capped.k == 2
-    assert capped.k_index == haos.wheel_1_k.choices.index(2)
+    # Credit stays on the arm that was actually rolled.
+    assert capped.k_index == route_selection.k_index
+
+
+def test_cap_k_for_route_clustering_clips_below_domain_without_raising() -> None:
+    # A single-route incumbent clips to k=1 even though 1 is not a domain arm.
+    haos = HAOS(config=HAOSConfig(), instance=make_instance_20())
+    route_selection = HAOSSelection(
+        k=4,
+        lambda_demand=0.4,
+        paradigm="route",
+        method="kmeans",
+        solver="pyvrp",
+        k_index=2,
+        lambda_index=2,
+        paradigm_index=1,
+        method_index=0,
+        solver_index=0,
+    )
+    capped = haos.cap_k_for_route_clustering(route_selection, n_routes=1)
+    assert capped.k == 1
+    assert capped.k_index == route_selection.k_index
 
 
 def test_cap_k_for_route_clustering_noop_when_k_within_route_count() -> None:
@@ -227,12 +248,12 @@ def test_coerced_vertex_selection_credits_vertex_wheels_on_update_final() -> Non
         k=2,
         lambda_demand=0.4,
         paradigm="route",
-        method="agglomerative_single",
+        method="agglomerative_complete",
         solver="pyvrp",
-        k_index=1,
+        k_index=0,
         lambda_index=2,
         paradigm_index=1,
-        method_index=3,
+        method_index=2,
         solver_index=0,
     )
     before = haos.state_dict()
@@ -305,15 +326,19 @@ def test_load_state_dict_choice_mismatch_raises() -> None:
         haos.load_state_dict(state)
 
 
-def test_compute_k_values_crops_candidates_by_minimum_feasible_fleet() -> None:
-    """k_max=4 for synthetic20; only candidates <= 4 remain (no extra 1/k_max injection)."""
+def test_compute_k_values_fallback_uses_min_feasible_fleet() -> None:
+    """Unparseable name: n=20, K_min=ceil(200/50)=4 caps the domain at [2, 3, 4]."""
     instance = make_instance_20()
-    values = HAOSConfig.compute_k_values(instance, candidates=[2, 8, 12])
-    assert values == [2]
-    assert all(value <= 4 for value in values)
+    assert HAOSConfig().compute_k_values(instance) == [2, 3, 4]
 
-    default = [1, 2, 3, 4, 6, 8, 10, 12, 14, 16]
-    assert HAOSConfig.compute_k_values(instance, candidates=default) == [1, 2, 3, 4]
+
+def test_compute_k_values_prefers_filename_n_and_kmin() -> None:
+    """A CVRPLib-style name overrides customer/demand-derived bounds."""
+    import dataclasses
+
+    instance = dataclasses.replace(make_instance_20(), name="XL-n9571-k55")
+    values = HAOSConfig().compute_k_values(instance)
+    assert values == [8, 10, 12, 15, 19, 23, 29, 36, 44, 55]
 
 
 def test_historical_deferred_updates_all_reverse_mapped_levels() -> None:

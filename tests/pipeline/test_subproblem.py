@@ -40,10 +40,10 @@ def test_remap_roundtrip(instance_12: CVRPInstance) -> None:
 
 
 def test_subcluster_wall_timeout_formula() -> None:
+    # Slack applied once over the whole lockstep wave sum: max(2x, +120 s).
     assert subcluster_wall_timeout(0.0) == 120.0
     assert subcluster_wall_timeout(100.0) == 220.0
     assert subcluster_wall_timeout(489.5) == pytest.approx(979.0)
-    assert subcluster_wall_timeout(100.0, n_rounds=3) == 660.0
 
 
 def test_solve_subclusters_parallel_raises_on_wall_timeout(instance_12: CVRPInstance) -> None:
@@ -62,7 +62,7 @@ def test_solve_subclusters_parallel_raises_on_wall_timeout(instance_12: CVRPInst
                     instance_12,
                     partition,
                     "pyvrp",
-                    time_per_customer=0.05,
+                    rate_s_per_customer=0.05,
                     n_workers=2,
                     seed=1,
                 )
@@ -88,7 +88,7 @@ def test_solve_subclusters_parallel_wraps_worker_failure(instance_12: CVRPInstan
                     instance_12,
                     partition,
                     "ails2",
-                    time_per_customer=0.05,
+                    rate_s_per_customer=0.05,
                     n_workers=2,
                     seed=1,
                 )
@@ -102,7 +102,7 @@ def test_solve_subclusters_parallel_real_pyvrp_small(instance_12: CVRPInstance) 
         instance_12,
         partition,
         "pyvrp",
-        time_per_customer=0.5,
+        rate_s_per_customer=0.5,
         n_workers=2,
         seed=1,
     )

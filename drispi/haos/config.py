@@ -4,6 +4,7 @@ import math
 from dataclasses import dataclass, field
 
 from drispi.core.instance import CVRPInstance
+from drispi.haos.k_domain import DEFAULT_BASE_ARMS, k_domain, parse_n_kmin
 
 
 @dataclass
@@ -29,9 +30,13 @@ class HAOSConfig:
     starting_weight: float = 10.0
     rewards: HAOSRewardConfig = field(default_factory=HAOSRewardConfig)
 
-    k_candidates: list[int] = field(
-        default_factory=lambda: [1, 2, 3, 4, 6, 8, 10, 12, 14]
-    )
+    # Scale-adaptive k domain (see drispi.haos.k_domain.k_domain).
+    k_base_arms: list[int] = field(default_factory=lambda: list(DEFAULT_BASE_ARMS))
+    k_max_arms: int = 10
+    k_s_hi: float = 2500.0
+    k_ext_per_1000: int = 6
+    k_imbalance_c: float = 0.980
+    k_imbalance_beta: float = 0.725
     min_weight_k: float = 0.025
 
     lambda_demand_values: list[float] = field(
@@ -70,21 +75,29 @@ class HAOSConfig:
     )
     min_weight_solver: float = 0.05
 
-    @staticmethod
-    def compute_k_values(
-        instance: CVRPInstance,
-        candidates: list[int] | None = None,
-    ) -> list[int]:
+    def compute_k_values(self, instance: CVRPInstance) -> list[int]:
         """
-        Sorted ``k_candidates`` entries that do not exceed minimum-feasible fleet
-        size ``ceil(sum(demand) / capacity)``.
+        Scale-adaptive k domain for this instance (variable arity).
 
-        Values in ``k_candidates`` larger than that bound are dropped; nothing
-        else (e.g. benchmark fleet ``k``) is appended. At least one candidate must
-        be ``<=`` that bound or HAOS cannot build the k wheel.
+        ``(n, K_min)`` come from the instance name (filename DIMENSION and
+        fleet size). For synthetic instances without a parseable name, fall
+        back to ``n_customers`` and the minimum-feasible fleet
+        ``ceil(sum(demand) / capacity)`` as ``K_min``.
         """
-        if candidates is None:
-            candidates = [1, 2, 3, 4, 6, 8, 10, 12, 14, 16]
-        total_demand = sum(instance.demands[c] for c in instance.customers)
-        k_max = math.ceil(total_demand / instance.capacity)
-        return sorted({k for k in candidates if k <= k_max})
+        parsed = parse_n_kmin(instance.name)
+        if parsed is not None:
+            n, k_min = parsed
+        else:
+            n = instance.n_customers
+            total_demand = sum(instance.demands[c] for c in instance.customers)
+            k_min = max(1, math.ceil(total_demand / instance.capacity))
+        return k_domain(
+            n,
+            k_min,
+            base_arms=list(self.k_base_arms),
+            max_arms=self.k_max_arms,
+            s_hi=self.k_s_hi,
+            ext_per_1000=self.k_ext_per_1000,
+            imbalance_c=self.k_imbalance_c,
+            imbalance_beta=self.k_imbalance_beta,
+        )

@@ -35,18 +35,34 @@ sp_sc:
   sp_time_limit: 720.0       # Gurobi wall limit per SC/SP solve (seconds)
   mip_gap: 0.00025
 
-# ── Subcluster solver ────────────────────────────────────────────────
-subcluster_time_per_customer: 0.06
+# ── Decomposition ────────────────────────────────────────────────────
+# k_domain: scale-adaptive HAOS level-1 k domain, computed once per instance
+# at init from (n, K_min) parsed from the instance name. base_arms are
+# filtered by k_lo (imbalance law vs s_hi) and extended geometrically up to
+# k_ext = ext_per_1000 * round(n/1000), clamped by K_min; at most max_arms.
+decomposition:
+  k_domain:
+    base_arms: [2, 3, 4, 6, 8, 10, 12]
+    max_arms: 10
+    s_hi: 2500            # coarsest acceptable largest subcluster (customers)
+    ext_per_1000: 6       # k_ext = ext_per_1000 * round(n/1000)
+    imbalance_c: 0.980    # max_share = imbalance_c * k^(-imbalance_beta)
+    imbalance_beta: 0.725
+  subcluster_budget:      # per-cluster budget = max(floor_s, size * rate)
+    rate_s_per_customer: 0.06
+    floor_s: 5.0
 
-# ── BG-AILS (budget = max(min_budget, n_customers / divisor)) ────────
+# ── BG-AILS (budget = max(floor_s, margin * predicted_dr_wall)) ──────
 bg_ails:
   mode: sync                 # sync (inline on main thread) | async (dedicated
                              # BG worker, pipelined with next decompose+route;
                              # requires cores.bg >= 1 for pinning)
   crash_threshold: 1         # BG worker crashes tolerated before the run fails
-  min_budget: 60.0
-  divisor: 35.0
-  divisor_assumes_time_per_customer: 0.06  # must match subcluster_time_per_customer
+  budget:                    # predicted_dr_wall = slope * sum_wave_max + intercept
+    floor_s: 60.0
+    margin: 0.95
+    wall_model_slope: 0.991
+    wall_model_intercept: -2.0
   initial_omega: 10
   boundary_threshold: 0.5
   small_cluster_cap: 20
@@ -71,11 +87,10 @@ haos_min_weight_paradigm: 0.1
 haos_min_weight_vertex_method: 0.05
 haos_min_weight_route_method: 0.05
 haos_min_weight_solver: 0.05
-haos_k_candidates: [1, 2, 3, 4, 6, 8, 10, 12]
 haos_lambda_demand_values: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
 haos_paradigm_values: ["vertex", "route"]
-haos_vertex_method_values: ["kmeans", "agglomerative_avg", "agglomerative_complete", "agglomerative_single", "kmedoids", "fcm"]
-haos_route_method_values: ["kmeans", "agglomerative_avg", "agglomerative_complete", "agglomerative_single"]
+haos_vertex_method_values: ["kmeans", "agglomerative_avg", "agglomerative_complete", "kmedoids", "fcm"]
+haos_route_method_values: ["kmeans", "agglomerative_avg", "agglomerative_complete"]
 haos_solver_values: ["pyvrp", "filo", "filo2", "ails2"]
 
 # ── HAOS rewards ─────────────────────────────────────────────────────

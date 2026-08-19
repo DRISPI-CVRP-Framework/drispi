@@ -49,6 +49,20 @@ class CVRPInstance:
         if any(demand < 0 for demand in self.demands.values()):
             raise ValueError("All demands must be non-negative")
 
+    def __getstate__(self) -> dict:
+        """Drop the cached ``distance_matrix`` from pickles.
+
+        The n² float64 cache (~800 MB at n=10001) must never cross a process
+        boundary; each worker recomputes the (sub)matrix it actually needs.
+        """
+        state = dict(self.__dict__)
+        state.pop("distance_matrix", None)
+        return state
+
+    def __setstate__(self, state: dict) -> None:
+        # Frozen dataclass: restore via __dict__ directly (no __setattr__).
+        self.__dict__.update(state)
+
     def euclidean_distance(self, i: int, j: int) -> float:
         """TSPLIB ``EUC_2D`` edge length: Euclidean rounded to nearest integer."""
         xi, yi = self.coordinates[i]

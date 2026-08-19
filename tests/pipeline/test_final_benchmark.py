@@ -28,7 +28,8 @@ def test_repo_final_benchmark_config_is_production_slice() -> None:
     assert loaded.bg_ails_pair_selection == "greedy"
     assert loaded.bg_ails_n_chains_mode == "k"
     assert loaded.bg_ails_initial_omega == 10.0
-    assert loaded.bg_ails_divisor == 35.0
+    assert loaded.bg_ails_budget_floor_s == 60.0
+    assert loaded.bg_ails_budget_margin == 0.95
     assert loaded.sp_time_limit == 720.0
 
 

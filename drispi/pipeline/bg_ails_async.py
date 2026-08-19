@@ -84,6 +84,9 @@ class BgAilsResult:
     total_wall_s: float
     ready_ts: float
     enqueue_ts: float
+    # Budget the job ran with (echoed from BgAilsJob.time_limit; 0.0 when the
+    # worker died before a job could be attributed).
+    time_limit: float = 0.0
     error: str | None = None
 
 
@@ -146,6 +149,7 @@ def _process_job(job: BgAilsJob, *, instance: CVRPInstance, xmx: str) -> BgAilsR
         total_wall_s=time.perf_counter() - t0,
         ready_ts=time.time(),
         enqueue_ts=job.enqueue_ts,
+        time_limit=job.time_limit,
     )
 
 
@@ -203,6 +207,7 @@ def bg_ails_worker_main(
                 total_wall_s=0.0,
                 ready_ts=time.time(),
                 enqueue_ts=job.enqueue_ts,
+                time_limit=job.time_limit,
                 error=str(exc),
             )
         result_queue.put(result)

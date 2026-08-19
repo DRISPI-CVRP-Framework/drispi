@@ -106,6 +106,7 @@ def filter_by_type(lines: list[dict], type_: str) -> list[dict]:
 
 
 _HAOS_FLAT_TO_LEGACY: dict[str, str] = {
+    # Legacy runs only: new runs log the computed k domain on the init event.
     "haos_k_candidates": "k_candidates",
     "haos_lambda_demand_values": "lambda_demand_values",
     "haos_paradigm_values": "paradigm_values",
@@ -126,7 +127,15 @@ def _normalize_haos_config(haos: dict) -> dict:
 
 
 def get_haos_config_from_jsonl(lines: list[dict]) -> dict | None:
-    """Extract HAOSConfig values from the init or config line."""
+    """Extract HAOSConfig values from the init or config line.
+
+    The k domain is computed per instance at init and logged as a top-level
+    ``k_domain`` field on the init event; it is injected here under the legacy
+    ``k_candidates`` chart key so k-wheel charts order by the actual domain.
+    """
+    init_lines = filter_by_type(lines, "init")
+    k_domain = init_lines[0].get("k_domain") if init_lines else None
+
     for type_ in ("init", "config"):
         typed = filter_by_type(lines, type_)
         if not typed:
@@ -134,12 +143,18 @@ def get_haos_config_from_jsonl(lines: list[dict]) -> dict | None:
         config = typed[0].get("config")
         if not isinstance(config, dict):
             continue
+        out: dict | None = None
         haos = config.get("haos")
         if isinstance(haos, dict):
-            return _normalize_haos_config(haos)
-        haos_config = config.get("haos_config")
-        if isinstance(haos_config, dict):
-            return haos_config
+            out = _normalize_haos_config(haos)
+        else:
+            haos_config = config.get("haos_config")
+            if isinstance(haos_config, dict):
+                out = dict(haos_config)
+        if out is not None:
+            if isinstance(k_domain, list):
+                out["k_candidates"] = list(k_domain)
+            return out
     return None
 
 

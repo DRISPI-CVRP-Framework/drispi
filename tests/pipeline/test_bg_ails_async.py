@@ -281,7 +281,10 @@ def test_async_apply_adopts_improvement_against_live_incumbent(
     assert best_after_0 > cheap_cost
     assert pipe._best_cost == cheap_cost
     assert pipe._bg_adopted == 1
-    assert pipe._last_cost == cheap_cost
+    # _last_cost tracks the most recent producer: iteration 1's DR candidate,
+    # applied after the BG(0) drain (fakes make DR cost identical across
+    # iterations, so it equals iteration 0's DR cost).
+    assert pipe._last_cost == best_after_0
 
 
 def test_async_launch_skipped_at_wall_clock_cap_clears_pending(

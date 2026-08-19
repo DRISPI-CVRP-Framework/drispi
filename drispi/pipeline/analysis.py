@@ -33,6 +33,7 @@ DPI = 150
 
 # Improvement-source colors (shared between cost trajectory and sources chart)
 SOURCE_COLORS = {
+    "decompose_route": "#4a90d9",  # blue
     "bg_ails": "#2ecc71",  # green
     "sp_sc": "#ff9f43",  # orange
     "standard_ails": "#a55eea",  # purple

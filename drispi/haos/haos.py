@@ -270,6 +270,21 @@ class HAOS:
             return
         self._immediate_rewards[iteration] = self._immediate_rewards.get(iteration, 0.0) + reward
 
+    def flush_immediate(self, selection: HAOSSelection, iteration: int) -> float:
+        """Credit accumulated immediate rewards for ``iteration`` to ``selection``.
+
+        Async-path counterpart of the immediate part of :meth:`update_final`:
+        the pending registry is left untouched so the late BG-AILS credit via
+        :meth:`apply_pending_immediate` still lands on the same arms.
+        Returns the credited amount (0.0 during warmup or when nothing accrued).
+        """
+        reward = float(self._immediate_rewards.pop(iteration, 0.0))
+        if iteration < self.config.haos_warmup:
+            return 0.0
+        if reward:
+            self._credit_selection(selection, reward)
+        return reward
+
     def update_deferred(
         self,
         contributing_tags: list[HAOSTag],

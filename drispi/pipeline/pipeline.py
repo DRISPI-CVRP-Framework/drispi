@@ -602,7 +602,43 @@ class DRISPIPipeline:
             candidate_cost = float(
                 sum(self._instance.route_cost(r) for r in combined_seqs)
             )
+            # The DR candidate competes for S* directly: the BG worker perturbs
+            # this solution before improving it, so without this apply an
+            # improving decompose+route result would be silently discarded.
+            imm = self._haos.compute_reward(
+                candidate_cost,
+                self._best_cost,
+                self._last_cost,
+                self._haos_config.rewards,
+                is_deferred=False,
+            )
+            self._haos.update_immediate(selection, iteration, imm)
+            self._apply_candidate_solution(
+                combined_seqs,
+                iteration=iteration,
+                phase_name="decompose_route",
+                op_tag=op_tag,
+            )
+            self._last_cost = candidate_cost
         else:
+            # Same contract as async: the DR candidate competes for S* before
+            # the perturbation damages it.
+            dr_cost = float(sum(self._instance.route_cost(r) for r in combined_seqs))
+            imm_dr = self._haos.compute_reward(
+                dr_cost,
+                self._best_cost,
+                self._last_cost,
+                self._haos_config.rewards,
+                is_deferred=False,
+            )
+            self._haos.update_immediate(selection, iteration, imm_dr)
+            self._apply_candidate_solution(
+                combined_seqs,
+                iteration=iteration,
+                phase_name="decompose_route",
+                op_tag=op_tag,
+            )
+            self._last_cost = dr_cost
             combined_sol = _seqs_to_solution_routes(self._instance, combined_seqs)
             n_chains = _resolve_n_chains(
                 partition,
@@ -841,13 +877,16 @@ class DRISPIPipeline:
             )
             self._last_cost = final_cost
         elif self._bg_mode == "sync":
-            # Async mode: _last_cost is updated at BG/SP apply time instead.
+            # Async mode: _last_cost was already set at DR apply above and is
+            # further updated at BG/SP apply time.
             self._last_cost = candidate_cost
 
         if self._bg_mode == "async":
-            # Decay policy (b): deferred rewards + global decay on schedule at
-            # end of iteration i; BG(i)'s immediate reward lands later via
-            # apply_pending_immediate without a second decay.
+            # Decay policy (b): the DR candidate's immediate reward plus any
+            # deferred rewards land now, followed by the global decay; BG(i)'s
+            # immediate reward lands later via apply_pending_immediate without
+            # a second decay.
+            self._haos.flush_immediate(selection, iteration)
             self._haos.decay_on_schedule(iteration, selection)
         else:
             self._haos.update_final(selection, iteration)
@@ -1327,7 +1366,7 @@ class DRISPIPipeline:
         op_tag: HAOSTag | None = None,
         contribute: object | None = None,
     ) -> bool:
-        """Unified consume-once apply path for BG-AILS and SP/standard-AILS.
+        """Unified consume-once apply path for DR, BG-AILS, and SP/standard-AILS.
 
         Contract (identical for sync and async producers):
         1. pool-contribute the candidate routes (always, before any adopt

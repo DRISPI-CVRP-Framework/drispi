@@ -29,7 +29,7 @@ def test_repo_final_benchmark_config_is_production_slice() -> None:
     assert loaded.bg_ails_n_chains_mode == "k"
     assert loaded.bg_ails_initial_omega == 10.0
     assert loaded.bg_ails_budget_floor_s == 60.0
-    assert loaded.bg_ails_budget_margin == 0.95
+    assert loaded.bg_ails_budget_margin == 1.0
     assert loaded.sp_time_limit == 720.0
 
 
@@ -105,7 +105,7 @@ def test_dry_run_default_xl_count(capsys: pytest.CaptureFixture[str]) -> None:
     xl = repo / "data" / "instances" / "xl"
     if not xl.is_dir() or len(list(xl.glob("*.vrp"))) != 100:
         pytest.skip("XL instance set not present")
-    fb.main(["--dry-run"])
+    fb.main(["--dry-run", "--no-resume"])
     out = capsys.readouterr().out
     assert "100 instances × 3 seeds = 300 runs" in out
     assert "75 waves" in out

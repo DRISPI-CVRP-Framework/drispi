@@ -229,14 +229,20 @@ trigger fires
   ``-Xmx`` should become a live measured requirement rather than the static
   ``4g`` constant.
 - **BG-AILS time budget** is ``max(floor_s, margin * predicted_dr_wall)`` where
-  ``predicted_dr_wall = slope * sum_over_waves(max budget in wave) + intercept``
+  ``predicted_dr_wall = scale * n_waves**wave_exponent * lockstep_sum``
   over the current partition's per-cluster budgets in submit order (see
-  ``drispi.improvement.bg_ails_budget``; knobs under ``bg_ails.budget``). The
-  static ``max(min_budget, n / divisor)`` rule and ``bg_ails_time_limit`` were
-  removed. Per-iteration predicted vs actual ``dr_wall_s`` is logged on the
-  route phase event.
-- **Subcluster wall-timeout** (hang detector) is anchored to the lockstep wave
-  sum of per-cluster budgets: ``max(2 * wave_sum, wave_sum + 120)``.
+  ``drispi.improvement.bg_ails_budget``; knobs under ``bg_ails.budget``).
+  Defaults: ``scale=0.976``, ``wave_exponent=-0.180``, ``margin=1.0``.
+  The static ``max(min_budget, n / divisor)`` rule and ``bg_ails_time_limit``
+  were removed. Per-iteration predicted vs actual ``dr_wall_s`` is logged on
+  the route phase event; DR vs incumbent is a first-class ``dr_apply`` JSONL
+  event plus ``iterations.csv``.
+- **Subcluster wall-timeout** (hang detector) is anchored to the same predicted
+  DR wall, not raw lockstep: ``max(2 * pred, pred + 120)``.
+- **k domain.** Base arms clipped by filename ``K_min``, plus an optional
+  geometric extension up to ``k_ext = ext_per_1000 * round(n/1000)``. The
+  imbalance law ``max_share = 1.062 * k^{-0.795}`` is a recorded measurement
+  only and is not applied at runtime.
 - Defaults when keys are omitted: see `drispi/pipeline/config.py`.
   `configs/default.yaml` lists every flag. Profiles such as
   `configs/async_example.yaml` merge on top (6 DRI + 1 BG + 1 SP, both async).

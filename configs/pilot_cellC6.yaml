@@ -1,0 +1,34 @@
+# Post-pilot confirmation — cell C6: shipping default (full 7-arm base,
+# ext_per_1000: 6). Identical to final_benchmark.yaml except output_dir;
+# defaults already give this k domain. Merges on top of configs/default.yaml.
+#
+# Resulting k domains:
+#   XL-n7037-k38    -> [2, 3, 4, 6, 8, 10, 12, 18, 26, 38]
+#   XL-n8028-k294   -> [2, 3, 4, 6, 8, 10, 12, 19, 30, 48]
+#   XL-n10001-k1570 -> [2, 3, 4, 6, 8, 10, 12, 21, 35, 60]
+
+time_limit: 7200.0
+max_no_improve: 1000000000
+run_analysis: false
+output_dir: "artifacts/pilot/cellC6/runs"
+
+cores:
+  total: 8
+  dri: 6
+  bg: 1
+  sp: 1
+
+bg_ails:
+  mode: async
+  crash_threshold: 1
+
+sp_sc:
+  mode: async
+  trigger: wallclock
+  interval_minutes: 20.0
+  overlap_policy: skip
+  warmup_iterations: 5
+  sp_interval: 3
+  min_coverage: 5
+  sp_time_limit: 720.0
+  mip_gap: 0.00025

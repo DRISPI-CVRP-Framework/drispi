@@ -25,6 +25,7 @@ from drispi.core.solution import Route as SolutionRoute
 from drispi.core.types import Route
 from drispi.haos.config import HAOSConfig, HAOSRewardConfig
 from drispi.haos.haos import HAOS, HAOSSelection
+from drispi.haos.k_domain import k_ext_value, parse_n_kmin
 from drispi.haos.tag import HAOSTag
 from drispi.haos.weights_io import save_weights
 from drispi.improvement.bg_ails import (
@@ -108,10 +109,7 @@ def _build_haos_config(config: DRISPIConfig) -> HAOSConfig:
         ),
         k_base_arms=list(config.decomp_k_base_arms),
         k_max_arms=config.decomp_k_max_arms,
-        k_s_hi=config.decomp_k_s_hi,
         k_ext_per_1000=config.decomp_k_ext_per_1000,
-        k_imbalance_c=config.decomp_k_imbalance_c,
-        k_imbalance_beta=config.decomp_k_imbalance_beta,
         min_weight_k=config.haos_min_weight_k,
         lambda_demand_values=list(config.haos_lambda_demand_values),
         min_weight_lambda=config.haos_min_weight_lambda,
@@ -227,7 +225,18 @@ class DRISPIPipeline:
             bks=bks_cost,
         )
         self._snapshot_writer = SnapshotWriter(self.run_dir)
-        self._logger.log_init(config, instance, k_domain=self._haos.k_values)
+        parsed = parse_n_kmin(instance.name)
+        k_ext = k_min = None
+        if parsed is not None:
+            k_ext = k_ext_value(parsed[0], parsed[1], config.decomp_k_ext_per_1000)
+            k_min = parsed[1]
+        self._logger.log_init(
+            config,
+            instance,
+            k_domain=self._haos.k_values,
+            k_ext=k_ext,
+            k_min=k_min,
+        )
 
         self._spsc_adopted = 0
         self._spsc_invocations = 0
@@ -361,6 +370,7 @@ class DRISPIPipeline:
                 )
 
         selection = self._haos.select(iteration, self._rng)
+        k_requested = selection.k
         best_routes = self._best_solution
         selection = self._haos.coerce_vertex_when_no_routes(
             selection,
@@ -489,8 +499,8 @@ class DRISPIPipeline:
             n_workers=granted_workers,
             rate=self._config.subcluster_rate_s_per_customer,
             sub_floor=self._config.subcluster_floor_s,
-            slope=self._config.bg_ails_wall_model_slope,
-            intercept=self._config.bg_ails_wall_model_intercept,
+            scale=self._config.bg_ails_wall_model_scale,
+            wave_exponent=self._config.bg_ails_wall_model_wave_exponent,
         )
         self._logger.log_phase_done(
             iteration,
@@ -502,6 +512,8 @@ class DRISPIPipeline:
             {
                 "solver": selection.solver,
                 "k": selection.k,
+                "k_requested": k_requested,
+                "k_realized": n_clusters,
                 "batch_rounds": n_rounds,
                 "n_workers_granted": granted_workers,
                 "predicted_dr_wall_s": round(predicted_dr_wall_s, 3),
@@ -533,8 +545,8 @@ class DRISPIPipeline:
             sub_floor=self._config.subcluster_floor_s,
             floor=self._config.bg_ails_budget_floor_s,
             margin=self._config.bg_ails_budget_margin,
-            slope=self._config.bg_ails_wall_model_slope,
-            intercept=self._config.bg_ails_wall_model_intercept,
+            scale=self._config.bg_ails_wall_model_scale,
+            wave_exponent=self._config.bg_ails_wall_model_wave_exponent,
         )
 
         if self._bg_mode == "async":
@@ -598,47 +610,32 @@ class DRISPIPipeline:
                         "handoff_block_wait_s": handoff_block_wait_s,
                     }
                 )
-            candidate_seqs = combined_seqs
-            candidate_cost = float(
-                sum(self._instance.route_cost(r) for r in combined_seqs)
-            )
             # The DR candidate competes for S* directly: the BG worker perturbs
             # this solution before improving it, so without this apply an
             # improving decompose+route result would be silently discarded.
-            imm = self._haos.compute_reward(
-                candidate_cost,
-                self._best_cost,
-                self._last_cost,
-                self._haos_config.rewards,
-                is_deferred=False,
-            )
-            self._haos.update_immediate(selection, iteration, imm)
-            self._apply_candidate_solution(
+            candidate_cost = self._apply_decompose_route(
                 combined_seqs,
                 iteration=iteration,
-                phase_name="decompose_route",
+                selection=selection,
                 op_tag=op_tag,
+                k_requested=k_requested,
+                k_realized=n_clusters,
+                predicted_dr_wall_s=predicted_dr_wall_s,
+                dr_wall_s=dr_stage_wall_seconds,
             )
-            self._last_cost = candidate_cost
         else:
             # Same contract as async: the DR candidate competes for S* before
             # the perturbation damages it.
-            dr_cost = float(sum(self._instance.route_cost(r) for r in combined_seqs))
-            imm_dr = self._haos.compute_reward(
-                dr_cost,
-                self._best_cost,
-                self._last_cost,
-                self._haos_config.rewards,
-                is_deferred=False,
-            )
-            self._haos.update_immediate(selection, iteration, imm_dr)
-            self._apply_candidate_solution(
+            self._apply_decompose_route(
                 combined_seqs,
                 iteration=iteration,
-                phase_name="decompose_route",
+                selection=selection,
                 op_tag=op_tag,
+                k_requested=k_requested,
+                k_realized=n_clusters,
+                predicted_dr_wall_s=predicted_dr_wall_s,
+                dr_wall_s=dr_stage_wall_seconds,
             )
-            self._last_cost = dr_cost
             combined_sol = _seqs_to_solution_routes(self._instance, combined_seqs)
             n_chains = _resolve_n_chains(
                 partition,
@@ -1234,6 +1231,10 @@ class DRISPIPipeline:
             # Never request more DRI slots than the reserved dri budget when
             # CoreManager is shared; still ask for n_clusters and let CM grant.
             pass
+        wall_kw = {
+            "wall_model_scale": self._config.bg_ails_wall_model_scale,
+            "wall_model_wave_exponent": self._config.bg_ails_wall_model_wave_exponent,
+        }
         if self._core_manager is not None:
             n_workers = self._core_manager.acquire(self._instance_id, request)
             try:
@@ -1246,6 +1247,7 @@ class DRISPIPipeline:
                     seed,
                     floor_s=self._config.subcluster_floor_s,
                     dri_cpus=dri_cpus,
+                    **wall_kw,
                 )
                 return routes, n_rounds, n_workers
             finally:
@@ -1260,6 +1262,7 @@ class DRISPIPipeline:
             seed,
             floor_s=self._config.subcluster_floor_s,
             dri_cpus=dri_cpus,
+            **wall_kw,
         )
         return routes, n_rounds, n_workers
 
@@ -1356,6 +1359,50 @@ class DRISPIPipeline:
             if tag is not None:
                 tags.append(tag)
         return tags
+
+    def _apply_decompose_route(
+        self,
+        combined_seqs: list[Route],
+        *,
+        iteration: int,
+        selection: HAOSSelection,
+        op_tag: HAOSTag | None,
+        k_requested: int,
+        k_realized: int,
+        predicted_dr_wall_s: float,
+        dr_wall_s: float,
+    ) -> float:
+        """Apply the DR candidate, credit HAOS immediately, and log dr_apply."""
+        incumbent_cost = self._best_cost
+        dr_cost = float(sum(self._instance.route_cost(r) for r in combined_seqs))
+        dr_improved = dr_cost < incumbent_cost
+        imm = self._haos.compute_reward(
+            dr_cost,
+            incumbent_cost,
+            self._last_cost,
+            self._haos_config.rewards,
+            is_deferred=False,
+        )
+        self._haos.update_immediate(selection, iteration, imm)
+        adopted = self._apply_candidate_solution(
+            combined_seqs,
+            iteration=iteration,
+            phase_name="decompose_route",
+            op_tag=op_tag,
+        )
+        self._logger.log_dr_apply(
+            iteration,
+            incumbent_cost=incumbent_cost,
+            dr_cost=dr_cost,
+            dr_improved=dr_improved,
+            adopted=adopted,
+            k_requested=k_requested,
+            k_realized=k_realized,
+            predicted_dr_wall_s=predicted_dr_wall_s,
+            dr_wall_s=dr_wall_s,
+        )
+        self._last_cost = dr_cost
+        return dr_cost
 
     def _apply_candidate_solution(
         self,

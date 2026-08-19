@@ -1,16 +1,22 @@
 """Single source of truth for the BG-AILS time budget (predicted DR wall).
 
-The budget follows the wall-time model fitted on the 100-instance XL campaign
-(R² = 0.976)::
+The budget follows the wall-time model refit on 835 post-strip pilot
+iterations::
 
-    dr_wall ≈ slope * sum_over_waves(max(budget_i in wave)) + intercept
+    dr_wall ≈ scale * n_waves**wave_exponent * sum_over_waves(max(budget_i in wave))
 
 Waves are the lockstep packing of per-cluster budgets in **submit order**
-(``ProcessPoolExecutor`` is a greedy queue, but the model was fitted with the
-lockstep formula on submit order, so prediction must use the same packing).
+(``ProcessPoolExecutor`` is a greedy queue). Do not sort budgets before packing.
+A linear alternative ``0.5775*lockstep - 4.749*(n_waves-1) + 38.56`` was
+recorded and is not shipped.
 """
 
 from __future__ import annotations
+
+import math
+
+DEFAULT_WALL_MODEL_SCALE = 0.976
+DEFAULT_WALL_MODEL_WAVE_EXPONENT = -0.180
 
 
 def subcluster_budget_seconds(size: int, *, rate: float, floor: float) -> float:
@@ -23,8 +29,7 @@ def subcluster_budget_seconds(size: int, *, rate: float, floor: float) -> float:
 def lockstep_wave_sum(budgets: list[float], n_workers: int) -> float:
     """Sum of per-wave maxima with waves packed in submit order.
 
-    Wave ``w`` is ``budgets[w * n_workers : (w + 1) * n_workers]``. This is the
-    barrier-synchronised proxy the campaign wall model was fitted on; do not
+    Wave ``w`` is ``budgets[w * n_workers : (w + 1) * n_workers]``. Do not
     sort budgets before calling.
     """
     if n_workers < 1:
@@ -41,8 +46,8 @@ def predicted_dr_wall_seconds(
     n_workers: int,
     rate: float,
     sub_floor: float,
-    slope: float,
-    intercept: float,
+    scale: float = DEFAULT_WALL_MODEL_SCALE,
+    wave_exponent: float = DEFAULT_WALL_MODEL_WAVE_EXPONENT,
 ) -> float:
     """Predicted route-phase wall from cluster sizes in submit order."""
     if not cluster_sizes:
@@ -50,8 +55,9 @@ def predicted_dr_wall_seconds(
     budgets = [
         subcluster_budget_seconds(s, rate=rate, floor=sub_floor) for s in cluster_sizes
     ]
-    pred = slope * lockstep_wave_sum(budgets, n_workers) + intercept
-    return max(0.0, pred)
+    lockstep = lockstep_wave_sum(budgets, n_workers)
+    n_waves = max(1, math.ceil(len(cluster_sizes) / n_workers))
+    return float(scale) * (n_waves ** float(wave_exponent)) * lockstep
 
 
 def bg_ails_budget_seconds(
@@ -62,8 +68,8 @@ def bg_ails_budget_seconds(
     sub_floor: float,
     floor: float,
     margin: float,
-    slope: float,
-    intercept: float,
+    scale: float = DEFAULT_WALL_MODEL_SCALE,
+    wave_exponent: float = DEFAULT_WALL_MODEL_WAVE_EXPONENT,
 ) -> float:
     """BG-AILS budget: ``max(floor, margin * predicted_dr_wall)``.
 
@@ -77,7 +83,7 @@ def bg_ails_budget_seconds(
         n_workers=n_workers,
         rate=rate,
         sub_floor=sub_floor,
-        slope=slope,
-        intercept=intercept,
+        scale=scale,
+        wave_exponent=wave_exponent,
     )
     return max(float(floor), float(margin) * predicted)

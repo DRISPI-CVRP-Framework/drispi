@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from unittest.mock import patch
 
@@ -491,3 +492,51 @@ def test_pipeline_skips_iteration_on_subcluster_worker_failure(
     assert calls["n"] >= 2
     assert pipe._no_improve_count >= 1
     assert isinstance(routes, list)
+
+
+def test_decompose_route_emits_dr_apply_and_iterations_csv(
+    instance_12: CVRPInstance, tmp_path: Path
+) -> None:
+    cfg = DRISPIConfig(
+        time_limit=1e9,
+        max_no_improve=1000,
+        output_dir=tmp_path,
+        warmup_iterations=100,
+        sp_interval=100,
+    )
+    pipe = DRISPIPipeline(instance_12, cfg)
+    with (
+        patch("drispi.pipeline.pipeline.cluster_instance", side_effect=_fake_cluster_instance),
+        patch(
+            "drispi.pipeline.pipeline.solve_subclusters_parallel",
+            side_effect=_fake_cluster_routes,
+        ),
+        patch("drispi.pipeline.pipeline.run_bg_ails_perturb", side_effect=_fake_bg_perturb),
+        patch("drispi.pipeline.pipeline.run_bg_ails_improve", side_effect=_fake_bg_improve),
+        patch("drispi.pipeline.pipeline.run_sp_sc", side_effect=_fake_run_sp_sc),
+        patch(
+            "drispi.pipeline.pipeline.run_standard_improvement",
+            side_effect=_fake_standard_improvement,
+        ),
+    ):
+        pipe._run_iteration(0)
+
+    events = [
+        json.loads(line)
+        for line in (pipe._logger.run_dir / "run.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    dr = next(e for e in events if e.get("type") == "dr_apply")
+    assert "incumbent_cost" in dr
+    assert "dr_cost" in dr
+    assert "dr_improved" in dr
+    assert "adopted" in dr
+    assert "k_requested" in dr
+    assert "k_realized" in dr
+    init = next(e for e in events if e.get("type") == "init")
+    assert "k_domain" in init
+    csv_path = pipe._logger.run_dir / "iterations.csv"
+    assert csv_path.is_file()
+    header = csv_path.read_text(encoding="utf-8").splitlines()[0]
+    assert "k_requested" in header
+    assert "predicted_dr_wall_s" in header

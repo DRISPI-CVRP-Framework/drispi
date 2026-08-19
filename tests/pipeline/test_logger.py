@@ -318,3 +318,61 @@ def test_final_summary_sorted_descending(instance_12: CVRPInstance, tmp_path: Pa
         counts.append(int(payload.split(" routes", 1)[0]))
     assert counts == sorted(counts, reverse=True)
     assert counts[0] == 3
+
+
+def test_log_init_records_k_domain_ext_and_min(
+    instance_12: CVRPInstance, tmp_path: Path
+) -> None:
+    stream = io.StringIO()
+    logger = PipelineLogger(instance_12.name, tmp_path, stream=stream)
+    logger.log_init(
+        _minimal_config(tmp_path),
+        instance_12,
+        k_domain=[2, 3, 4],
+        k_ext=0,
+        k_min=4,
+    )
+    events = [
+        json.loads(line)
+        for line in (logger.run_dir / "run.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    init = next(e for e in events if e.get("type") == "init")
+    assert init["k_domain"] == [2, 3, 4]
+    assert init["k_ext"] == 0
+    assert init["k_min"] == 4
+
+
+def test_log_dr_apply_writes_jsonl_and_iterations_csv(
+    instance_12: CVRPInstance, tmp_path: Path
+) -> None:
+    stream = io.StringIO()
+    logger = PipelineLogger(instance_12.name, tmp_path, stream=stream)
+    logger.log_dr_apply(
+        3,
+        incumbent_cost=1000.0,
+        dr_cost=990.0,
+        dr_improved=True,
+        adopted=True,
+        k_requested=12,
+        k_realized=11,
+        predicted_dr_wall_s=80.5,
+        dr_wall_s=79.2,
+    )
+    events = [
+        json.loads(line)
+        for line in (logger.run_dir / "run.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    event = next(e for e in events if e.get("type") == "dr_apply")
+    assert event["iteration"] == 3
+    assert event["incumbent_cost"] == 1000.0
+    assert event["dr_cost"] == 990.0
+    assert event["dr_improved"] is True
+    assert event["adopted"] is True
+    assert event["k_requested"] == 12
+    assert event["k_realized"] == 11
+    csv_text = (logger.run_dir / "iterations.csv").read_text(encoding="utf-8")
+    assert "incumbent_cost,dr_cost,dr_improved,adopted" in csv_text
+    assert "990.0" in csv_text
+

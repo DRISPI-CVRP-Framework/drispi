@@ -40,7 +40,7 @@ def test_remap_roundtrip(instance_12: CVRPInstance) -> None:
 
 
 def test_subcluster_wall_timeout_formula() -> None:
-    # Slack applied once over the whole lockstep wave sum: max(2x, +120 s).
+    # Slack applied once over the predicted DR wall: max(2x, +120 s).
     assert subcluster_wall_timeout(0.0) == 120.0
     assert subcluster_wall_timeout(100.0) == 220.0
     assert subcluster_wall_timeout(489.5) == pytest.approx(979.0)

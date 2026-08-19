@@ -10,7 +10,10 @@ from concurrent.futures import ALL_COMPLETED, ProcessPoolExecutor, wait
 from drispi.core.instance import CVRPInstance
 from drispi.core.solution import Route as SolutionRoute
 from drispi.core.types import Route
-from drispi.improvement.bg_ails_budget import lockstep_wave_sum, subcluster_budget_seconds
+from drispi.improvement.bg_ails_budget import (
+    predicted_dr_wall_seconds,
+    subcluster_budget_seconds,
+)
 from drispi.pipeline.cores import affinity_logging_enabled
 
 LOGGER = logging.getLogger(__name__)
@@ -30,14 +33,15 @@ def batch_rounds(n_clusters: int, n_workers: int) -> int:
     return max(1, int(math.ceil(n_clusters / workers)))
 
 
-def subcluster_wall_timeout(wave_sum: float) -> float:
-    """Hang detector: wall-clock limit over the lockstep wave sum.
+def subcluster_wall_timeout(predicted_wall: float) -> float:
+    """Hang detector: slack over the corrected predicted DR wall.
 
-    The slack (2x or +120 s, whichever is larger) is applied once over the
-    whole predicted lockstep wall, not per wave — the old per-wave scaling
-    grew uselessly loose at 10+ waves.
+    ``predicted_wall`` must be the multiplicative wave-model predictor
+    (``scale * n_waves**exponent * lockstep``), not raw lockstep. Slack
+    (2x or +120 s, whichever is larger) is applied once over that pred,
+    not per wave.
     """
-    return max(2.0 * wave_sum, wave_sum + 120.0)
+    return max(2.0 * predicted_wall, predicted_wall + 120.0)
 
 
 def _dri_worker_initializer(dri_cpus: list[int] | None) -> None:
@@ -134,13 +138,15 @@ def solve_subclusters_parallel(
     *,
     floor_s: float = 5.0,
     dri_cpus: list[int] | None = None,
+    wall_model_scale: float = 0.976,
+    wall_model_wave_exponent: float = -0.180,
 ) -> tuple[list[list[Route]], int]:
     """
     Solve each cluster in parallel; return (routes per cluster, batch_rounds).
 
     Waves remain implicit in ``ProcessPoolExecutor``; ``batch_rounds`` is derived
     as ``ceil(k / n_workers)`` for instrumentation. The wall timeout is anchored
-    to the lockstep wave sum of per-cluster budgets (submit order).
+    to the corrected predicted DR wall of per-cluster budgets (submit order).
     """
     # Warm the parent matrix in-process for route_cost; CVRPInstance.__getstate__
     # strips it from worker pickles, so this never crosses a process boundary.
@@ -157,7 +163,16 @@ def solve_subclusters_parallel(
     n_rounds = batch_rounds(len(partition), max_workers)
     budgets = [budget(c) for c in partition]
     max_budget = max(budgets, default=0.0)
-    wall_timeout = subcluster_wall_timeout(lockstep_wave_sum(budgets, max_workers))
+    cluster_sizes = [len(c) for c in partition]
+    predicted_wall = predicted_dr_wall_seconds(
+        cluster_sizes,
+        n_workers=max_workers,
+        rate=rate_s_per_customer,
+        sub_floor=floor_s,
+        scale=wall_model_scale,
+        wave_exponent=wall_model_wave_exponent,
+    )
+    wall_timeout = subcluster_wall_timeout(predicted_wall)
 
     executor = ProcessPoolExecutor(
         max_workers=max_workers,

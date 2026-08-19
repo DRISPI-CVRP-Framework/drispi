@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import json
 import logging
 import math
@@ -246,6 +247,7 @@ class PipelineLogger:
         file_handler.setFormatter(logging.Formatter("%(message)s"))
 
         self._jsonl = JsonlHandler(self._run_dir / "run.jsonl")
+        self._iterations_csv = self._run_dir / "iterations.csv"
 
         self._logger.addHandler(self._terminal)
         self._logger.addHandler(file_handler)
@@ -317,6 +319,8 @@ class PipelineLogger:
         instance: CVRPInstance,
         *,
         k_domain: list[int] | None = None,
+        k_ext: int | None = None,
+        k_min: int | None = None,
     ) -> None:
         bks_display = f"{self._bks_cost:.2f}" if self._bks_cost is not None else "N/A"
         header_lines = [
@@ -327,7 +331,10 @@ class PipelineLogger:
             ),
         ]
         if k_domain is not None:
-            header_lines.append(f"k domain (computed at init): {k_domain}")
+            extra = f"k domain (computed at init): {k_domain}"
+            if k_ext is not None or k_min is not None:
+                extra += f"  k_ext={k_ext}  k_min={k_min}"
+            header_lines.append(extra)
         for line in header_lines:
             self._emit(None, _TAG_INIT, line)
 
@@ -346,6 +353,10 @@ class PipelineLogger:
                 }
                 if k_domain is not None:
                     json_event["k_domain"] = list(k_domain)
+                if k_ext is not None:
+                    json_event["k_ext"] = k_ext
+                if k_min is not None:
+                    json_event["k_min"] = k_min
             self._emit(None, _TAG_INIT, line, json_event=json_event)
 
     def log_haos_roll(
@@ -531,6 +542,73 @@ class PipelineLogger:
         )
         bks_path = self._run_dir / f"{self._instance_name}_BKS.sol"
         write_sol(routes, cost, bks_path)
+
+    def log_dr_apply(
+        self,
+        iteration: int,
+        *,
+        incumbent_cost: float,
+        dr_cost: float,
+        dr_improved: bool,
+        adopted: bool,
+        k_requested: int,
+        k_realized: int,
+        predicted_dr_wall_s: float | None = None,
+        dr_wall_s: float | None = None,
+    ) -> None:
+        """First-class DR-vs-incumbent record (JSONL + iterations.csv)."""
+        incumbent_out: float | None = (
+            incumbent_cost if math.isfinite(incumbent_cost) else None
+        )
+        event = {
+            "type": "dr_apply",
+            "iteration": iteration,
+            "incumbent_cost": incumbent_out,
+            "dr_cost": dr_cost,
+            "dr_improved": dr_improved,
+            "adopted": adopted,
+            "k_requested": k_requested,
+            "k_realized": k_realized,
+        }
+        if predicted_dr_wall_s is not None:
+            event["predicted_dr_wall_s"] = round(predicted_dr_wall_s, 3)
+        if dr_wall_s is not None:
+            event["dr_wall_s"] = round(dr_wall_s, 3)
+        self._emit_json(event)
+
+        write_header = not self._iterations_csv.is_file()
+        with self._iterations_csv.open("a", encoding="utf-8", newline="") as fh:
+            writer = csv.DictWriter(
+                fh,
+                fieldnames=[
+                    "iteration",
+                    "incumbent_cost",
+                    "dr_cost",
+                    "dr_improved",
+                    "adopted",
+                    "k_requested",
+                    "k_realized",
+                    "predicted_dr_wall_s",
+                    "dr_wall_s",
+                ],
+            )
+            if write_header:
+                writer.writeheader()
+            writer.writerow(
+                {
+                    "iteration": iteration,
+                    "incumbent_cost": incumbent_out if incumbent_out is not None else "",
+                    "dr_cost": dr_cost,
+                    "dr_improved": dr_improved,
+                    "adopted": adopted,
+                    "k_requested": k_requested,
+                    "k_realized": k_realized,
+                    "predicted_dr_wall_s": (
+                        round(predicted_dr_wall_s, 3) if predicted_dr_wall_s is not None else ""
+                    ),
+                    "dr_wall_s": round(dr_wall_s, 3) if dr_wall_s is not None else "",
+                }
+            )
 
     def log_summary(
         self,

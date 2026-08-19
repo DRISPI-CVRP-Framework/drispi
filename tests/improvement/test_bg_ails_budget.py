@@ -11,6 +11,10 @@ from drispi.improvement.bg_ails_budget import (
     subcluster_budget_seconds,
 )
 
+# sizes 2000/1000/500 at rate 0.06 -> budgets 120/60/30.
+_SIZES_DESC = [2000, 1000, 500]
+_SIZES_ASC = [500, 1000, 2000]
+
 
 def test_subcluster_budget_floor_and_scale() -> None:
     assert subcluster_budget_seconds(10, rate=0.06, floor=5.0) == 5.0
@@ -30,61 +34,71 @@ def test_lockstep_wave_sum_packs_in_submit_order() -> None:
         lockstep_wave_sum([1.0], 0)
 
 
-def test_predicted_dr_wall_from_cluster_sizes() -> None:
-    # sizes 2000/1000/500 at rate 0.06 -> budgets 120/60/30; 2 workers ->
-    # wave sum 150; wall = 0.991 * 150 - 2.0 = 146.65.
+def test_predicted_dr_wall_multiplicative_wave_model() -> None:
+    # lockstep 150, 2 waves -> 0.976 * 2**(-0.180) * 150 ≈ 129.198.
     pred = predicted_dr_wall_seconds(
-        [2000, 1000, 500],
-        n_workers=2,
-        rate=0.06,
-        sub_floor=5.0,
-        slope=0.991,
-        intercept=-2.0,
+        _SIZES_DESC, n_workers=2, rate=0.06, sub_floor=5.0
     )
-    assert pred == pytest.approx(146.65)
+    assert pred == pytest.approx(0.976 * (2 ** -0.180) * 150.0)
+    assert pred == pytest.approx(129.228, abs=0.01)
+
+
+def test_predicted_dr_wall_empty_is_zero() -> None:
     assert (
-        predicted_dr_wall_seconds(
-            [], n_workers=2, rate=0.06, sub_floor=5.0, slope=0.991, intercept=-2.0
-        )
-        == 0.0
+        predicted_dr_wall_seconds([], n_workers=2, rate=0.06, sub_floor=5.0) == 0.0
     )
 
 
-def test_predicted_dr_wall_never_negative() -> None:
-    # Tiny wave sum with negative intercept must clamp at zero.
-    pred = predicted_dr_wall_seconds(
-        [1], n_workers=1, rate=0.06, sub_floor=1.0, slope=0.991, intercept=-2.0
+def test_predicted_dr_wall_is_order_sensitive() -> None:
+    pred_desc = predicted_dr_wall_seconds(
+        _SIZES_DESC, n_workers=2, rate=0.06, sub_floor=5.0
     )
-    assert pred == 0.0
+    pred_asc = predicted_dr_wall_seconds(
+        _SIZES_ASC, n_workers=2, rate=0.06, sub_floor=5.0
+    )
+    assert pred_asc == pytest.approx(0.976 * (2 ** -0.180) * 180.0)
+    assert pred_asc != pytest.approx(pred_desc)
+
+
+def test_predicted_dr_wall_is_wave_count_sensitive() -> None:
+    # Same sizes, 1 worker -> 3 waves, lockstep 210.
+    pred_3 = predicted_dr_wall_seconds(
+        _SIZES_DESC, n_workers=1, rate=0.06, sub_floor=5.0
+    )
+    pred_2 = predicted_dr_wall_seconds(
+        _SIZES_DESC, n_workers=2, rate=0.06, sub_floor=5.0
+    )
+    assert pred_3 == pytest.approx(0.976 * (3 ** -0.180) * 210.0)
+    assert pred_3 != pytest.approx(pred_2)
 
 
 def test_budget_hits_floor_for_small_partitions() -> None:
-    # One 6-customer wave: budget 5 s floor, wall ~2.955 s -> floor 60 binds.
+    # One 6-customer wave: budget 5 s floor, pred ~4.88 s -> floor 60 binds.
     budget = bg_ails_budget_seconds(
         [6],
         n_workers=6,
         rate=0.06,
         sub_floor=5.0,
         floor=60.0,
-        margin=0.95,
-        slope=0.991,
-        intercept=-2.0,
+        margin=1.0,
     )
     assert budget == 60.0
 
 
 def test_budget_tracks_predicted_wall_above_floor() -> None:
+    pred = predicted_dr_wall_seconds(
+        _SIZES_DESC, n_workers=2, rate=0.06, sub_floor=5.0
+    )
     budget = bg_ails_budget_seconds(
-        [2000, 1000, 500],
+        _SIZES_DESC,
         n_workers=2,
         rate=0.06,
         sub_floor=5.0,
         floor=60.0,
-        margin=0.95,
-        slope=0.991,
-        intercept=-2.0,
+        margin=1.0,
     )
-    assert budget == pytest.approx(0.95 * 146.65)
+    assert budget == pytest.approx(pred)
+    assert budget > 60.0
 
 
 def test_budget_rejects_negative_floor() -> None:
@@ -95,7 +109,5 @@ def test_budget_rejects_negative_floor() -> None:
             rate=0.06,
             sub_floor=5.0,
             floor=-1.0,
-            margin=0.95,
-            slope=0.991,
-            intercept=-2.0,
+            margin=1.0,
         )

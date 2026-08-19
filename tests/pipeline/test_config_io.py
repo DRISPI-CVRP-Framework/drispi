@@ -21,7 +21,7 @@ def test_save_and_load_round_trip(tmp_path: Path) -> None:
         time_limit=100.0,
         seed=42,
         decomp_k_base_arms=[2, 4, 8],
-        decomp_k_s_hi=2000.0,
+        decomp_k_ext_per_1000=4,
         bg_ails_budget_margin=0.9,
         output_dir=tmp_path / "runs",
     )
@@ -31,7 +31,7 @@ def test_save_and_load_round_trip(tmp_path: Path) -> None:
     assert loaded.time_limit == 100.0
     assert loaded.seed == 42
     assert loaded.decomp_k_base_arms == [2, 4, 8]
-    assert loaded.decomp_k_s_hi == 2000.0
+    assert loaded.decomp_k_ext_per_1000 == 4
     assert loaded.bg_ails_budget_margin == 0.9
     assert loaded.output_dir == tmp_path / "runs"
 
@@ -94,9 +94,9 @@ def test_config_to_dict_sections() -> None:
     assert grouped["decomposition"]["decomp_k_base_arms"] == [2, 3, 4, 6, 8, 10, 12]
     assert grouped["decomposition"]["subcluster_floor_s"] == 5.0
     assert grouped["bg_ails"]["bg_ails_budget_floor_s"] == 60.0
-    assert grouped["bg_ails"]["bg_ails_budget_margin"] == 0.95
-    assert grouped["bg_ails"]["bg_ails_wall_model_slope"] == 0.991
-    assert grouped["bg_ails"]["bg_ails_wall_model_intercept"] == -2.0
+    assert grouped["bg_ails"]["bg_ails_budget_margin"] == 1.0
+    assert grouped["bg_ails"]["bg_ails_wall_model_scale"] == 0.976
+    assert grouped["bg_ails"]["bg_ails_wall_model_wave_exponent"] == -0.180
     assert "bg_ails_time_limit" not in grouped["bg_ails"]
     assert "bg_ails_divisor" not in grouped["bg_ails"]
 
@@ -133,7 +133,8 @@ def test_load_nested_bg_ails_block(tmp_path: Path) -> None:
     assert loaded.bg_ails_budget_floor_s == 90.0
     assert loaded.bg_ails_budget_margin == 0.9
     # Untouched nested keys fall back to dataclass defaults.
-    assert loaded.bg_ails_wall_model_slope == DRISPIConfig().bg_ails_wall_model_slope
+    assert loaded.bg_ails_wall_model_scale == DRISPIConfig().bg_ails_wall_model_scale
+    assert loaded.bg_ails_wall_model_wave_exponent == DRISPIConfig().bg_ails_wall_model_wave_exponent
 
 
 def test_load_nested_bg_ails_rejects_time_limit(tmp_path: Path) -> None:
@@ -172,7 +173,7 @@ def test_load_nested_decomposition_block(tmp_path: Path) -> None:
         "  k_domain:\n"
         "    base_arms: [2, 4, 8]\n"
         "    max_arms: 8\n"
-        "    s_hi: 2000\n"
+        "    ext_per_1000: 4\n"
         "  subcluster_budget:\n"
         "    rate_s_per_customer: 0.05\n"
         "    floor_s: 4.0\n",
@@ -181,11 +182,9 @@ def test_load_nested_decomposition_block(tmp_path: Path) -> None:
     loaded = load_config(path)
     assert loaded.decomp_k_base_arms == [2, 4, 8]
     assert loaded.decomp_k_max_arms == 8
-    assert loaded.decomp_k_s_hi == 2000
+    assert loaded.decomp_k_ext_per_1000 == 4
     assert loaded.subcluster_rate_s_per_customer == 0.05
     assert loaded.subcluster_floor_s == 4.0
-    # Untouched nested keys fall back to dataclass defaults.
-    assert loaded.decomp_k_ext_per_1000 == DRISPIConfig().decomp_k_ext_per_1000
 
 
 def test_load_nested_bg_ails_warns_on_unknown_key(tmp_path: Path) -> None:
@@ -232,13 +231,12 @@ def test_repo_default_yaml_bg_ails_budget_keys() -> None:
     repo_root = Path(__file__).resolve().parents[2]
     loaded = load_config(repo_root / "configs" / "default.yaml")
     assert loaded.bg_ails_budget_floor_s == 60.0
-    assert loaded.bg_ails_budget_margin == 0.95
-    assert loaded.bg_ails_wall_model_slope == 0.991
-    assert loaded.bg_ails_wall_model_intercept == -2.0
+    assert loaded.bg_ails_budget_margin == 1.0
+    assert loaded.bg_ails_wall_model_scale == 0.976
+    assert loaded.bg_ails_wall_model_wave_exponent == -0.180
     assert loaded.subcluster_rate_s_per_customer == 0.06
     assert loaded.subcluster_floor_s == 5.0
     assert loaded.decomp_k_base_arms == [2, 3, 4, 6, 8, 10, 12]
-    assert loaded.decomp_k_s_hi == 2500
     assert loaded.decomp_k_ext_per_1000 == 6
 
 
@@ -292,3 +290,48 @@ def test_repo_async_example_yaml_is_six_plus_one_plus_one() -> None:
     assert loaded.bg_ails_n_chains_mode == "k"
     assert loaded.bg_ails_initial_omega == 10.0
     assert loaded.bg_ails_budget_floor_s == 60.0
+
+
+def test_load_rejects_removed_k_domain_keys(tmp_path: Path) -> None:
+    for key in ("s_hi", "imbalance_c", "imbalance_beta", "k_lo"):
+        path = tmp_path / "cfg.yaml"
+        path.write_text(f"decomposition:\n  k_domain:\n    {key}: 1\n", encoding="utf-8")
+        with pytest.raises(ValueError, match="was removed"):
+            load_config(path)
+
+
+def test_load_rejects_removed_wall_model_keys(tmp_path: Path) -> None:
+    for key in ("wall_model_slope", "wall_model_intercept"):
+        path = tmp_path / "cfg.yaml"
+        path.write_text(f"bg_ails:\n  budget:\n    {key}: 1.0\n", encoding="utf-8")
+        with pytest.raises(ValueError, match="was removed"):
+            load_config(path)
+
+
+def test_load_rejects_non_predicted_dr_wall_budget_mode(tmp_path: Path) -> None:
+    path = tmp_path / "cfg.yaml"
+    path.write_text("bg_ails:\n  budget:\n    mode: lockstep\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="predicted_dr_wall"):
+        load_config(path)
+
+
+def test_confirmation_profiles_differ_only_in_k_domain() -> None:
+    repo_root = Path(__file__).resolve().parents[2]
+    configs = repo_root / "configs"
+    cell0 = load_config(configs / "pilot_cell0prime.yaml")
+    cell_c4 = load_config(configs / "pilot_cellC4.yaml")
+    cell_c6 = load_config(configs / "pilot_cellC6.yaml")
+    cell_thin = load_config(configs / "pilot_cellC6thin.yaml")
+    assert cell0.decomp_k_base_arms == [1, 2, 3, 4, 6, 8, 10, 12]
+    assert cell0.decomp_k_ext_per_1000 == 0
+    assert cell_c4.decomp_k_base_arms == [2, 3, 4, 6, 8, 10, 12]
+    assert cell_c4.decomp_k_ext_per_1000 == 4
+    assert cell_c6.decomp_k_base_arms == [2, 3, 4, 6, 8, 10, 12]
+    assert cell_c6.decomp_k_ext_per_1000 == 6
+    assert cell_thin.decomp_k_base_arms == [2, 4, 8, 12]
+    assert cell_thin.decomp_k_ext_per_1000 == 6
+    for loaded in (cell0, cell_c4, cell_c6, cell_thin):
+        assert loaded.bg_ails_budget_margin == 1.0
+        assert loaded.cores_dri == 6
+        assert loaded.bg_ails_mode == "async"
+        assert loaded.sp_sc_mode == "async"

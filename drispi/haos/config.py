@@ -33,10 +33,7 @@ class HAOSConfig:
     # Scale-adaptive k domain (see drispi.haos.k_domain.k_domain).
     k_base_arms: list[int] = field(default_factory=lambda: list(DEFAULT_BASE_ARMS))
     k_max_arms: int = 10
-    k_s_hi: float = 2500.0
     k_ext_per_1000: int = 6
-    k_imbalance_c: float = 0.980
-    k_imbalance_beta: float = 0.725
     min_weight_k: float = 0.025
 
     lambda_demand_values: list[float] = field(
@@ -96,8 +93,5 @@ class HAOSConfig:
             k_min,
             base_arms=list(self.k_base_arms),
             max_arms=self.k_max_arms,
-            s_hi=self.k_s_hi,
             ext_per_1000=self.k_ext_per_1000,
-            imbalance_c=self.k_imbalance_c,
-            imbalance_beta=self.k_imbalance_beta,
         )

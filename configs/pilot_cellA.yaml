@@ -1,6 +1,8 @@
-# Stage-1 pilot — cell A: drop-low only (k_lo filter active, extend-high OFF).
-# Run on the stage-1 image. Identical to final_benchmark.yaml except for the
-# k_domain override; merges on top of configs/default.yaml.
+# 12 h pilot archive — cell A: drop-low only (k_lo filter + extend-high OFF).
+# Frozen snapshot of the stage-1 image. Do not reuse as a confirmation profile:
+# k_lo is gone, and ext_per_1000: 0 is now a clean no-op (full base, no
+# geometric extension) rather than "drop-low".
+# Merges on top of configs/default.yaml.
 #
 # Resulting k domains for the pilot instances:
 #   XL-n8028-k294   -> [6, 8, 10, 12]
@@ -19,7 +21,7 @@ cores:
 
 decomposition:
   k_domain:
-    ext_per_1000: 0   # disable geometric extension; keep the k_lo drop-low filter
+    ext_per_1000: 0   # archive: disabled extension on the stage-1 image (k_lo was still applied then)
 
 bg_ails:
   mode: async

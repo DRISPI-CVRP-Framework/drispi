@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import pickle
 
 from drispi.core.instance import CVRPInstance
 from drispi.core.solution import Route, Solution
@@ -28,6 +29,14 @@ def test_distance_matrix_cached_property_computed_once(small_instance: CVRPInsta
     first = small_instance.distance_matrix
     second = small_instance.distance_matrix
     assert first is second
+
+
+def test_pickle_round_trip_drops_distance_matrix(small_instance: CVRPInstance) -> None:
+    _ = small_instance.distance_matrix
+    assert "distance_matrix" in small_instance.__dict__
+    restored = pickle.loads(pickle.dumps(small_instance, protocol=pickle.HIGHEST_PROTOCOL))
+    assert "distance_matrix" not in restored.__dict__
+    assert restored.distance_matrix.shape == small_instance.distance_matrix.shape
 
 
 def test_route_cost_empty_returns_zero(small_instance: CVRPInstance) -> None:

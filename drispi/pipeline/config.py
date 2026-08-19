@@ -40,17 +40,14 @@ class DRISPIConfig:
 
     # ── Decomposition (k domain + subcluster budget) ──────────────────
     # Scale-adaptive HAOS level-1 k domain, computed once per instance at
-    # init (see drispi.haos.k_domain). base_arms are filtered by k_lo (from
-    # the imbalance law and s_hi) and extended geometrically up to
-    # k_ext = ext_per_1000 * round(n/1000), clamped by K_min.
+    # init (see drispi.haos.k_domain). base_arms are clipped by K_min and
+    # extended geometrically up to k_ext = ext_per_1000 * round(n/1000),
+    # clamped by K_min; at most max_arms.
     decomp_k_base_arms: list[int] = field(
         default_factory=lambda: [2, 3, 4, 6, 8, 10, 12]
     )
     decomp_k_max_arms: int = 10
-    decomp_k_s_hi: float = 2500.0
     decomp_k_ext_per_1000: int = 6
-    decomp_k_imbalance_c: float = 0.980
-    decomp_k_imbalance_beta: float = 0.725
     # Per-cluster solver budget = max(floor_s, size * rate_s_per_customer).
     subcluster_rate_s_per_customer: float = 0.06
     subcluster_floor_s: float = 5.0
@@ -63,12 +60,13 @@ class DRISPIConfig:
     # Consecutive/total BG worker crashes tolerated before the run fails.
     bg_ails_crash_threshold: int = 1
     # budget = max(floor_s, margin * predicted_dr_wall) where
-    # predicted_dr_wall = slope * sum_over_waves(max budget in wave) + intercept
-    # (wall model fitted on the 100-instance XL campaign, R² = 0.976).
+    # predicted_dr_wall = scale * n_waves^wave_exponent * lockstep_sum
+    # (wall model refit on 835 post-strip pilot iterations).
+    bg_ails_budget_mode: str = "predicted_dr_wall"
     bg_ails_budget_floor_s: float = 60.0
-    bg_ails_budget_margin: float = 0.95
-    bg_ails_wall_model_slope: float = 0.991
-    bg_ails_wall_model_intercept: float = -2.0
+    bg_ails_budget_margin: float = 1.0
+    bg_ails_wall_model_scale: float = 0.976
+    bg_ails_wall_model_wave_exponent: float = -0.180
     bg_ails_initial_omega: float = 0.8
     bg_ails_boundary_threshold: float = 0.5
     bg_ails_small_cluster_cap: int = 20

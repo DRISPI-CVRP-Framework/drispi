@@ -33,20 +33,18 @@ _SECTION_FIELDS: dict[str, list[str]] = {
     "decomposition": [
         "decomp_k_base_arms",
         "decomp_k_max_arms",
-        "decomp_k_s_hi",
         "decomp_k_ext_per_1000",
-        "decomp_k_imbalance_c",
-        "decomp_k_imbalance_beta",
         "subcluster_rate_s_per_customer",
         "subcluster_floor_s",
     ],
     "bg_ails": [
         "bg_ails_mode",
         "bg_ails_crash_threshold",
+        "bg_ails_budget_mode",
         "bg_ails_budget_floor_s",
         "bg_ails_budget_margin",
-        "bg_ails_wall_model_slope",
-        "bg_ails_wall_model_intercept",
+        "bg_ails_wall_model_scale",
+        "bg_ails_wall_model_wave_exponent",
         "bg_ails_initial_omega",
         "bg_ails_boundary_threshold",
         "bg_ails_small_cluster_cap",
@@ -120,19 +118,17 @@ _BG_AILS_NESTED_KEYS = {
 }
 
 _BG_AILS_BUDGET_NESTED_KEYS = {
+    "mode": "bg_ails_budget_mode",
     "floor_s": "bg_ails_budget_floor_s",
     "margin": "bg_ails_budget_margin",
-    "wall_model_slope": "bg_ails_wall_model_slope",
-    "wall_model_intercept": "bg_ails_wall_model_intercept",
+    "wall_model_scale": "bg_ails_wall_model_scale",
+    "wall_model_wave_exponent": "bg_ails_wall_model_wave_exponent",
 }
 
 _DECOMP_K_DOMAIN_NESTED_KEYS = {
     "base_arms": "decomp_k_base_arms",
     "max_arms": "decomp_k_max_arms",
-    "s_hi": "decomp_k_s_hi",
     "ext_per_1000": "decomp_k_ext_per_1000",
-    "imbalance_c": "decomp_k_imbalance_c",
-    "imbalance_beta": "decomp_k_imbalance_beta",
 }
 
 _DECOMP_SUBCLUSTER_BUDGET_NESTED_KEYS = {
@@ -209,9 +205,12 @@ def _expand_nested_sp_sc(value: Any) -> dict[str, Any]:
 
 _BG_BUDGET_REMOVED_MSG = (
     "the static BG-AILS budget was removed; use bg_ails.budget "
-    "(floor_s / margin / wall_model_slope / wall_model_intercept — "
+    "(floor_s / margin / wall_model_scale / wall_model_wave_exponent — "
     "budget = max(floor_s, margin * predicted_dr_wall))"
 )
+
+_K_DOMAIN_REMOVED_KEYS = {"k_lo", "s_hi", "imbalance_c", "imbalance_beta"}
+_BG_BUDGET_REMOVED_KEYS = {"wall_model_slope", "wall_model_intercept"}
 
 
 def _expand_flat_block(
@@ -241,9 +240,22 @@ def _expand_nested_bg_ails(value: Any) -> dict[str, Any]:
         raise ValueError(f"bg_ails.{sorted(present)[0]} was removed; {_BG_BUDGET_REMOVED_MSG}")
     out: dict[str, Any] = {}
     if "budget" in value:
+        budget = value["budget"]
+        if isinstance(budget, dict):
+            present_old = _BG_BUDGET_REMOVED_KEYS & set(budget)
+            if present_old:
+                raise ValueError(
+                    f"bg_ails.budget.{sorted(present_old)[0]} was removed; "
+                    f"{_BG_BUDGET_REMOVED_MSG}"
+                )
         out.update(
             _expand_flat_block(value["budget"], _BG_AILS_BUDGET_NESTED_KEYS, "bg_ails.budget")
         )
+        mode = out.get("bg_ails_budget_mode")
+        if mode is not None and mode != "predicted_dr_wall":
+            raise ValueError(
+                f"bg_ails.budget.mode must be 'predicted_dr_wall', got {mode!r}"
+            )
     for key, field_name in _BG_AILS_NESTED_KEYS.items():
         if key not in value:
             continue
@@ -259,6 +271,15 @@ def _expand_nested_decomposition(value: Any) -> dict[str, Any]:
         raise ValueError("decomposition: nested block must be a mapping")
     out: dict[str, Any] = {}
     if "k_domain" in value:
+        k_domain_block = value["k_domain"]
+        if isinstance(k_domain_block, dict):
+            present_old = _K_DOMAIN_REMOVED_KEYS & set(k_domain_block)
+            if present_old:
+                raise ValueError(
+                    f"decomposition.k_domain.{sorted(present_old)[0]} was removed; "
+                    "k_lo / s_hi / imbalance_* are no longer used — tune "
+                    "base_arms / max_arms / ext_per_1000"
+                )
         out.update(
             _expand_flat_block(
                 value["k_domain"], _DECOMP_K_DOMAIN_NESTED_KEYS, "decomposition.k_domain"

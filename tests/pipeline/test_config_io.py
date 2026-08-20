@@ -92,6 +92,7 @@ def test_config_to_dict_sections() -> None:
     assert grouped["sp_sc"]["sp_sc_trigger"] == "iteration"
     assert grouped["cores"]["cores_total"] is None
     assert grouped["decomposition"]["decomp_k_base_arms"] == [2, 3, 4, 6, 8, 10, 12]
+    assert grouped["decomposition"]["decomp_k_ext_per_1000"] == 4
     assert grouped["decomposition"]["subcluster_floor_s"] == 5.0
     assert grouped["bg_ails"]["bg_ails_budget_floor_s"] == 60.0
     assert grouped["bg_ails"]["bg_ails_budget_margin"] == 1.0
@@ -237,7 +238,7 @@ def test_repo_default_yaml_bg_ails_budget_keys() -> None:
     assert loaded.subcluster_rate_s_per_customer == 0.06
     assert loaded.subcluster_floor_s == 5.0
     assert loaded.decomp_k_base_arms == [2, 3, 4, 6, 8, 10, 12]
-    assert loaded.decomp_k_ext_per_1000 == 6
+    assert loaded.decomp_k_ext_per_1000 == 4
 
 
 def test_profile_config_inherits_default_yaml(tmp_path: Path) -> None:

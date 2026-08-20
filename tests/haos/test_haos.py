@@ -338,7 +338,7 @@ def test_compute_k_values_prefers_filename_n_and_kmin() -> None:
 
     instance = dataclasses.replace(make_instance_20(), name="XL-n9571-k55")
     values = HAOSConfig().compute_k_values(instance)
-    assert values == [2, 3, 4, 6, 8, 10, 12, 20, 33, 55]
+    assert values == [2, 3, 4, 6, 8, 10, 12, 18, 27, 40]
 
 
 def test_historical_deferred_updates_all_reverse_mapped_levels() -> None:

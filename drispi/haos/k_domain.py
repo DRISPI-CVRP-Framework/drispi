@@ -40,7 +40,7 @@ def k_domain(
     *,
     base_arms: list[int] | None = None,
     max_arms: int = 10,
-    ext_per_1000: int = 6,
+    ext_per_1000: int = 4,
 ) -> list[int]:
     """Deterministic k domain for HAOS level 1, fixed at initialisation.
 

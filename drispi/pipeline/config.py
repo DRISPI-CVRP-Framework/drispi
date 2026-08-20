@@ -47,7 +47,7 @@ class DRISPIConfig:
         default_factory=lambda: [2, 3, 4, 6, 8, 10, 12]
     )
     decomp_k_max_arms: int = 10
-    decomp_k_ext_per_1000: int = 6
+    decomp_k_ext_per_1000: int = 4
     # Per-cluster solver budget = max(floor_s, size * rate_s_per_customer).
     subcluster_rate_s_per_customer: float = 0.06
     subcluster_floor_s: float = 5.0

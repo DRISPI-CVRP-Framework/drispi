@@ -11,14 +11,14 @@ from drispi.haos.k_domain import DEFAULT_BASE_ARMS, k_domain, parse_n_kmin
 XL_DIR = Path("data/instances/xl")
 THIN_BASE = [2, 4, 8, 12]
 
-# Golden rows at ext_per_1000=6 with the restored 7-arm base.
+# Golden rows at ext_per_1000=4 (shipping default / confirmation cell C4).
 GOLDEN: dict[tuple[int, int], list[int]] = {
     (1048, 237): [2, 3, 4, 6, 8, 10, 12],
     (1654, 11): [2, 3, 4, 6, 8, 10, 11],
-    (5061, 184): [2, 3, 4, 6, 8, 10, 12, 16, 22, 30],
-    (7037, 38): [2, 3, 4, 6, 8, 10, 12, 18, 26, 38],
-    (8028, 294): [2, 3, 4, 6, 8, 10, 12, 19, 30, 48],
-    (10001, 1570): [2, 3, 4, 6, 8, 10, 12, 21, 35, 60],
+    (5061, 184): [2, 3, 4, 6, 8, 10, 12, 14, 17, 20],
+    (7037, 38): [2, 3, 4, 6, 8, 10, 12, 16, 21, 28],
+    (8028, 294): [2, 3, 4, 6, 8, 10, 12, 17, 23, 32],
+    (10001, 1570): [2, 3, 4, 6, 8, 10, 12, 18, 27, 40],
 }
 
 
@@ -82,6 +82,14 @@ def test_cell_0prime_base_includes_k1() -> None:
     assert k_domain(
         10001, 1570, base_arms=[1, 2, 3, 4, 6, 8, 10, 12], ext_per_1000=0
     ) == [1, 2, 3, 4, 6, 8, 10, 12]
+
+
+def test_c6_ext6_pins() -> None:
+    kwargs = {"ext_per_1000": 6}
+    assert k_domain(5061, 184, **kwargs) == [2, 3, 4, 6, 8, 10, 12, 16, 22, 30]
+    assert k_domain(7037, 38, **kwargs) == [2, 3, 4, 6, 8, 10, 12, 18, 26, 38]
+    assert k_domain(8028, 294, **kwargs) == [2, 3, 4, 6, 8, 10, 12, 19, 30, 48]
+    assert k_domain(10001, 1570, **kwargs) == [2, 3, 4, 6, 8, 10, 12, 21, 35, 60]
 
 
 def test_c6_thin_confirmation_pins() -> None:

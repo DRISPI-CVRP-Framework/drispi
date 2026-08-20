@@ -1,6 +1,6 @@
-# Post-pilot confirmation — cell C6: shipping default (full 7-arm base,
-# ext_per_1000: 6). Identical to final_benchmark.yaml except output_dir;
-# defaults already give this k domain. Merges on top of configs/default.yaml.
+# Post-pilot confirmation — cell C6: full 7-arm base, ext_per_1000: 6.
+# Shipping default is now C4 (ext_per_1000: 4); this profile pins 6 so it
+# still means C6 after that change. Merges on top of configs/default.yaml.
 #
 # Resulting k domains:
 #   XL-n7037-k38    -> [2, 3, 4, 6, 8, 10, 12, 18, 26, 38]
@@ -17,6 +17,10 @@ cores:
   dri: 6
   bg: 1
   sp: 1
+
+decomposition:
+  k_domain:
+    ext_per_1000: 6
 
 bg_ails:
   mode: async

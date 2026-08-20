@@ -69,10 +69,11 @@ the same predictor, with slack `max(2x, x+120)`.
 
 The HAOS level-1 k domain is no longer a fixed candidate list — it is computed
 once per instance at init from `(n, K_min)` in the instance name (tunables
-under `decomposition.k_domain`; see `drispi/haos/k_domain.py`). The computed
-domain is logged on the run's init JSONL event. The imbalance law
-`max_share = 1.062 * k^{-0.795}` is a recorded measurement only and is not
-applied at runtime.
+under `decomposition.k_domain`; see `drispi/haos/k_domain.py`). Default is
+the confirmation C4 setup: base `{2,3,4,6,8,10,12}` with `ext_per_1000: 4`.
+The computed domain is logged on the run's init JSONL event. The imbalance
+law `max_share = 1.062 * k^{-0.795}` is a recorded measurement only and is
+not applied at runtime.
 
 SC/SP modes, pinning, and YAML `off` quoting: [docs/sp_sc_modes.md](docs/sp_sc_modes.md).
 

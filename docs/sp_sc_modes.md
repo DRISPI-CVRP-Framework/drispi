@@ -240,9 +240,10 @@ trigger fires
 - **Subcluster wall-timeout** (hang detector) is anchored to the same predicted
   DR wall, not raw lockstep: ``max(2 * pred, pred + 120)``.
 - **k domain.** Base arms clipped by filename ``K_min``, plus an optional
-  geometric extension up to ``k_ext = ext_per_1000 * round(n/1000)``. The
-  imbalance law ``max_share = 1.062 * k^{-0.795}`` is a recorded measurement
-  only and is not applied at runtime.
+  geometric extension up to ``k_ext = ext_per_1000 * round(n/1000)``.
+  Default ``ext_per_1000`` is 4 (confirmation cell C4). The imbalance law
+  ``max_share = 1.062 * k^{-0.795}`` is a recorded measurement only and is
+  not applied at runtime.
 - Defaults when keys are omitted: see `drispi/pipeline/config.py`.
   `configs/default.yaml` lists every flag. Profiles such as
   `configs/async_example.yaml` merge on top (6 DRI + 1 BG + 1 SP, both async).

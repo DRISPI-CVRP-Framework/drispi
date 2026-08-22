@@ -48,6 +48,8 @@ class DRISPIConfig:
     )
     decomp_k_max_arms: int = 10
     decomp_k_ext_per_1000: int = 4
+    decomp_k_min_routes_per_cluster: int | None = None
+    decomp_k_min_arm_spacing: int | None = None
     # Per-cluster solver budget = max(floor_s, size * rate_s_per_customer).
     subcluster_rate_s_per_customer: float = 0.06
     subcluster_floor_s: float = 5.0

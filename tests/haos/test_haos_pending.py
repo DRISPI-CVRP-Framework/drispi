@@ -30,7 +30,15 @@ def make_instance_20() -> CVRPInstance:
 
 
 def _fresh(warmup: int = 0, decay: float = 0.95) -> HAOS:
-    return HAOS(config=HAOSConfig(haos_warmup=warmup, decay=decay), instance=make_instance_20())
+    return HAOS(
+        config=HAOSConfig(
+            haos_warmup=warmup,
+            decay=decay,
+            k_min_routes_per_cluster=0,
+            k_min_arm_spacing=1,
+        ),
+        instance=make_instance_20(),
+    )
 
 
 def test_apply_pending_immediate_credits_registered_arms_without_redecay() -> None:

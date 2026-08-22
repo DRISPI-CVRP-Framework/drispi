@@ -331,6 +331,8 @@ def test_log_init_records_k_domain_ext_and_min(
         k_domain=[2, 3, 4],
         k_ext=0,
         k_min=4,
+        k_ext_bound="disabled",
+        k_ladder_spacing_rejected=0,
     )
     events = [
         json.loads(line)
@@ -341,6 +343,8 @@ def test_log_init_records_k_domain_ext_and_min(
     assert init["k_domain"] == [2, 3, 4]
     assert init["k_ext"] == 0
     assert init["k_min"] == 4
+    assert init["k_ext_bound"] == "disabled"
+    assert init["k_ladder_spacing_rejected"] == 0
 
 
 def test_log_dr_apply_writes_jsonl_and_iterations_csv(

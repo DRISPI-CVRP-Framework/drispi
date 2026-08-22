@@ -321,6 +321,8 @@ class PipelineLogger:
         k_domain: list[int] | None = None,
         k_ext: int | None = None,
         k_min: int | None = None,
+        k_ext_bound: str | None = None,
+        k_ladder_spacing_rejected: int | None = None,
     ) -> None:
         bks_display = f"{self._bks_cost:.2f}" if self._bks_cost is not None else "N/A"
         header_lines = [
@@ -334,6 +336,10 @@ class PipelineLogger:
             extra = f"k domain (computed at init): {k_domain}"
             if k_ext is not None or k_min is not None:
                 extra += f"  k_ext={k_ext}  k_min={k_min}"
+            if k_ext_bound is not None:
+                extra += f"  k_ext_bound={k_ext_bound}"
+            if k_ladder_spacing_rejected is not None:
+                extra += f"  spacing_rejected={k_ladder_spacing_rejected}"
             header_lines.append(extra)
         for line in header_lines:
             self._emit(None, _TAG_INIT, line)
@@ -357,6 +363,10 @@ class PipelineLogger:
                     json_event["k_ext"] = k_ext
                 if k_min is not None:
                     json_event["k_min"] = k_min
+                if k_ext_bound is not None:
+                    json_event["k_ext_bound"] = k_ext_bound
+                if k_ladder_spacing_rejected is not None:
+                    json_event["k_ladder_spacing_rejected"] = k_ladder_spacing_rejected
             self._emit(None, _TAG_INIT, line, json_event=json_event)
 
     def log_haos_roll(

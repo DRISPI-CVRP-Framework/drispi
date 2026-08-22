@@ -195,6 +195,8 @@ def _async_cfg(tmp_path: Path, **overrides) -> DRISPIConfig:
         cores_dri=6,
         cores_bg=1,
         cores_sp=1,
+        decomp_k_min_routes_per_cluster=0,
+        decomp_k_min_arm_spacing=1,
     )
     base.update(overrides)
     return DRISPIConfig(**base)

@@ -84,6 +84,8 @@ def test_bg_ails_improvement_kept_on_sp_sc_iteration(
         time_limit=1e9,
         max_no_improve=1000,
         output_dir=tmp_path,
+        decomp_k_min_routes_per_cluster=0,
+        decomp_k_min_arm_spacing=1,
         warmup_iterations=0,
         sp_interval=1,
         min_coverage=1,
@@ -160,6 +162,8 @@ def test_pipeline_runs_five_iterations(instance_12: CVRPInstance, tmp_path: Path
         time_limit=1e9,
         max_no_improve=1000,
         output_dir=tmp_path,
+        decomp_k_min_routes_per_cluster=0,
+        decomp_k_min_arm_spacing=1,
         haos_warmup=2,
         warmup_iterations=100,
         sp_interval=100,
@@ -199,6 +203,8 @@ def test_pipeline_stops_on_time_limit(instance_12: CVRPInstance, tmp_path: Path)
         time_limit=0.001,
         max_no_improve=1000,
         output_dir=tmp_path,
+        decomp_k_min_routes_per_cluster=0,
+        decomp_k_min_arm_spacing=1,
         warmup_iterations=1000,
     )
     with (
@@ -220,6 +226,8 @@ def test_pipeline_stops_on_max_no_improve(instance_12: CVRPInstance, tmp_path: P
         time_limit=1e9,
         max_no_improve=2,
         output_dir=tmp_path,
+        decomp_k_min_routes_per_cluster=0,
+        decomp_k_min_arm_spacing=1,
         warmup_iterations=1000,
     )
     with (
@@ -242,6 +250,8 @@ def test_update_best_resets_no_improve(instance_12: CVRPInstance, tmp_path: Path
         time_limit=1e9,
         max_no_improve=100,
         output_dir=tmp_path,
+        decomp_k_min_routes_per_cluster=0,
+        decomp_k_min_arm_spacing=1,
         warmup_iterations=1000,
     )
     pipe = DRISPIPipeline(instance_12, cfg)
@@ -264,6 +274,8 @@ def test_bg_improvement_tags_routes_before_update_best(
         time_limit=1e9,
         max_no_improve=100,
         output_dir=tmp_path,
+        decomp_k_min_routes_per_cluster=0,
+        decomp_k_min_arm_spacing=1,
         warmup_iterations=100,
         sp_interval=100,
     )
@@ -306,6 +318,8 @@ def test_finalize_writes_weights_and_sol(instance_12: CVRPInstance, tmp_path: Pa
         time_limit=1e9,
         max_no_improve=100,
         output_dir=tmp_path,
+        decomp_k_min_routes_per_cluster=0,
+        decomp_k_min_arm_spacing=1,
         warmup_iterations=1000,
     )
     pipe = DRISPIPipeline(instance_12, cfg)
@@ -329,6 +343,8 @@ def test_route_clustering_uses_best_solution_not_pool(
         time_limit=1e9,
         max_no_improve=100,
         output_dir=tmp_path,
+        decomp_k_min_routes_per_cluster=0,
+        decomp_k_min_arm_spacing=1,
         warmup_iterations=100,
         sp_interval=100,
     )
@@ -390,6 +406,8 @@ def test_haos_weights_change_after_warmup(instance_12: CVRPInstance, tmp_path: P
         time_limit=1e9,
         max_no_improve=100,
         output_dir=tmp_path,
+        decomp_k_min_routes_per_cluster=0,
+        decomp_k_min_arm_spacing=1,
         haos_warmup=2,
         haos_reward_no_improvement=2.0,
         warmup_iterations=100,
@@ -421,6 +439,8 @@ def test_pipeline_skips_iteration_on_subcluster_timeout(
         time_limit=1e9,
         max_no_improve=1000,
         output_dir=tmp_path,
+        decomp_k_min_routes_per_cluster=0,
+        decomp_k_min_arm_spacing=1,
         haos_warmup=2,
         warmup_iterations=100,
         sp_interval=100,
@@ -460,6 +480,8 @@ def test_pipeline_skips_iteration_on_subcluster_worker_failure(
         time_limit=1e9,
         max_no_improve=1000,
         output_dir=tmp_path,
+        decomp_k_min_routes_per_cluster=0,
+        decomp_k_min_arm_spacing=1,
         haos_warmup=2,
         warmup_iterations=100,
         sp_interval=100,
@@ -501,6 +523,8 @@ def test_decompose_route_emits_dr_apply_and_iterations_csv(
         time_limit=1e9,
         max_no_improve=1000,
         output_dir=tmp_path,
+        decomp_k_min_routes_per_cluster=0,
+        decomp_k_min_arm_spacing=1,
         warmup_iterations=100,
         sp_interval=100,
     )

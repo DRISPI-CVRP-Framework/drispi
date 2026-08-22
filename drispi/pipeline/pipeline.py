@@ -25,7 +25,7 @@ from drispi.core.solution import Route as SolutionRoute
 from drispi.core.types import Route
 from drispi.haos.config import HAOSConfig, HAOSRewardConfig
 from drispi.haos.haos import HAOS, HAOSSelection
-from drispi.haos.k_domain import k_ext_value, parse_n_kmin
+from drispi.haos.k_domain import parse_n_kmin
 from drispi.haos.tag import HAOSTag
 from drispi.haos.weights_io import save_weights
 from drispi.improvement.bg_ails import (
@@ -92,6 +92,14 @@ def _changed_route_indices(before: list[Route], after: list[Route]) -> list[int]
     return [i for i, r in enumerate(after) if frozenset(r) not in before_sets]
 
 
+def _require_k_domain_int(value: int | None, field_name: str) -> int:
+    if value is None:
+        raise ValueError(
+            f"{field_name} is required (set it in the config file; there is no code default)"
+        )
+    return value
+
+
 def _build_haos_config(config: DRISPIConfig) -> HAOSConfig:
     """Build internal HAOSConfig from flat DRISPIConfig fields."""
     return HAOSConfig(
@@ -110,6 +118,14 @@ def _build_haos_config(config: DRISPIConfig) -> HAOSConfig:
         k_base_arms=list(config.decomp_k_base_arms),
         k_max_arms=config.decomp_k_max_arms,
         k_ext_per_1000=config.decomp_k_ext_per_1000,
+        k_min_routes_per_cluster=_require_k_domain_int(
+            config.decomp_k_min_routes_per_cluster,
+            "decomposition.k_domain.min_routes_per_cluster",
+        ),
+        k_min_arm_spacing=_require_k_domain_int(
+            config.decomp_k_min_arm_spacing,
+            "decomposition.k_domain.min_arm_spacing",
+        ),
         min_weight_k=config.haos_min_weight_k,
         lambda_demand_values=list(config.haos_lambda_demand_values),
         min_weight_lambda=config.haos_min_weight_lambda,
@@ -226,17 +242,23 @@ class DRISPIPipeline:
         )
         self._snapshot_writer = SnapshotWriter(self.run_dir)
         parsed = parse_n_kmin(instance.name)
-        k_ext = k_min = None
+        resolution = self._haos.k_resolution
         if parsed is not None:
-            k_ext = k_ext_value(parsed[0], parsed[1], config.decomp_k_ext_per_1000)
-            k_min = parsed[1]
-        self._logger.log_init(
-            config,
-            instance,
-            k_domain=self._haos.k_values,
-            k_ext=k_ext,
-            k_min=k_min,
-        )
+            self._logger.log_init(
+                config,
+                instance,
+                k_domain=resolution.domain,
+                k_ext=resolution.k_ext,
+                k_min=parsed[1],
+                k_ext_bound=resolution.k_ext_bound,
+                k_ladder_spacing_rejected=resolution.spacing_rejected,
+            )
+        else:
+            self._logger.log_init(
+                config,
+                instance,
+                k_domain=resolution.domain,
+            )
 
         self._spsc_adopted = 0
         self._spsc_invocations = 0

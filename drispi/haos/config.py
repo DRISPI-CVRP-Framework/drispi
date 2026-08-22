@@ -4,7 +4,7 @@ import math
 from dataclasses import dataclass, field
 
 from drispi.core.instance import CVRPInstance
-from drispi.haos.k_domain import DEFAULT_BASE_ARMS, k_domain, parse_n_kmin
+from drispi.haos.k_domain import DEFAULT_BASE_ARMS, KDomainResolution, parse_n_kmin, resolve_k_domain
 
 
 @dataclass
@@ -34,6 +34,8 @@ class HAOSConfig:
     k_base_arms: list[int] = field(default_factory=lambda: list(DEFAULT_BASE_ARMS))
     k_max_arms: int = 10
     k_ext_per_1000: int = 4
+    k_min_routes_per_cluster: int = field(kw_only=True)
+    k_min_arm_spacing: int = field(kw_only=True)
     min_weight_k: float = 0.025
 
     lambda_demand_values: list[float] = field(
@@ -72,7 +74,7 @@ class HAOSConfig:
     )
     min_weight_solver: float = 0.05
 
-    def compute_k_values(self, instance: CVRPInstance) -> list[int]:
+    def compute_k_values(self, instance: CVRPInstance) -> KDomainResolution:
         """
         Scale-adaptive k domain for this instance (variable arity).
 
@@ -88,9 +90,11 @@ class HAOSConfig:
             n = instance.n_customers
             total_demand = sum(instance.demands[c] for c in instance.customers)
             k_min = max(1, math.ceil(total_demand / instance.capacity))
-        return k_domain(
+        return resolve_k_domain(
             n,
             k_min,
+            min_routes_per_cluster=self.k_min_routes_per_cluster,
+            min_arm_spacing=self.k_min_arm_spacing,
             base_arms=list(self.k_base_arms),
             max_arms=self.k_max_arms,
             ext_per_1000=self.k_ext_per_1000,

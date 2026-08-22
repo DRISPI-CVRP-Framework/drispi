@@ -65,6 +65,8 @@ def test_xl_n1281_pipeline_smoke_short(xl_n1281: CVRPInstance) -> None:
         max_no_improve=500,
         n_workers=2,
         output_dir=out,
+        decomp_k_min_routes_per_cluster=0,
+        decomp_k_min_arm_spacing=1,
         haos_warmup=10,
         warmup_iterations=1000,
         sp_interval=1000,

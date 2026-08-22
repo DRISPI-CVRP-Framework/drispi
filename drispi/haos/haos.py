@@ -52,7 +52,8 @@ class HAOS:
         self.instance = instance
         self.rng = rng or random.Random()
 
-        self.k_values = config.compute_k_values(instance)
+        self.k_resolution = config.compute_k_values(instance)
+        self.k_values = self.k_resolution.domain
         sw = config.starting_weight
         self.wheel_1_k = RouletteWheel(self.k_values, config.min_weight_k, starting_weight=sw)
         self.wheel_2_lambda = RouletteWheel(

@@ -35,6 +35,8 @@ def test_xl_n1281_pipeline_long_budget(xl_n1281: CVRPInstance) -> None:
         max_no_improve=50,
         n_workers=6,
         output_dir=out,
+        decomp_k_min_routes_per_cluster=0,
+        decomp_k_min_arm_spacing=1,
         warmup_iterations=10,
         sp_interval=3,
         subcluster_rate_s_per_customer=0.06,

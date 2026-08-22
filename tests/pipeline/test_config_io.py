@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from drispi.core.instance import CVRPInstance
 from drispi.pipeline.config import DRISPIConfig
 from drispi.pipeline.config_io import (
     config_to_dict,
@@ -14,6 +15,7 @@ from drispi.pipeline.config_io import (
     merge_cli_overrides,
     save_config,
 )
+from drispi.pipeline.pipeline import _build_haos_config
 
 
 def test_save_and_load_round_trip(tmp_path: Path) -> None:
@@ -239,6 +241,8 @@ def test_repo_default_yaml_bg_ails_budget_keys() -> None:
     assert loaded.subcluster_floor_s == 5.0
     assert loaded.decomp_k_base_arms == [2, 3, 4, 6, 8, 10, 12]
     assert loaded.decomp_k_ext_per_1000 == 4
+    assert loaded.decomp_k_min_routes_per_cluster == 8
+    assert loaded.decomp_k_min_arm_spacing == 2
 
 
 def test_profile_config_inherits_default_yaml(tmp_path: Path) -> None:
@@ -336,3 +340,46 @@ def test_confirmation_profiles_differ_only_in_k_domain() -> None:
         assert loaded.cores_dri == 6
         assert loaded.bg_ails_mode == "async"
         assert loaded.sp_sc_mode == "async"
+        assert loaded.decomp_k_min_routes_per_cluster == 8
+        assert loaded.decomp_k_min_arm_spacing == 2
+
+
+def test_build_haos_config_requires_k_domain_fields() -> None:
+    with pytest.raises(ValueError, match="min_routes_per_cluster is required"):
+        _build_haos_config(DRISPIConfig())
+    with pytest.raises(ValueError, match="min_arm_spacing is required"):
+        _build_haos_config(DRISPIConfig(decomp_k_min_routes_per_cluster=8))
+
+
+def test_default_yaml_k_domain_reaches_compute_k_values() -> None:
+    repo_root = Path(__file__).resolve().parents[2]
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        loaded = load_config(repo_root / "configs" / "default.yaml")
+    ignored = [
+        str(w.message)
+        for w in caught
+        if "Unknown decomposition.k_domain key ignored" in str(w.message)
+    ]
+    assert not ignored
+    assert loaded.decomp_k_min_routes_per_cluster == 8
+    assert loaded.decomp_k_min_arm_spacing == 2
+
+    haos_config = _build_haos_config(loaded)
+    expected = {
+        "XL-n9571-k55": [2, 3, 4, 6, 8, 10, 12],
+        "XL-n5902-k122": [2, 3, 4, 6, 8, 10, 12, 14],
+        "XL-n4340-k148": [2, 3, 4, 6, 8, 10, 12, 15],
+        "XL-n9784-k2774": [2, 3, 4, 6, 8, 10, 12, 18, 27, 40],
+    }
+    for name, domain in expected.items():
+        instance = CVRPInstance(
+            name=name,
+            n_customers=1,
+            capacity=100,
+            depot=(0.0, 0.0),
+            customers=[2],
+            coordinates={1: (0.0, 0.0), 2: (1.0, 0.0)},
+            demands={1: 0, 2: 1},
+        )
+        assert haos_config.compute_k_values(instance).domain == domain, name

@@ -30,7 +30,7 @@ def _tiny_instance() -> CVRPInstance:
 def test_always_adds_even_when_not_new_best() -> None:
     instance = _tiny_instance()
     pool = RoutePool()
-    haos = HAOS(config=HAOSConfig(), instance=instance)
+    haos = HAOS(config=HAOSConfig(k_min_routes_per_cluster=0, k_min_arm_spacing=1), instance=instance)
     selection = haos.select(iteration=0, rng=random.Random(0))
     sp = [[2, 3], [4, 5]]
     ails = [[2, 3], [4, 5]]
@@ -51,7 +51,7 @@ def test_always_adds_even_when_not_new_best() -> None:
 def test_changed_route_gets_improvement_tag() -> None:
     instance = _tiny_instance()
     pool = RoutePool()
-    haos = HAOS(config=HAOSConfig(), instance=instance)
+    haos = HAOS(config=HAOSConfig(k_min_routes_per_cluster=0, k_min_arm_spacing=1), instance=instance)
     selection = haos.select(iteration=0, rng=random.Random(1))
     sp = [[2, 3], [4, 5]]
     ails = [[2, 3, 4], [5]]  # merged first route -> new customer set vs SP
@@ -77,7 +77,7 @@ def test_changed_route_gets_improvement_tag() -> None:
 def test_unchanged_route_reuses_pool_tag() -> None:
     instance = _tiny_instance()
     pool = RoutePool()
-    haos = HAOS(config=HAOSConfig(), instance=instance)
+    haos = HAOS(config=HAOSConfig(k_min_routes_per_cluster=0, k_min_arm_spacing=1), instance=instance)
     selection = haos.select(iteration=0, rng=random.Random(2))
     original = HAOSTag(3, 0.5, "vertex", "spectral", "ails2", 0, False)
     sp_route = [2, 3, 4]

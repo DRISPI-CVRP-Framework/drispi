@@ -30,7 +30,7 @@ def make_instance_20() -> CVRPInstance:
 
 
 def test_save_weights_writes_expected_json(tmp_path) -> None:
-    haos = HAOS(config=HAOSConfig(), instance=make_instance_20())
+    haos = HAOS(config=HAOSConfig(k_min_routes_per_cluster=0, k_min_arm_spacing=1), instance=make_instance_20())
     output = tmp_path / "weights.json"
     save_weights(haos, output, instance_name="x20", iterations_completed=42)
     payload = json.loads(output.read_text(encoding="utf-8"))
@@ -48,7 +48,7 @@ def test_save_weights_writes_expected_json(tmp_path) -> None:
 
 
 def test_load_weights_round_trip_restores_state(tmp_path) -> None:
-    config = HAOSConfig(haos_warmup=0)
+    config = HAOSConfig(haos_warmup=0, k_min_routes_per_cluster=0, k_min_arm_spacing=1)
     source = HAOS(config=config, instance=make_instance_20())
     target = HAOS(config=config, instance=make_instance_20())
     selection = source.select(iteration=0, rng=random.Random(11))
@@ -62,6 +62,6 @@ def test_load_weights_round_trip_restores_state(tmp_path) -> None:
 
 
 def test_load_weights_missing_file_raises(tmp_path) -> None:
-    haos = HAOS(config=HAOSConfig(), instance=make_instance_20())
+    haos = HAOS(config=HAOSConfig(k_min_routes_per_cluster=0, k_min_arm_spacing=1), instance=make_instance_20())
     with pytest.raises(FileNotFoundError):
         load_weights(haos, tmp_path / "missing.json")

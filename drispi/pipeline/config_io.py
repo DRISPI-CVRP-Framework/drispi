@@ -34,6 +34,8 @@ _SECTION_FIELDS: dict[str, list[str]] = {
         "decomp_k_base_arms",
         "decomp_k_max_arms",
         "decomp_k_ext_per_1000",
+        "decomp_k_min_routes_per_cluster",
+        "decomp_k_min_arm_spacing",
         "subcluster_rate_s_per_customer",
         "subcluster_floor_s",
     ],
@@ -129,6 +131,8 @@ _DECOMP_K_DOMAIN_NESTED_KEYS = {
     "base_arms": "decomp_k_base_arms",
     "max_arms": "decomp_k_max_arms",
     "ext_per_1000": "decomp_k_ext_per_1000",
+    "min_routes_per_cluster": "decomp_k_min_routes_per_cluster",
+    "min_arm_spacing": "decomp_k_min_arm_spacing",
 }
 
 _DECOMP_SUBCLUSTER_BUDGET_NESTED_KEYS = {

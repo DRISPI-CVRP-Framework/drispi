@@ -45,6 +45,8 @@ def test_drispi_pipeline_smoke_one_iteration(small_instance: CVRPInstance, tmp_p
         time_limit=1e9,
         max_no_improve=100,
         output_dir=tmp_path,
+        decomp_k_min_routes_per_cluster=0,
+        decomp_k_min_arm_spacing=1,
         haos_warmup=10,
         warmup_iterations=1000,
         sp_interval=1000,

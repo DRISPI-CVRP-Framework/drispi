@@ -29,7 +29,7 @@ def make_instance_20() -> CVRPInstance:
 
 
 def test_coerce_vertex_when_no_routes_switches_paradigm_and_method() -> None:
-    haos = HAOS(config=HAOSConfig(), instance=make_instance_20())
+    haos = HAOS(config=HAOSConfig(k_min_routes_per_cluster=0, k_min_arm_spacing=1), instance=make_instance_20())
     route_selection = HAOSSelection(
         k=2,
         lambda_demand=0.4,
@@ -56,7 +56,7 @@ def test_coerce_vertex_when_no_routes_switches_paradigm_and_method() -> None:
 
 
 def test_coerce_vertex_when_no_routes_noop_if_best_solution_available() -> None:
-    haos = HAOS(config=HAOSConfig(), instance=make_instance_20())
+    haos = HAOS(config=HAOSConfig(k_min_routes_per_cluster=0, k_min_arm_spacing=1), instance=make_instance_20())
     route_selection = HAOSSelection(
         k=2,
         lambda_demand=0.4,
@@ -78,7 +78,7 @@ def test_coerce_vertex_when_no_routes_noop_if_best_solution_available() -> None:
 
 
 def test_cap_k_for_route_clustering_clips_k_and_keeps_k_index() -> None:
-    haos = HAOS(config=HAOSConfig(), instance=make_instance_20())
+    haos = HAOS(config=HAOSConfig(k_min_routes_per_cluster=0, k_min_arm_spacing=1), instance=make_instance_20())
     route_selection = HAOSSelection(
         k=4,
         lambda_demand=0.4,
@@ -99,7 +99,7 @@ def test_cap_k_for_route_clustering_clips_k_and_keeps_k_index() -> None:
 
 def test_cap_k_for_route_clustering_clips_below_domain_without_raising() -> None:
     # A single-route incumbent clips to k=1 even though 1 is not a domain arm.
-    haos = HAOS(config=HAOSConfig(), instance=make_instance_20())
+    haos = HAOS(config=HAOSConfig(k_min_routes_per_cluster=0, k_min_arm_spacing=1), instance=make_instance_20())
     route_selection = HAOSSelection(
         k=4,
         lambda_demand=0.4,
@@ -118,7 +118,7 @@ def test_cap_k_for_route_clustering_clips_below_domain_without_raising() -> None
 
 
 def test_cap_k_for_route_clustering_noop_when_k_within_route_count() -> None:
-    haos = HAOS(config=HAOSConfig(), instance=make_instance_20())
+    haos = HAOS(config=HAOSConfig(k_min_routes_per_cluster=0, k_min_arm_spacing=1), instance=make_instance_20())
     route_selection = HAOSSelection(
         k=2,
         lambda_demand=0.4,
@@ -136,7 +136,7 @@ def test_cap_k_for_route_clustering_noop_when_k_within_route_count() -> None:
 
 
 def test_cap_k_for_route_clustering_noop_for_vertex_paradigm() -> None:
-    haos = HAOS(config=HAOSConfig(), instance=make_instance_20())
+    haos = HAOS(config=HAOSConfig(k_min_routes_per_cluster=0, k_min_arm_spacing=1), instance=make_instance_20())
     vertex_selection = HAOSSelection(
         k=4,
         lambda_demand=0.4,
@@ -154,7 +154,7 @@ def test_cap_k_for_route_clustering_noop_for_vertex_paradigm() -> None:
 
 
 def test_coerce_vertex_when_no_routes_noop_if_already_vertex() -> None:
-    haos = HAOS(config=HAOSConfig(), instance=make_instance_20())
+    haos = HAOS(config=HAOSConfig(k_min_routes_per_cluster=0, k_min_arm_spacing=1), instance=make_instance_20())
     vertex_selection = HAOSSelection(
         k=2,
         lambda_demand=0.4,
@@ -176,7 +176,7 @@ def test_coerce_vertex_when_no_routes_noop_if_already_vertex() -> None:
 
 
 def test_select_returns_complete_valid_selection() -> None:
-    haos = HAOS(config=HAOSConfig(), instance=make_instance_20())
+    haos = HAOS(config=HAOSConfig(k_min_routes_per_cluster=0, k_min_arm_spacing=1), instance=make_instance_20())
     selection = haos.select(iteration=0, rng=random.Random(1))
     assert selection.k in haos.wheel_1_k.choices
     assert selection.lambda_demand in haos.wheel_2_lambda.choices
@@ -190,7 +190,7 @@ def test_select_returns_complete_valid_selection() -> None:
 
 
 def test_warmup_leaves_weights_unchanged() -> None:
-    config = HAOSConfig(haos_warmup=5)
+    config = HAOSConfig(haos_warmup=5, k_min_routes_per_cluster=0, k_min_arm_spacing=1)
     haos = HAOS(config=config, instance=make_instance_20())
     selection = haos.select(iteration=0, rng=random.Random(2))
     before = haos.state_dict()
@@ -201,7 +201,7 @@ def test_warmup_leaves_weights_unchanged() -> None:
 
 
 def test_compute_reward_tiers() -> None:
-    haos = HAOS(config=HAOSConfig(), instance=make_instance_20())
+    haos = HAOS(config=HAOSConfig(k_min_routes_per_cluster=0, k_min_arm_spacing=1), instance=make_instance_20())
     rewards = HAOSRewardConfig()
     assert haos.compute_reward(None, 100.0, 110.0, rewards) == rewards.reward_no_solution
     assert haos.compute_reward(90.0, 100.0, 110.0, rewards) == rewards.reward_new_best
@@ -226,7 +226,7 @@ def test_compute_reward_tiers() -> None:
 
 
 def test_to_tag_from_selection() -> None:
-    haos = HAOS(config=HAOSConfig(), instance=make_instance_20())
+    haos = HAOS(config=HAOSConfig(k_min_routes_per_cluster=0, k_min_arm_spacing=1), instance=make_instance_20())
     selection = haos.select(iteration=3, rng=random.Random(3))
     tag = selection.to_tag(iteration=3)
     assert tag.k == selection.k
@@ -242,7 +242,7 @@ def test_to_tag_from_selection() -> None:
 
 
 def test_coerced_vertex_selection_credits_vertex_wheels_on_update_final() -> None:
-    config = HAOSConfig(haos_warmup=0, decay=0.95)
+    config = HAOSConfig(haos_warmup=0, decay=0.95, k_min_routes_per_cluster=0, k_min_arm_spacing=1)
     haos = HAOS(config=config, instance=make_instance_20())
     route_selection = HAOSSelection(
         k=2,
@@ -283,7 +283,7 @@ def test_coerced_vertex_selection_credits_vertex_wheels_on_update_final() -> Non
 
 
 def test_update_final_after_warmup_updates_selected_weights() -> None:
-    config = HAOSConfig(haos_warmup=0, decay=0.95)
+    config = HAOSConfig(haos_warmup=0, decay=0.95, k_min_routes_per_cluster=0, k_min_arm_spacing=1)
     haos = HAOS(config=config, instance=make_instance_20())
     selection = haos.select(iteration=0, rng=random.Random(4))
     before = haos.state_dict()
@@ -295,7 +295,7 @@ def test_update_final_after_warmup_updates_selected_weights() -> None:
 
 
 def test_state_dict_has_all_levels() -> None:
-    haos = HAOS(config=HAOSConfig(), instance=make_instance_20())
+    haos = HAOS(config=HAOSConfig(k_min_routes_per_cluster=0, k_min_arm_spacing=1), instance=make_instance_20())
     state = haos.state_dict()
     assert set(state.keys()) == {
         "level_1_k",
@@ -308,7 +308,7 @@ def test_state_dict_has_all_levels() -> None:
 
 
 def test_load_state_dict_restores_weights() -> None:
-    config = HAOSConfig(haos_warmup=0)
+    config = HAOSConfig(haos_warmup=0, k_min_routes_per_cluster=0, k_min_arm_spacing=1)
     source = HAOS(config=config, instance=make_instance_20())
     target = HAOS(config=config, instance=make_instance_20())
     selection = source.select(iteration=0, rng=random.Random(5))
@@ -319,7 +319,7 @@ def test_load_state_dict_restores_weights() -> None:
 
 
 def test_load_state_dict_choice_mismatch_raises() -> None:
-    haos = HAOS(config=HAOSConfig(), instance=make_instance_20())
+    haos = HAOS(config=HAOSConfig(k_min_routes_per_cluster=0, k_min_arm_spacing=1), instance=make_instance_20())
     state = haos.state_dict()
     state["level_5_solver"]["values"] = ["other"]
     with pytest.raises(ValueError):
@@ -329,7 +329,9 @@ def test_load_state_dict_choice_mismatch_raises() -> None:
 def test_compute_k_values_fallback_uses_min_feasible_fleet() -> None:
     """Unparseable name: n=20, K_min=ceil(200/50)=4 caps the domain at [2, 3, 4]."""
     instance = make_instance_20()
-    assert HAOSConfig().compute_k_values(instance) == [2, 3, 4]
+    assert HAOSConfig(
+        k_min_routes_per_cluster=0, k_min_arm_spacing=1
+    ).compute_k_values(instance).domain == [2, 3, 4]
 
 
 def test_compute_k_values_prefers_filename_n_and_kmin() -> None:
@@ -337,12 +339,14 @@ def test_compute_k_values_prefers_filename_n_and_kmin() -> None:
     import dataclasses
 
     instance = dataclasses.replace(make_instance_20(), name="XL-n9571-k55")
-    values = HAOSConfig().compute_k_values(instance)
-    assert values == [2, 3, 4, 6, 8, 10, 12, 18, 27, 40]
+    values = HAOSConfig(
+        k_min_routes_per_cluster=8, k_min_arm_spacing=2
+    ).compute_k_values(instance)
+    assert values.domain == [2, 3, 4, 6, 8, 10, 12]
 
 
 def test_historical_deferred_updates_all_reverse_mapped_levels() -> None:
-    config = HAOSConfig(haos_warmup=0)
+    config = HAOSConfig(haos_warmup=0, k_min_routes_per_cluster=0, k_min_arm_spacing=1)
     haos = HAOS(config=config, instance=make_instance_20())
     selection = haos.select(iteration=10, rng=random.Random(6))
     historical = haos.select(iteration=5, rng=random.Random(7)).to_tag(iteration=5)
@@ -359,7 +363,7 @@ def test_historical_deferred_updates_all_reverse_mapped_levels() -> None:
 
 def test_update_deferred_ignores_improvement_route_tags() -> None:
     """Improvement-tagged HAOSTags must not receive deferred credit."""
-    config = HAOSConfig(haos_warmup=0, decay=0.8)
+    config = HAOSConfig(haos_warmup=0, decay=0.8, k_min_routes_per_cluster=0, k_min_arm_spacing=1)
     haos_only_immediate = HAOS(config=config, instance=make_instance_20())
     haos_with_filtered_deferred = HAOS(config=config, instance=make_instance_20())
     rng = random.Random(99)

@@ -16,16 +16,65 @@ Outline the different levels and the reward system. Maybe already mention warm-u
 
 
 \section{Decomposition}\label{sec:fra-decomposition}
-This has to outline route-based and vertex-based clustering. And it has to outline the different methods used within each of these paragraphs. 
+% NOTE(citations-added-this-pass, not yet verified by the author): the following
+% keys are new to bibliography/literature.bib as of this draft and should be
+% checked for relevance and correctness before the next build:
+% gillettHeuristicAlgorithmVehicleDispatch1974, fisherGeneralizedAssignmentHeuristic1981,
+% kaufmanFindingGroupsData1990, bezdekFCMFuzzyCmeans1984,
+% macqueenMethodsClassificationAnalysis1967, kerscherDecomposerouteimproveFrameworkSolving2025.
 
-This also has to include dissimilarity measures and the impact of demand in addition to spatial proximity.
+The decomposition layer runs at the beginning of every iteration in the DRI loop, adapting the decompose-route-improve terminology of \citet{kerscherDecomposerouteimproveFrameworkSolving2025}, who propose the framework for large-scale vehicle routing problems with time windows that this work extends to the \gls{cvrp} at very-large scale in a fully parallelized, self-tuning setting. HAOS (Section~\ref{sec:fra-haos}) controls this stage through four levers, redrawn at every iteration: first the number of subclusters k; second the clustering paradigm, either vertex-based, which partitions the customers directly, or route-based, which partitions the routes of the current incumbent solution and propagates the resulting labels to their customers; third the clustering method used within that paradigm; and fourth the demand weight $\lambda_q$ of the dissimilarity metric utilized in the majority of clustering approaches. A fifth quantity that also feeds the metric, the angular offset $\phi$, is drawn uniformly from $[0, 2\pi)$ at every iteration independently of HAOS, so that the wraparound point described below does not stay fixed across iterations.
 
-Some nice figures would be helpful here (maybe show the impact of how clustering differs on the same instance with fixed HAOS operators (except for levels 2-4)).
+The dissimilarity metric combines three terms for every pair of customers i and j with coordinates $(x_i, y_i)$ and $(x_j, y_j)$ and demands $q_i$ and $q_j$: their Euclidean distance, an angular term, and a demand term,
+\begin{equation}
+d_{ij} = \sqrt{(x_i - x_j)^2 + (y_i - y_j)^2 + \lambda_\theta \, \Delta\theta_{ij}^2\,} \left(1 + \lambda_q \frac{|q_i - q_j|}{Q}\right).
+\label{eq:decomp-dissimilarity}
+\end{equation}
+$\Delta\theta_{ij}$ is the shortest angular distance between customer i's and customer j's polar angle around the depot, computed with the offset $\phi$ introduced above. $\lambda_\theta$ scales the angular term to the average coordinate magnitude of the instance, so that neither term dominates across instances of different spatial extent, and $\phi$ shifts where the $\Delta\theta_{ij}$ wraparound at $2\pi$ falls. The demand factor applies the multi-feature dissimilarity metric of \citet{kerscherDecomposerouteimproveFrameworkSolving2025}, who combine spatial, temporal, and demand features, to a setting without time windows: only the demand ratio $\lambda_q |q_i - q_j| / Q$ remains alongside space.
+
+\begin{table}[H]
+\centering
+\caption{Inputs used by each decomposition method.}
+\label{tab:decomp-methods}
+\begin{tabular}{llccc}
+\toprule
+Method & Paradigm & Input & Angular & Demand \\
+\midrule
+K-means & vertex & raw coordinates & -- & -- \\
+Fuzzy c-means & vertex & raw coordinates & -- & -- \\
+K-medoids & vertex & dissimilarity matrix & \checkmark & \checkmark \\
+Agglomerative (average) & vertex & dissimilarity matrix & \checkmark & \checkmark \\
+Agglomerative (complete) & vertex & dissimilarity matrix & \checkmark & \checkmark \\
+K-means & route & route centroids & -- & -- \\
+Agglomerative (average) & route & route centroids & -- & -- \\
+Agglomerative (complete) & route & route centroids & -- & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Both clustering paradigms trace back to the classic cluster-first, route-second scheme for capacitated routing \citep{gillettHeuristicAlgorithmVehicleDispatch1974, fisherGeneralizedAssignmentHeuristic1981}. Vertex-based clustering partitions the customers directly and offers five methods (Table~\ref{tab:decomp-methods}). K-means \citep{macqueenMethodsClassificationAnalysis1967} and fuzzy c-means \citep{bezdekFCMFuzzyCmeans1984} cluster on raw two-dimensional coordinates, fuzzy c-means hardened to a partition by assigning each customer to its highest-membership cluster. K-medoids, i.e.,\ partitioning around medoids \citep{kaufmanFindingGroupsData1990}, and agglomerative hierarchical clustering under average or complete linkage \citep{kaufmanFindingGroupsData1990} instead cluster directly on the dissimilarity matrix of Equation~\ref{eq:decomp-dissimilarity}, the only three method arms, out of eight, that $\lambda_q$ and $\phi$ reach.
+
+Route-based clustering represents each route by the centroid of its customers' coordinates and clusters the centroids with k-means or with the same average or complete linkage, applied to the plain Euclidean distance between centroids rather than to the dissimilarity matrix (Table~\ref{tab:decomp-methods}). The matrix, rebuilt from $(\lambda_q, \phi)$, still feeds the boundary detection used in BG-AILS (Section~\ref{sec:fra-bg-ails}) regardless of which paradigm decomposition uses. Labels then propagate from routes to customers directly, since every customer belongs to exactly one route in the incumbent solution; a nearest-centroid tie-break in the implementation matters only for the degenerate case of conflicting cluster candidates.
+
+The clusters are then handed over in form of a set of independent subproblems to the routing layer (Section~\ref{sec:fra-routing}) to be solved.
+
+% TODO(style): a figure comparing the resulting partitions for the same instance
+% across the five vertex and three route methods, with k, lambda_q, and phi
+% fixed, would help here. No such figure exists yet; do not add a \ref to one.
 
 \section{Routing}\label{sec:fra-routing}
-Explain how the subclusters are solved. Quickly mention parallelization of this stage. Also include recombination and compare with other decompose and solve parallely approaches.
+% NOTE(citations-added-this-pass, not yet verified by the author): the following
+% keys are new to bibliography/literature.bib as of this draft and should be
+% checked for relevance and correctness before the next build:
+% maximoAILSIIAdaptiveIterated2024, accorsiFastScalableHeuristic2021,
+% accorsiRoutingOneMillion2024, woudaPyVRPHighPerformanceVRP2024,
+% vidalHybridGeneticSearchCVRP2022, queirogaXLInstancesCapacitated2026.
 
-Also explain the hyperparameters for this stage. Should be quite short (1-2 pages at most).
+Once decomposition produces the k subclusters (Section~\ref{sec:fra-decomposition}), the routing stage builds one sub-instance per subcluster, with contiguous internal node IDs and its own copy of the depot, and solves all k of them in parallel, independently of each other. A fifth HAOS lever, the solver, is drawn once per iteration and applied to every subcluster that iteration, so all k sub-instances are solved by the same one of four solvers. Each sub-instance receives a time budget of $\max(\text{floor}, \text{size} \times \text{rate})$ seconds, with a default rate of 0.06 seconds per customer and a floor of 5 seconds, so small subclusters are not starved of search time. The k sub-instances are dispatched to a pool of worker processes pinned to the cores reserved for this stage; if k exceeds the worker count, the remainder queue in further waves, and Section~\ref{sec:fra-pipeline} details how this pool fits into the wider core split. A wall-clock timeout derived from a fitted wave-time model guards against a hung worker.
+
+The four solvers are monolithic, full-instance \gls{cvrp} heuristics that DRISPI treats as black boxes: AILS-II \citep{maximoAILSIIAdaptiveIterated2024}\footnote{\url{https://github.com/INFORMSJoC/2023.0106}}, an adaptive iterated local search with an elite-solution pool for large instances, run as a Java subprocess; FILO \citep{accorsiFastScalableHeuristic2021}\footnote{\url{https://github.com/acco93/filo}}, a ruin-and-recreate local search built on the COBRA granular-neighborhood library, run as a compiled C++ subprocess; FILO2 \citep{accorsiRoutingOneMillion2024}\footnote{\url{https://github.com/acco93/filo2}}, an evolution of FILO for instances up to one million customers, also a C++ subprocess; and PyVRP \citep{woudaPyVRPHighPerformanceVRP2024}\footnote{\url{https://pyvrp.org} (\texttt{pip install pyvrp}).}, a Python package implementing hybrid genetic search \citep{vidalHybridGeneticSearchCVRP2022} that DRISPI calls in-process rather than as a subprocess. These four are not an arbitrary shortlist: \citet{queirogaXLInstancesCapacitated2026}, who introduce the XL instance set this thesis targets (Chapter~\ref{chapter:problem}), benchmark them against several other state-of-the-art heuristics and report that AILS-II and FILO2 dominate the best-known solutions on the XL range itself, while HGS-CVRP remains the strongest performer on the smaller, medium-scale instances that a typical DRISPI subcluster is closer in size to; the solver lever spans exactly this size spectrum.
+
+The routes returned by the k solved subclusters are concatenated into one combined solution for the full instance; because the subclusters partition the customers, no route returned at this stage spans two subclusters, and the concatenation needs no reconciliation. Each route is tagged with the subcluster of its customers, information that BG-AILS (Section~\ref{sec:fra-bg-ails}) reuses once its perturbations start moving customers across subcluster boundaries. This combined, subcluster-tagged solution is the input BG-AILS perturbs and re-optimizes next.
 
 \section{Boundary-Guided Adaptive Iterated Local Search}\label{sec:fra-bg-ails}
 Explain the logic of BG AILS. Show the important parameters and some nice plots to illustrate the approach.
@@ -37,12 +86,45 @@ And I want one plot that shows the difference between BG-AILS and AILS. (Highlig
 Since this is one of my novelties, it can be a longer section.
 
 \section{Set Partitioning}\label{sec:fra-sp}
-Explain SP and the SC fallback. Give the formal problem statement of SP and its LP Relaxation. Do the same for SC, but maybe in the appendix.
+% NOTE(citations-added-this-pass, not yet verified by the author): the following
+% keys are new to bibliography/literature.bib as of this draft and should be
+% checked for relevance and correctness before the next build:
+% rochatProbabilisticDiversificationIntensification1995, balinskiIntegerProgramDelivery1964,
+% garfinkelSetPartitioningProblemSetCovering1969, jaccardDistributionFloreAlpine1901.
 
-Explain the role of SP and min coverage. 
+Periodically, DRISPI steps back from the current incumbent and recombines every route accumulated so far into one new candidate solution, using set covering or set partitioning (SC/SP) as the recombination model. Doing so only pays off if a shared memory of routes exists for it to recombine, so this section first describes that memory, the route pool, before turning to the SP and SC models themselves and the hyperparameter that decides between them.
+
+The route pool stores one entry per distinct customer set $C_r \subseteq C$, where $C$ is the customer set of the instance (Chapter~\ref{chapter:problem}), keyed by the frozen customer set rather than by the ordered sequence of customers a route visits them in: two routes serving the same customers in a different order, or at a different cost, are the same column, and the cheaper of the two overwrites the other. This column-oriented memory, populated online during the search and periodically recombined through a partitioning model, follows the adaptive-memory principle of \citet{rochatProbabilisticDiversificationIntensification1995}, who introduce the route pool and its set-partitioning recombination for vehicle routing.
+
+Two pathways feed the pool every iteration, both through the same contribute-before-adopt rule: a candidate solution is added to the pool before the pipeline decides whether to adopt it as the new incumbent, so a losing candidate still leaves its routes behind for later reuse. The DRI loop feeds the pool twice per iteration, once from its decompose-route stage (Section~\ref{sec:fra-routing}) and once from its improve stage, BG-AILS (Section~\ref{sec:fra-bg-ails}). The SC/SP step covered in this section feeds the pool only indirectly: solving SC or SP selects among the customer sets already in the pool and creates no new ones, so its own output adds nothing; the standard-AILS pass that polishes its result (Section~\ref{sec:fra-improve}) is what can move customers between routes and thereby contribute genuinely new columns. Every contributed route carries a tag recording the full HAOS selection that produced it, that is, k, the demand weight, the paradigm, the method, and the solver, with a separate flag marking routes from the post-SC/SP polish; the tag survives even once HAOS has moved on to a different selection, which is what later lets reward attribution and pool inspection trace a route back to its origin. Whenever a candidate is adopted as the new incumbent, its routes, already in the pool by the rule above, are marked elite; elite routes are exempt from eviction, so the pool never loses the one partition it is guaranteed to already have, namely the incumbent's own.
+
+Every SC/SP solve also updates two running scores on each pool entry. The quality score is the continuous weight the LP relaxation of that solve (below) assigns to the entry's route, appended to a window of the three most recent values; an entry never touched by a solve carries no quality score yet. The diversity score is the mean Jaccard distance \citep{jaccardDistributionFloreAlpine1901} between a route's customer set and every other pool entry's customer set,
+\begin{equation}
+\bar{J}(r) = \frac{1}{|R| - 1} \sum_{r' \in R \setminus \{r\}} \frac{|C_r \triangle C_{r'}|}{|C_r \cup C_{r'}|},
+\label{eq:route-diversity}
+\end{equation}
+where $R$ is the pool at the time of the update, recomputed for every entry whenever any solve happens and likewise appended to a three-value window. Both scores are read as the mean of their window, so a single unusually high or low value does not dominate a route's standing.
+
+Eviction ranks the non-elite entries on both scores and combines the ranks into one fitness value. Among the entries that have been scored at least once, ascending order by mean quality score gives rank one to the weakest route and the highest rank to the strongest; independently, descending order by mean diversity score gives rank one to the most singular route and the highest rank to the most redundant. Writing $\rho_q(r)$ and $\rho_d(r)$ for these two ranks, fitness is $\Phi(r) = \rho_q(r) + w_d \cdot \rho_d(r)$, with the diversity weight $w_d$ (0.5 by default) controlling how much redundancy counts against a route relative to raw quality; the entries with the highest $\Phi(r)$ are evicted first. Because both terms grow toward the same end of their respective orderings, a route that the LP relies on heavily but that is also nearly identical to several other pool entries can rank as a stronger eviction candidate than a weak but singular one, since redundancy drives the diversity term up regardless of quality. Eviction only triggers once the pool exceeds its maximum size (10,000 columns by default) and only removes the overflow amount; entries never yet scored are taken only if the overflow cannot be covered by scored, non-elite entries alone, and elite entries are never taken at all.
+
+The recombination model itself treats the pool as a column set. Let $R$ be the set of routes currently in the pool, $c_r$ the cost of route $r \in R$, that is, the Euclidean depot-customers-depot round trip over the travel costs of Chapter~\ref{chapter:problem}, and $x_r \in \{0, 1\}$ a decision variable selecting route $r$. Set partitioning, in the formulation \citet{balinskiIntegerProgramDelivery1964} introduce for exactly this delivery-routing setting, reads
+\begin{align}
+\min \quad & \sum_{r \in R} c_r x_r \label{eq:sp-obj}\\
+\text{s.t.} \quad & \sum_{r \in R:\, i \in C_r} x_r = 1, && \forall i \in C \label{eq:sp-partition}\\
+& x_r \in \{0, 1\}, && \forall r \in R. \label{eq:sp-binary}
+\end{align}
+Solving Equations~\ref{eq:sp-obj}--\ref{eq:sp-binary} recombines route fragments that were never jointly considered, since they may have entered the pool from different subclusters, different HAOS selections, or different iterations, into one coherent solution that still covers every customer exactly once. This is the sense in which SP looks across the boundaries any single DRI iteration's decomposition imposes, something no individual subcluster solve or BG-AILS perturbation can do on its own.
+
+DRISPI builds this model once in Gurobi\footnote{\url{https://www.gurobi.com}} and solves it twice. It first relaxes Equation~\ref{eq:sp-binary} to the continuous $x_r \in [0, 1]$ and solves the resulting linear program; the fractional weights this LP relaxation returns are exactly the quality scores fed back into the route pool above, so every SC/SP solve doubles as a scoring pass over the pool regardless of what it ultimately selects. The variables are then switched to binary, warm-started from the LP solution, and re-optimized as a mixed-integer program under a wall-clock time limit and a relative optimality gap (720 seconds and 0.025\% by default), so the search can be cut off with a good, if not provably optimal, solution rather than run to completion.
+
+The equality constraint of Equation~\ref{eq:sp-partition} is only a meaningful choice when the pool offers more than one real alternative for most customers; a pool still dominated by a single incumbent partition would just reproduce it under SP. DRISPI therefore checks, before every SC/SP trigger, whether every customer in the instance is covered by at least a fixed minimum number of pool routes, five by default. Only when that holds does SP run; otherwise DRISPI falls back to set covering (SC), the inequality-constrained relaxation of the same formulation \citep{garfinkelSetPartitioningProblemSetCovering1969}, whose formal problem statement and LP relaxation are given in Appendix~\ref{app:set-covering}. SC only requires every customer to be covered at least once rather than exactly once, a condition the pool always satisfies, because the elite routes described above are never evicted and already form a feasible partition on their own. This is also why the fallback is safe and not merely convenient: SP is never blocked by infeasibility, only by a pool that has not yet accumulated enough alternatives, and SC exists to give the SC/SP step something well defined and always solvable to run on every scheduled trigger, warmup aside, no matter how far the pool has matured. The price of that permissiveness is that SC's selected routes can overlap on a customer; a savings-based heuristic then removes each duplicated customer from every selected route except the one where removing it would save the least cost, restoring a partition before the standard-AILS pass (Section~\ref{sec:fra-improve}) polishes the result.
 
 \section{Improvement}\label{sec:fra-improve}
-This section can be super short. It should just explain the purpose.
+Once SC/SP (Section~\ref{sec:fra-sp}) recombines the route pool into one partition, DRISPI runs one further pass over it using AILS-II as solver, seeded only with that partition as an initial solution. Other than in BG-AILS (Section~\ref{sec:fra-bg-ails}), this step focuses less on perturbation but rather refinement by local search. This standard improvement step also allows the solver to touch all routes instead of biasing moves towards certain neighborhoods. The pass runs under its own wall-clock budget (360 seconds by default) on the same core reservation as the SC/SP solve that precedes it; Section~\ref{sec:fra-pipeline} covers how exactly a parallel architecture of DRISPI looks.
+
+The refined routes feed back into the route pool exactly like every other stage's output (see Section~\ref{sec:fra-sp}): a route whose customer set matches one SC/SP already selected keeps that route's existing tag, while a route AILS-II creates by moving customers between routes is added as new, tagged as an improvement route rather than credited to a HAOS selection of its own.
+
+This is also where the deferred half of HAOS's reward system (Section~\ref{sec:fra-haos}) closes. The pass's outcome, a new best, an improvement over the previous iteration without beating the incumbent, or neither, is scored through the deferred branch of HAOS's reward function and credited not to the current iteration's own draw but to every distinct HAOS tag the routes SC/SP selected already carried, that is, to whichever earlier decompose-route or BG-AILS draws produced those specific routes, regardless of how many iterations ago that was. Improvement-route tags are excluded from this credit, since AILS-II created them without any HAOS draw of their own to reward.
 
 \section{Pipeline Orchestration}\label{sec:fra-pipeline}
 This section should lead all previous sections together. 

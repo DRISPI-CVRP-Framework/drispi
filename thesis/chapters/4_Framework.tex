@@ -113,8 +113,8 @@ Eviction ranks the non-elite entries on both scores and combines the ranks into 
 
 The recombination model itself treats the pool as a column set. Let $R$ be the set of routes currently in the pool, $c_r$ the cost of route $r \in R$, that is, the Euclidean depot-customers-depot round trip over the travel costs of Chapter~\ref{chapter:problem}, and $x_r \in \{0, 1\}$ a decision variable selecting route $r$. Set partitioning, in the formulation \citet{balinskiIntegerProgramDelivery1964} introduce for exactly this delivery-routing setting, reads
 \begin{align}
-\min \quad & \sum_{r \in R} c_r x_r \label{eq:sp-obj}\\
-\text{s.t.} \quad & \sum_{r \in R:\, i \in C_r} x_r = 1, && \forall i \in C \label{eq:sp-partition}\\
+\text{min} \quad & \sum_{\mathclap{r \in R}} c_r x_r \label{eq:sp-obj}\\
+\text{s.t.} \quad & \sum_{\mathclap{r \in R:\, i \in C_r}} x_r = 1, && \forall i \in C \label{eq:sp-partition}\\
 & x_r \in \{0, 1\}, && \forall r \in R. \label{eq:sp-binary}
 \end{align}
 Solving Equations~\ref{eq:sp-obj}--\ref{eq:sp-binary} recombines route fragments that were never jointly considered, since they may have entered the pool from different subclusters, different HAOS selections, or different iterations, into one coherent solution that still covers every customer exactly once. This is the sense in which SP looks across the boundaries any single DRI iteration's decomposition imposes, something no individual subcluster solve or BG-AILS perturbation can do on its own.

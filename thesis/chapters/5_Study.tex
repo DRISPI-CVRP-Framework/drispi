@@ -23,10 +23,57 @@ Show the hyperparameters used for the benchmark run. Explain the impact of the d
 \section{Results}\label{sec:stu-results}
 Short introduction.
 
-\subsection{Performance Comparison against State-of-the-Art Monolotithic Solvers}\label{sec:stu-comparison}
-Show the results of the 100 runs a 2h with 3 seeds each. Make a big table with the avg. and best results for each instance. Next to it take the values from the Queiroga et al. (2026) paper and show the difference.
+\subsection{Performance Comparison against State-of-the-Art Monolithic Solvers}\label{sec:stu-comparison}
+Table~\ref{tab:solver-summary} compares DRISPI against the eight monolithic solvers \citet{queirogaXLInstancesCapacitated2026} benchmark on the 100 XL instances: AILS-II, FILO, FILO2, KGLSXXL, HGS-CVRP, SISRs, LKH-3, and OR-Tools. For every solver we recompute the percentage gap to the current official \gls{bks}, the record listed by the CVRPLib \gls{bks} Challenge\footnote{\url{https://galgos.inf.puc-rio.br/cvrplib/index.php/en/bks_challenge/score/instances}, accessed September 7, 2026.}, for both the mean-of-$N$ and best-of-$N$ cost the original paper reports ($N=60$ for the published solvers, $N=3$ for DRISPI), then average that per-instance gap over all 100 instances and, separately, over the fifty instances with fewer than 3,400 customers and the fifty with more, the split \citet{queirogaXLInstancesCapacitated2026} use for their own results table. Every gap in Table~\ref{tab:solver-summary} uses the current \gls{bks} as the denominator, including for the published solvers. \citet{queirogaXLInstancesCapacitated2026} report their own average gaps against the \gls{bks} at the time of publication, effectively AILS-II's own result for most instances, so those published averages are not comparable to the ones reported here. Appendix~\ref{app:xl-results} lists the per-instance detail behind DRISPI's two columns: instance characteristics, best cost, and gap, alongside both \gls{bks} references (Table~\ref{tab:xl-summary}).
 
-This answers the primary research question.
+\begin{longtable}{@{}lrrrrrr@{}}
+\caption{Mean percentage gap to the current \gls{bks} across all 100 XL instances, split into the fifty instances with fewer than 3,400 customers and the fifty with more, following \citet{queirogaXLInstancesCapacitated2026}. Mean-of-$N$ averages the sixty runs per published solver (three seeds for DRISPI); best-of-$N$ is the minimum. Sorted by ascending mean-of-$N$ gap over all instances.}\label{tab:solver-summary}\\
+\toprule
+& \multicolumn{3}{c}{Mean-of-$N$ Gap (\%)} & \multicolumn{3}{c}{Best-of-$N$ Gap (\%)} \\
+\cmidrule(lr){2-4} \cmidrule(lr){5-7}
+Solver & All & $n<3{,}400$ & $n>3{,}400$ & All & $n<3{,}400$ & $n>3{,}400$ \\
+\midrule
+\endfirsthead
+\toprule
+& \multicolumn{3}{c}{Mean-of-$N$ Gap (\%)} & \multicolumn{3}{c}{Best-of-$N$ Gap (\%)} \\
+\cmidrule(lr){2-4} \cmidrule(lr){5-7}
+Solver & All & $n<3{,}400$ & $n>3{,}400$ & All & $n<3{,}400$ & $n>3{,}400$ \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\bottomrule
+\endlastfoot
+\input{tables/solver_summary_table}
+\end{longtable}
+
+Mean-of-$N$ is the primary comparison in Table~\ref{tab:solver-summary}, because DRISPI's mean-of-3 and each published solver's mean-of-60 both estimate the same population quantity, the expected cost of a single run, and are just averages over different sample sizes. Best-of-$N$ is not: it is the minimum of three draws for DRISPI against the minimum of sixty for every published solver, a sampling budget 20 times larger, which mechanically favors the columns with more draws. Sampling one of DRISPI's own three seed costs at a time gives an expected best-of-1 gap equal to the mean-of-3 gap, 0.309\%; the average of the smaller cost in each of the three retained seed pairs gives a best-of-2 gap of 0.286\%; the actual three-seed minimum gives the best-of-3 gap of 0.277\%, already reported in Table~\ref{tab:solver-summary}. The marginal gain is 0.022 pp from the first extra sample and 0.009 pp from the second. AILS-II, FILO2, FILO, SISRs, KGLSXXL, and HGS-CVRP gain 0.07, 0.09, 0.10, 0.16, 0.21, and 0.25 pp respectively between their own mean-of-60 and best-of-60 columns, larger reductions from many more repetitions. DRISPI's mean per-instance seed standard deviation is 0.035 pp, so additional seeds narrow its best column by less than they narrow a higher-variance baseline's. This produces the rank inversion in Table~\ref{tab:solver-summary}: DRISPI ranks third by mean-of-$N$ and fourth by best-of-$N$, without a change in the underlying solution quality; the difference is which column rewards low run-to-run variance and which rewards a wide sampling budget. Best-of-$N$ is reported to match the published solvers' own headline metric, not as the primary comparison.
+
+The means in Table~\ref{tab:solver-summary} do not establish whether an observed difference is real rather than an artifact of the 100 sampled instances. We tested DRISPI's mean-of-3 and best-of-3 columns against the corresponding column of five of the eight published solvers, AILS-II, FILO2, FILO, SISRs, and HGS-CVRP, with the paired Wilcoxon signed-rank test \citep{demsVarStatisticalComparisonsClassifiers}, treating the 100 instances as matched pairs, and controlled the family-wise error rate across the resulting ten tests with the Holm step-down correction \citep{demsVarStatisticalComparisonsClassifiers}. KGLSXXL, LKH-3, and OR-Tools are omitted: their gaps in Table~\ref{tab:solver-summary} are large enough that the paired comparison would not be informative. DRISPI is significantly worse than AILS-II on both metrics (best-of-$N$: +0.188 pp, DRISPI ahead on one of 100 instances, Holm-corrected $p=5.5\times10^{-17}$; mean-of-$N$: +0.150 pp, DRISPI ahead on seven of 100, $p=2.5\times10^{-16}$) and significantly better than SISRs on both (best-of-$N$: $-0.148$ pp, $p=1.1\times10^{-10}$; mean-of-$N$: $-0.274$ pp, $p=2.4\times10^{-16}$). DRISPI is significantly better than HGS-CVRP on both metrics as well, by a wider margin (best-of-$N$: $-0.924$ pp, DRISPI ahead on 96 of 100 instances, $p=6.4\times10^{-17}$; mean-of-$N$: $-1.139$ pp, DRISPI ahead on all 100 instances, $p=3.9\times10^{-17}$). Against FILO, neither metric reaches significance (best-of-$N$: +0.040 pp, $p=0.51$; mean-of-$N$: $-0.025$ pp, $p=0.34$): the two are indistinguishable at this sample size. Against FILO2, the two metrics disagree: DRISPI is significantly worse on best-of-$N$ (+0.074 pp, $p=0.0033$) but not on mean-of-$N$ (+0.015 pp, $p=0.51$), the primary comparison. The 0.015 pp mean-of-$N$ difference against FILO2 does not survive correction for multiple testing and is not a demonstrated gap.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.8\textwidth, height=0.55\textwidth,
+    xlabel={Mean-of-$N$ gap to BKS (\%)},
+    ylabel={Fraction of instances},
+    xmin=0, xmax=1,
+    ymin=0, ymax=1,
+    legend pos=south east,
+    legend cell align=left,
+    grid=major,
+    grid style={dotted, gray!50},
+]
+\input{figures/gap_ecdf_data.tex}
+\end{axis}
+\end{tikzpicture}
+\caption{Empirical cumulative distribution of the mean-of-$N$ gap to the current BKS, for the five solvers with a mean-of-$N$ gap below one percent in Table~\ref{tab:solver-summary}.}\label{fig:gap-ecdf}
+\end{figure}
+
+Figure~\ref{fig:gap-ecdf} shows why the Table~\ref{tab:solver-summary} means understate DRISPI's typical result and its tail at once: DRISPI's mean-of-3 gap has a mean of 0.309\% against a median of 0.255\% (interquartile range 0.172\%--0.380\%, ninetieth percentile 0.527\%, maximum 1.683\%), a right-skewed distribution in which most instances sit below the mean and a short tail sits well above it. DRISPI's curve tracks above FILO2's up to a gap of about 0.3\% (61\% of instances at or below that gap, against 55\% for FILO2) and falls below it from 0.4\% (79\% against 86\%), the crossover the non-significant paired mean-of-$N$ test against FILO2 allows: DRISPI wins on the tighter half of the distribution and loses on the wider half. Against FILO, DRISPI's curve stays at or above FILO's over the range shown, consistent with the near-even 53-of-100 split in the paired test.
+
+Two individual results do not appear in any aggregate. On XL-n4535-k1134, DRISPI's best-of-3 cost of 1,203,553 is below the initial \gls{bks} of 1,203,566 \citet{queirogaXLInstancesCapacitated2026} reported at publication. On XL-n1094-k157, DRISPI's best-of-3 cost matches both the initial and the current \gls{bks} exactly, at 112,431. Across all 100 instances, DRISPI's best-of-3 cost matches or beats AILS-II's mean-of-60 on 12 instances (Appendix~\ref{app:xl-results}, Table~\ref{tab:xl-summary}).
 
 \subsection{Performance by Instance Characteristics}\label{sec:stu-characteristics}
 Show how DRISPI performs by instance characteristics. This should be a simple plot showing the performance by instance size, depot position, customer distribution, and demand distribution.
@@ -40,9 +87,3 @@ Are the results interpretable in general?
 
 \subsection{Convergence Behavior}\label{sec:stu-convergence}
 Show how the convergence behavior is like for DRISPI by wallclock time and iterations. Use this chapter to also investigate improvement sources (quantitatively and qualitatively).
-
-\subsection{Optional: Long-Run Study}\label{sec:stu-long}
-Another study to show the performance of DRISPI with more time budget. This should focus especially on instances with solutions close to the BKS.
-
-\subsection{Optional: Salability Study}\label{sec:stu-scalability}
-Another study to show the diminishing returns of the scalability through parallelization. Use the same approach as in the scalability chapter of the literature.

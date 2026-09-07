@@ -11,4 +11,36 @@ Section~\ref{sec:fra-sp} introduces set covering (SC) as the fallback DRISPI run
 \end{align}
 As with SP, DRISPI solves the LP relaxation of Equation~\ref{eq:sc-binary}, $x_r \in [0, 1]$, first; the resulting fractional weights update the pool's quality scores in the same way regardless of whether the solve ends up running SC or SP, and the binary re-solve is warm-started from that relaxation.
 \newpage
-\section{Appendix Two}\label{section:Appendix Two}
+\section{XL Instance Detailed Results}\label{app:xl-results}
+Table~\ref{tab:xl-summary} reports the per-instance detail underlying the Section~\ref{sec:stu-comparison} comparison: instance characteristics, DRISPI's best cost and gap to the current \gls{bks} for all 100 XL instances, alongside the initial-\gls{bks} and current-\gls{bks} reference costs.
+
+% TODO(style): deviates from the "no shrinking below body size" rule in
+% STYLE.md \S8; kept in portrait (rather than the rotating/sidewaystable
+% default for wide tables) at the user's request, which requires scriptsize
+% to fit twelve columns inside \textwidth.
+\begin{scriptsize}
+\setkomafont{caption}{\normalsize}
+\setkomafont{captionlabel}{\normalsize}
+\setlength{\tabcolsep}{3pt}
+\begin{longtable}{@{}rlcllrrrrrrr@{}}
+\caption{Detailed results for DRISPI on the 100 XL instances.}\label{tab:xl-summary}\\
+\toprule
+& & & & & & & \multicolumn{2}{c}{DRISPI} & \multicolumn{2}{c}{Initial BKS} & \multicolumn{1}{c}{BKS} \\
+\cmidrule(lr){8-9} \cmidrule(lr){10-11} \cmidrule(lr){12-12}
+\# & Name & Dep & Cust & Dem & $Q$ & $r$ & \multicolumn{1}{c}{Cost} & Gap (\%) & \multicolumn{1}{c}{Cost} & Gap (\%) & \multicolumn{1}{c}{Cost} \\
+\midrule
+\endfirsthead
+\multicolumn{12}{c}{\tablename\ \thetable{} -- continued from previous page}\\
+\toprule
+& & & & & & & \multicolumn{2}{c}{DRISPI} & \multicolumn{2}{c}{Initial BKS} & \multicolumn{1}{c}{BKS} \\
+\cmidrule(lr){8-9} \cmidrule(lr){10-11} \cmidrule(lr){12-12}
+\# & Name & Dep & Cust & Dem & $Q$ & $r$ & \multicolumn{1}{c}{Cost} & Gap (\%) & \multicolumn{1}{c}{Cost} & Gap (\%) & \multicolumn{1}{c}{Cost} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\bottomrule
+\endlastfoot
+\input{tables/xl_summary_table}
+\end{longtable}
+\end{scriptsize}

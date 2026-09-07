@@ -50,8 +50,12 @@ def format_metric(value: float | None) -> int | float | None:
 
 
 def fix_merged_numbers(text: str) -> str:
-    """Repair PDF extraction artifacts like '1,882,369.01,889,998'."""
-    return re.sub(r"\.(\d)(1,\d)", r".\1 \2", text)
+    """Repair PDF extraction artifacts like '1,882,369.01,889,998' or
+    '2,334,348.42,340,824', where pdftotext drops the space between a
+    one-decimal "avg" value and the next comma-grouped integer. Matches any
+    decimal point + single digit immediately followed by a comma-grouped
+    number (>=1 comma), not just ones starting with "1,"."""
+    return re.sub(r"\.(\d)(\d{1,3}(?:,\d{3})+)", r".\1 \2", text)
 
 
 def parse_number_tokens(rest: str) -> list[float]:

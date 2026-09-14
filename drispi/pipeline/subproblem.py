@@ -140,6 +140,7 @@ def solve_subclusters_parallel(
     dri_cpus: list[int] | None = None,
     wall_model_scale: float = 0.976,
     wall_model_wave_exponent: float = -0.180,
+    wall_timeout_s: float | None = None,
 ) -> tuple[list[list[Route]], int]:
     """
     Solve each cluster in parallel; return (routes per cluster, batch_rounds).
@@ -147,6 +148,8 @@ def solve_subclusters_parallel(
     Waves remain implicit in ``ProcessPoolExecutor``; ``batch_rounds`` is derived
     as ``ceil(k / n_workers)`` for instrumentation. The wall timeout is anchored
     to the corrected predicted DR wall of per-cluster budgets (submit order).
+    Pass ``wall_timeout_s`` to override that hang detector (ablation checkpoint
+    generation under heavy outer concurrency).
     """
     # Warm the parent matrix in-process for route_cost; CVRPInstance.__getstate__
     # strips it from worker pickles, so this never crosses a process boundary.
@@ -172,7 +175,11 @@ def solve_subclusters_parallel(
         scale=wall_model_scale,
         wave_exponent=wall_model_wave_exponent,
     )
-    wall_timeout = subcluster_wall_timeout(predicted_wall)
+    wall_timeout = (
+        float(wall_timeout_s)
+        if wall_timeout_s is not None
+        else subcluster_wall_timeout(predicted_wall)
+    )
 
     executor = ProcessPoolExecutor(
         max_workers=max_workers,

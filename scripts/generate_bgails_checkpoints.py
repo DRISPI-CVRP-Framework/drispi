@@ -2,7 +2,7 @@
 """Generate BG-AILS ablation checkpoints (HAOS/SC-SP off, pinned config).
 
 Waves: --wave 1 uses seeds 101-103, --wave 2 uses 104-106.
-Default --jobs=5 concurrent generators (each generator still uses 6 FILO2 workers).
+Default --jobs=3 concurrent generators (each generator still uses 6 FILO2 workers).
 """
 
 from __future__ import annotations
@@ -53,10 +53,20 @@ def main() -> None:
             pool.submit(_job, name, seed, args.workers, args.force): (name, seed)
             for name, seed in tasks
         }
+        remaining: list[tuple[str, int]] = []
         for fut in as_completed(futs):
             name, seed = futs[fut]
             try:
-                print(fut.result())
+                print(fut.result(), flush=True)
+            except Exception:
+                remaining.append((name, seed))
+                print(f"FAILED {name} seed={seed} (will retry once)")
+                traceback.print_exc()
+    if remaining:
+        print(f"retrying {len(remaining)} checkpoint(s) serially")
+        for name, seed in remaining:
+            try:
+                print(_job(name, seed, args.workers, args.force), flush=True)
             except Exception:
                 failed += 1
                 print(f"FAILED {name} seed={seed}")

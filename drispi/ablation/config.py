@@ -39,8 +39,11 @@ PERF_DIR = ROOT / "artifacts/bg_ails_ablation/performance"
 MEAS_DIR = ROOT / "artifacts/bg_ails_ablation/measurement"
 FIGURE_DATA_DIR = ROOT / "data/results/bg_ails_ablation"
 
-CHECKPOINT_JOBS = 5
+CHECKPOINT_JOBS = 3
 ABLATION_JOBS = 24
+# Hang detector floor for checkpoint FILO2 (production is predicted+120s, too
+# tight when several generators share the machine).
+CHECKPOINT_WALL_FLOOR_S = 480.0
 
 
 def pinned_config() -> dict[str, object]:

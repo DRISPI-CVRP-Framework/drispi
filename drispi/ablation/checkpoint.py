@@ -19,8 +19,8 @@ from drispi.clustering.vertex.agglomerative import cluster as agglomerative_clus
 from drispi.clustering.vertex.kmedoids import cluster as kmedoids_cluster
 from drispi.core.instance import CVRPInstance
 from drispi.haos.k_domain import k_domain, parse_n_kmin
-from drispi.improvement.bg_ails_budget import bg_ails_budget_seconds
-from drispi.pipeline.subproblem import solve_subclusters_parallel
+from drispi.improvement.bg_ails_budget import bg_ails_budget_seconds, predicted_dr_wall_seconds
+from drispi.pipeline.subproblem import solve_subclusters_parallel, subcluster_wall_timeout
 
 
 def instance_vrp_path(instance: CVRPInstance, *aliases: str) -> Path:
@@ -66,10 +66,11 @@ def git_commit() -> str:
                 ["git", "rev-parse", "HEAD"],
                 cwd=ac.ROOT,
                 text=True,
+                stderr=subprocess.DEVNULL,
             )
             .strip()
         )
-    except (subprocess.CalledProcessError, FileNotFoundError):
+    except (subprocess.CalledProcessError, FileNotFoundError, OSError):
         return "unknown"
 
 
@@ -116,6 +117,17 @@ def generate_checkpoint(
         margin=ac.BG_BUDGET_MARGIN,
     )
 
+    predicted_wall = predicted_dr_wall_seconds(
+        cluster_sizes,
+        n_workers=n_workers,
+        rate=ac.SUBCLUSTER_RATE,
+        sub_floor=ac.SUBCLUSTER_FLOOR_S,
+    )
+    wall_timeout = max(
+        subcluster_wall_timeout(predicted_wall),
+        ac.CHECKPOINT_WALL_FLOOR_S,
+    )
+
     cluster_routes, _n_rounds = solve_subclusters_parallel(
         instance,
         partition,
@@ -124,6 +136,7 @@ def generate_checkpoint(
         n_workers,
         int(seed),
         floor_s=ac.SUBCLUSTER_FLOOR_S,
+        wall_timeout_s=wall_timeout,
     )
     combined_seqs = [list(r) for cluster in cluster_routes for r in cluster]
     cost = float(sum(instance.route_cost(s) for s in combined_seqs))

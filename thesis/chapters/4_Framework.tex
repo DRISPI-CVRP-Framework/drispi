@@ -291,14 +291,14 @@ Small-cluster cap $\sigma$ & 20 customers & Clusters below this size receive a b
 Small-cluster boost $\alpha$ & 0.5 & Maximum boost factor $1 + \alpha$, approached as cluster size $\to 0$. \\
 Chain-count mode & $k$ & Number of cross-reconnect chains per call ($k - 1$ also implemented). \\
 Pair selection & greedy & Deterministic arg-max vs.\ stochastic roulette-wheel route-pair draw. \\
-Initial omega $\omega_0$ (\texttt{-initialOmega}) & 0.8 & Overrides AILS-II's own starting diversification-control value. \\
+Initial omega $\omega_0$ (\texttt{-initialOmega}) & 10 & Overrides AILS-II's own starting perturbation degree; see below. \\
 Budget floor & 60\,s & Minimum AILS-II wall-clock limit regardless of the predicted model below. \\
 Budget margin & 1.0 & Multiplier applied to the predicted decompose-route wall time. \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:bg-ails-params} summarizes the parameters this stage introduces on top of stock AILS-II. Of these, only the initial-omega override reaches into AILS-II itself; every other AILS-II hyperparameter governing its own local search and diversification control (the parameters $d_{\min}$, $d_{\max}$, $\gamma$, and $\varphi$ of \citet{maximoHybridAdaptiveIterated2021}) is left at AILS-II's own defaults. The remaining parameters -- the boundary threshold, the small-cluster cap and boost, the chain-count mode, and the pair-selection rule -- are new and govern only the Python-side perturbation step described above.
+Table~\ref{tab:bg-ails-params} summarizes the parameters this stage introduces on top of stock AILS-II. Of these, only the initial-omega override reaches into AILS-II itself; every other AILS-II hyperparameter governing its own local search and diversification control (the parameters $d_{\min}$, $d_{\max}$, $\gamma$, and $\varphi$ of \citet{maximoHybridAdaptiveIterated2021}) is left at AILS-II's own defaults. Overriding $\omega$ to 10 against AILS-II's own starting value of roughly 30 lowers rather than raises the solver's internal perturbation degree: BG-AILS has already displaced customers across subcluster boundaries with its own cross-reconnect chain before AILS-II starts, so the pass that follows is asked to intensify around that disruption rather than to add more of its own. The remaining parameters -- the boundary threshold, the small-cluster cap and boost, the chain-count mode, and the pair-selection rule -- are new and govern only the Python-side perturbation step described above.
 
 The key difference between BG-AILS and a plain AILS-II improvement pass is therefore not the solver itself but this focus on boundary regions, imposed both by the perturbation step and by the short wall-clock budget BG-AILS is given. That budget follows neither the fixed per-customer rate used for subcluster solving (Section~\ref{sec:fra-routing}) nor a plain function of instance size, but a fitted model of the surrounding decompose-route stage's own wall-clock time,
 \begin{align}

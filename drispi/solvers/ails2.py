@@ -116,12 +116,14 @@ class Ails2Solver(_SubprocessSolver):
         *,
         initial_omega: float | None = None,
         seed: int = 42,
+        touch_dump_path: Path | None = None,
     ) -> list[Route]:
         """
         Improve from an existing solution file (``-initialSolution``).
 
         When ``initial_omega`` is set, passes ``-initialOmega`` (BG-AILS); otherwise
-        post-SP/SC style improvement only.
+        post-SP/SC style improvement only. When ``touch_dump_path`` is set, copies
+        the instrumented sidecar ``<outpath>.touch.tsv`` after the process exits.
         """
         with TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
@@ -137,4 +139,13 @@ class Ails2Solver(_SubprocessSolver):
                 initial_omega=initial_omega,
             )
             self._run_subprocess(cmd, time_limit)
+            if touch_dump_path is not None:
+                sidecar = Path(str(sol_path) + ".touch.tsv")
+                if sidecar.is_file():
+                    touch_dump_path.parent.mkdir(parents=True, exist_ok=True)
+                    touch_dump_path.write_bytes(sidecar.read_bytes())
+                else:
+                    raise FileNotFoundError(
+                        f"expected touch dump {sidecar} (instrumented jar required)"
+                    )
             return self._solution_to_pool(sol_path, instance)

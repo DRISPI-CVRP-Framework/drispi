@@ -54,14 +54,15 @@ def test_cross_reconnect_preserves_combined_multiset() -> None:
     rng = np.random.default_rng(0)
     a = [1, 2, 3, 4]
     b = [10, 20, 30, 40]
-    na, nb = bg_ails._cross_reconnect(a, b, rng)
+    na, nb, _a, _b = bg_ails._cross_reconnect(a, b, rng)
     assert sorted(na + nb) == sorted(a + b)
 
 
 def test_cross_reconnect_short_routes_unchanged() -> None:
     rng = np.random.default_rng(0)
-    na, nb = bg_ails._cross_reconnect([1], [2, 3], rng)
+    na, nb, a, b = bg_ails._cross_reconnect([1], [2, 3], rng)
     assert na == [1] and nb == [2, 3]
+    assert a == 0 and b == 0
 
 
 def test_pick_route_pair_by_affinity_distinct_when_two_routes() -> None:
@@ -176,7 +177,7 @@ def test_perturb_routes_preserves_all_customers() -> None:
     ]
     ranks = np.ones(n, dtype=np.float64)
     rng = np.random.default_rng(1)
-    out, _perturbed = bg_ails.perturb_routes(
+    out, _perturbed, _trace = bg_ails.perturb_routes(
         routes,
         inst,
         ranks,

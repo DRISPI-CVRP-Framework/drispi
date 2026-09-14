@@ -117,7 +117,7 @@ def test_run_bg_ails_preserves_customer_multiset(monkeypatch: pytest.MonkeyPatch
     partition = [[2, 3], [4, 5]]
 
     def _pert_identity(*_a, **_k):
-        return routes, []
+        return routes, [], []
 
     monkeypatch.setattr("drispi.improvement.bg_ails.perturb_routes", _pert_identity)
     mock_solver = MagicMock(spec=Ails2Solver)

@@ -69,7 +69,7 @@ class DRISPIConfig:
     bg_ails_budget_margin: float = 1.0
     bg_ails_wall_model_scale: float = 0.976
     bg_ails_wall_model_wave_exponent: float = -0.180
-    bg_ails_initial_omega: float = 0.8
+    bg_ails_initial_omega: float = 10.0
     bg_ails_boundary_threshold: float = 0.5
     bg_ails_small_cluster_cap: int = 20
     bg_ails_small_cluster_alpha: float = 0.5

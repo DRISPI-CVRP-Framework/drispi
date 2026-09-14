@@ -580,7 +580,7 @@ FUNCTION {format.editors}
 FUNCTION {format.doi}
 { doi empty$
     { "" }
-    { "doi: \href{https://doi.org/" doi * "}{" * doi * "}" * }
+    { "doi: \href{https://doi.org/" doi * "}{\detokenize{" * doi * "}}" * }
   if$
 }
 FUNCTION {format.note}

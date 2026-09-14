@@ -5,7 +5,7 @@ As introduced in Chapter~\ref{chapter:introduction}, this work addresses the
 computational complexity, and define the scope of the computational study.
 
 The \gls{cvrp} is defined on a complete undirected graph $G = (V, E)$, where 
-$V = \{1\} \cup C$ is the set of locations. Node $0$ represents the depot, and 
+$V = \{0\} \cup C$ is the set of locations. Node $0$ represents the depot, and 
 $C = \{1, \ldots, n\}$ is the set of customers to be served, so that $n = |C|$. Each edge 
 $\{i, j\} \in E$ carries a non-negative travel cost $d_{ij} \geq 0$, and each 
 customer $i \in C$ has an associated demand $q_i > 0$. A homogeneous fleet of 
@@ -19,7 +19,7 @@ consequence of its generalization of the Traveling Salesman Problem. In
 practical terms, the number of feasible solutions grows factorially with $n$, 
 effectively rendering exact methods intractable beyond a few hundred customers. While 
 branch-cut-and-price algorithms can solve small and medium instances to proven 
-optimality~\citep{baldacci2008exact}, they are not viable at 
+optimality~\citep{} \todo{CITE: branch-cut-and-price exact method}, they are not viable at 
 the scales considered here. This necessitates heuristic and metaheuristic 
 approaches, which trade optimality guarantees for high-quality solutions within 
 practical time budgets. Even within the heuristic paradigm, as 
@@ -35,11 +35,10 @@ heterogeneity, and average route length, making them a demanding and
 representative testing set for large-scale \gls{cvrp} solvers. The DRISPI framework, 
 proposed in Chapter~\ref{chapter:framework}, is designed specifically to 
 operate at this scale by decomposing the full instance into tractable 
-subproblems, which are then solved solved independently and parallelized using existing state-of-the-art 
+subproblems, which are then solved independently and parallelized using existing state-of-the-art 
 solvers.
 
-% TODO(style): bibliography/literature.bib does not yet contain entries for
-% lenstraComplexityVehicleRouting1981 or baldacci2008exact. Add them (with
-% verifiable DOI/URL) before the next build; citations will render as "?"
-% until then. (queirogaXLInstancesCapacitated2026 was added in the Routing
-% section pass and is now resolved.)
+% TODO(style): bibliography/literature.bib does not yet contain an entry for
+% the branch-cut-and-price exact method citation above; the \citep{} is left
+% empty with an inline \todo{CITE: ...} until a key is added. lenstra and
+% queirogaXLInstancesCapacitated2026 are both resolved as of this pass.

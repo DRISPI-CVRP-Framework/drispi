@@ -104,6 +104,83 @@ def test_pick_route_pair_greedy_takes_argmax_weight() -> None:
         assert i != j
 
 
+def test_pick_route_pair_greedy_skips_used_first_routes() -> None:
+    seqs = [[2, 3], [4, 5], [6, 7]]
+    partition = [[2, 3], [4, 5], [6, 7]]
+    rc = bg_ails._route_cluster_ids(seqs, partition)
+    customers = [2, 3, 4, 5, 6, 7]
+    cid = {c: i for i, c in enumerate(customers)}
+    d = np.ones((6, 6), dtype=np.float64)
+    np.fill_diagonal(d, 0.0)
+    aff = bg_ails.compute_route_boundary_affinities(seqs, rc, partition, d, cid)
+    w = np.array([0.1, 0.2, 10.0], dtype=np.float64)
+    rng = np.random.default_rng(0)
+    i, j = bg_ails._pick_route_pair_by_affinity(
+        seqs, rc, w, aff, rng, selection="greedy", used_first={2}
+    )
+    assert i == 1
+    assert i != j
+
+
+def test_greedy_chain_uses_k_distinct_first_routes() -> None:
+    inst = _square_instance()
+    partition = [[2, 3], [4, 5], [6, 7]]
+    n = len(inst.customers)
+    d = np.ones((n, n), dtype=np.float64) * 2.0
+    np.fill_diagonal(d, 0.0)
+    routes = [
+        Route(customers=[2, 3], cost=0.0),
+        Route(customers=[4, 5], cost=0.0),
+        Route(customers=[6, 7], cost=0.0),
+    ]
+    ranks = np.zeros(n, dtype=np.float64)
+    ranks[0] = 1.0  # customer 2 → route 0
+    ranks[2] = 0.5  # customer 4 → route 1
+    ranks[4] = 0.1  # customer 6 → route 2
+    _out, _idx, trace = bg_ails.perturb_routes(
+        routes,
+        inst,
+        ranks,
+        partition,
+        d,
+        np.random.default_rng(0),
+        n_chains=3,
+        pair_selection="greedy",
+        unique_first_routes=True,
+    )
+    firsts = [step["i"] for step in trace]
+    assert firsts == [0, 1, 2]
+
+
+def test_greedy_replay_repeats_the_same_first_route() -> None:
+    inst = _square_instance()
+    partition = [[2, 3], [4, 5], [6, 7]]
+    n = len(inst.customers)
+    d = np.ones((n, n), dtype=np.float64) * 2.0
+    np.fill_diagonal(d, 0.0)
+    routes = [
+        Route(customers=[2, 3], cost=0.0),
+        Route(customers=[4, 5], cost=0.0),
+        Route(customers=[6, 7], cost=0.0),
+    ]
+    ranks = np.zeros(n, dtype=np.float64)
+    ranks[0] = 1.0
+    ranks[2] = 0.5
+    ranks[4] = 0.1
+    _out, _idx, trace = bg_ails.perturb_routes(
+        routes,
+        inst,
+        ranks,
+        partition,
+        d,
+        np.random.default_rng(0),
+        n_chains=3,
+        pair_selection="greedy",
+        unique_first_routes=False,
+    )
+    assert [step["i"] for step in trace] == [0, 0, 0]
+
+
 def test_pick_route_pair_stochastic_can_pick_non_max() -> None:
     seqs = [[2, 3], [4, 5]]
     partition = [[2, 3], [4, 5]]

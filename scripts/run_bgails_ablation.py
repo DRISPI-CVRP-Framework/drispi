@@ -30,10 +30,17 @@ def main() -> None:
     p.add_argument("--wave", type=int, choices=(1, 2), default=1)
     p.add_argument("--instance", action="append", dest="instances")
     p.add_argument("--seed", type=int, action="append", dest="seeds")
-    p.add_argument("--arm", action="append", dest="arms", choices=("A", "B", "C"))
+    p.add_argument("--arm", action="append", dest="arms", choices=("A", "B", "C", "D", "E"))
     p.add_argument("--time-limit", type=float, default=None, help="override T (smoke tests)")
     p.add_argument("--jobs", type=int, default=ac.ABLATION_JOBS)
-    p.add_argument("--force", action="store_true")
+    p.add_argument(
+        "--force",
+        action="store_true",
+        help=(
+            "rerun selected --arm JVM(s). --arm D/E may refresh their inits; "
+            "A/B/C inits are never overwritten. E also rewrites the mask file"
+        ),
+    )
     args = p.parse_args()
     instances = args.instances or list_xl_instances()
     seeds = args.seeds or list(ac.WAVE_SEEDS[args.wave])

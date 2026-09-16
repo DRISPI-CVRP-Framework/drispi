@@ -90,6 +90,39 @@ def test_reversed_route_is_not_a_modification() -> None:
     assert modified_customers([[2, 3, 4]], [[4, 3, 2]]) == set()
 
 
+def test_pct_vs_checkpoint_ignores_own_start() -> None:
+    from drispi.ablation.stats import instance_means, pct_vs_checkpoint
+
+    row = {
+        "instance": "XL-n1-k1",
+        "arms": {
+            "A": {"cost_in": 100.0, "cost_out": 90.0, "pct_improvement": 10.0},
+            "B": {"cost_in": 150.0, "cost_out": 90.0, "pct_improvement": 40.0},
+            "C": {"cost_in": 110.0, "cost_out": 89.0, "pct_improvement": 19.09},
+        },
+    }
+    assert pct_vs_checkpoint(row, "A") == pytest.approx(10.0)
+    assert pct_vs_checkpoint(row, "B") == pytest.approx(10.0)
+    assert pct_vs_checkpoint(row, "C") == pytest.approx(11.0)
+    means = instance_means([row])
+    assert means["XL-n1-k1"]["B"] == pytest.approx(10.0)
+    assert means["XL-n1-k1"]["C"] == pytest.approx(11.0)
+
+
+def test_write_boundary_mask_filters_tau(tmp_path: Path) -> None:
+    from drispi.ablation.arms import write_boundary_mask
+
+    path = write_boundary_mask(
+        tmp_path,
+        customers=[2, 3, 4, 5],
+        ranks_hat=[0.1, 0.6, 0.5, 0.9],
+        tau=0.5,
+    )
+    body = path.read_text(encoding="utf-8")
+    active = [ln for ln in body.splitlines() if ln.isdigit()]
+    assert active == ["3", "5"]
+
+
 def test_holm_monotonic_and_family_of_two() -> None:
     adj = holm([0.01, 0.04])
     assert adj[0] <= adj[1]

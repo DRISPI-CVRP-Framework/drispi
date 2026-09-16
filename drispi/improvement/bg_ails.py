@@ -203,6 +203,7 @@ def _pick_route_pair_by_affinity(
     rng: np.random.Generator,
     *,
     selection: PairSelection = "stochastic",
+    used_first: set[int] | frozenset[int] | None = None,
 ) -> tuple[int, int]:
     """
     Select routes ``(i, j)`` near the same boundary: pick ``i`` by boundary weight,
@@ -210,12 +211,21 @@ def _pick_route_pair_by_affinity(
     ``k`` weighted by how close ``j`` is to ``i``'s cluster.
 
     ``selection="stochastic"`` samples at each step; ``"greedy"`` takes argmax.
+    ``used_first`` is excluded from the first-route draw so a chain of ``k``
+    steps takes the next unused high-rank route rather than repeating the same
+    argmax. Partners may repeat; previous first-routes may appear as partners.
     """
     n_r = len(seqs)
     if n_r < 2:
         return 0, 0
 
     w = overall_weights.astype(np.float64) + 1e-9
+    if used_first:
+        for u in used_first:
+            if 0 <= u < n_r:
+                w[u] = 0.0
+        if float(np.sum(w)) < 1e-15:
+            w = overall_weights.astype(np.float64) + 1e-9
     i = _pick_from_weights(w, rng, selection=selection)
     c_i = route_cluster_ids[i]
 
@@ -307,6 +317,7 @@ def perturb_routes(
     pair_selection: PairSelection = "stochastic",
     n_chains_mode: NChainsMode = "k_minus_1",
     pair_picker: Literal["affinity", "uniform"] = "affinity",
+    unique_first_routes: bool = True,
 ) -> tuple[list[Route], list[int], list[dict[str, int]]]:
     """
     Multi-route cross-reconnect perturbation.
@@ -318,7 +329,11 @@ def perturb_routes(
     If ``n_chains`` is ``None``, ``n_chains_mode="k_minus_1"`` uses
     ``max(1, len(partition) - 1)`` and ``"k"`` uses ``len(partition)``.
     ``pair_selection`` controls stochastic vs greedy route-pair picking when
-    ``pair_picker="affinity"``. ``pair_picker="uniform"`` draws both routes
+    ``pair_picker="affinity"``. With ``unique_first_routes=True`` (the default),
+    first-route draws exclude routes already chosen as ``r_a`` in this call, so
+    ``n_chains`` distinct highest-rank routes each get one affinity partner.
+    ``unique_first_routes=False`` is the ablation arm-C operator: greedy may
+    replay the same pair every step. ``pair_picker="uniform"`` draws both routes
     uniformly at random and ignores ranks, affinities, and ``pair_selection``.
 
     Returns ``(routes, perturbed_route_indices, chain_trace)`` where each trace
@@ -352,6 +367,7 @@ def perturb_routes(
         )
 
     perturbed_indices: set[int] = set()
+    used_first: set[int] = set()
     trace: list[dict[str, int]] = []
     for _ in range(n_chain_iter):
         if pair_picker == "uniform":
@@ -368,7 +384,10 @@ def perturb_routes(
                 affinity,
                 rng,
                 selection=pair_selection,
+                used_first=used_first if unique_first_routes else None,
             )
+            if unique_first_routes:
+                used_first.add(i)
         perturbed_indices.add(i)
         perturbed_indices.add(j)
         seqs[i], seqs[j], cut_a, cut_b = _cross_reconnect(seqs[i], seqs[j], rng)
@@ -439,6 +458,7 @@ def run_bg_ails_perturb(
     seed: int,
     pair_selection: PairSelection = "stochastic",
     n_chains_mode: NChainsMode = "k_minus_1",
+    unique_first_routes: bool = True,
 ) -> tuple[list[Route], list[int]]:
     """
     Boundary ranks + cross-reconnect perturbation only (no AILS-II).
@@ -467,6 +487,7 @@ def run_bg_ails_perturb(
         rng,
         pair_selection=pair_selection,
         n_chains_mode=n_chains_mode,
+        unique_first_routes=unique_first_routes,
     )
     return pert, idx
 
@@ -510,8 +531,9 @@ def run_guided_perturb_traced(
     seed: int,
     pair_selection: PairSelection = "greedy",
     n_chains_mode: NChainsMode = "k",
+    unique_first_routes: bool = True,
 ) -> tuple[list[Route], list[int], list[dict[str, int]], np.ndarray]:
-    """Arm-C perturbation plus pre-threshold ranks ``b̂_i`` for figures."""
+    """Guided perturbation plus pre-threshold ranks ``b̂_i`` for figures."""
     if len(partition) <= 1:
         n = len(instance.customers)
         return solution, [], [], np.ones(n, dtype=np.float64)
@@ -535,6 +557,7 @@ def run_guided_perturb_traced(
         pair_selection=pair_selection,
         n_chains_mode=n_chains_mode,
         pair_picker="affinity",
+        unique_first_routes=unique_first_routes,
     )
     return pert, idx, trace, ranks
 
@@ -588,6 +611,7 @@ def run_bg_ails(
     seed: int,
     pair_selection: PairSelection = "stochastic",
     n_chains_mode: NChainsMode = "k_minus_1",
+    unique_first_routes: bool = True,
 ) -> tuple[list[Route], list[int], list[Route]]:
     """
     Full BG-AILS pipeline: ranks → weighted perturbation → AILS-II with injected
@@ -614,6 +638,7 @@ def run_bg_ails(
         seed=seed,
         pair_selection=pair_selection,
         n_chains_mode=n_chains_mode,
+        unique_first_routes=unique_first_routes,
     )
     improved = run_bg_ails_improve(
         instance,
@@ -669,6 +694,7 @@ class BgAilsImprovement(BaseImprovement):
         seed: int,
         pair_selection: PairSelection = "stochastic",
         n_chains_mode: NChainsMode = "k_minus_1",
+        unique_first_routes: bool = True,
     ) -> None:
         self._d = np.asarray(dissimilarity_matrix, dtype=np.float64)
         self._partition = partition
@@ -680,6 +706,7 @@ class BgAilsImprovement(BaseImprovement):
         self._seed = seed
         self._pair_selection = pair_selection
         self._n_chains_mode = n_chains_mode
+        self._unique_first_routes = unique_first_routes
         self.last_perturbed_route_indices: list[int] = []
 
     def improve(self, solution: Solution, instance: CVRPInstance, time_limit: float) -> Solution:
@@ -697,6 +724,7 @@ class BgAilsImprovement(BaseImprovement):
             seed=self._seed,
             pair_selection=self._pair_selection,
             n_chains_mode=self._n_chains_mode,
+            unique_first_routes=self._unique_first_routes,
         )
         self.last_perturbed_route_indices = perturbed
         total = float(sum(r.cost for r in out_routes))

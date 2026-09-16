@@ -60,12 +60,14 @@ class Ails2Solver(_SubprocessSolver):
         *,
         initial_solution_path: Path | None = None,
         initial_omega: float | None = None,
+        boundary_mask_path: Path | None = None,
     ) -> list[str]:
         """
         Invoke AILS-II as::
 
             java <jvm_flags> -jar <jar> -file <vrp> -stoppingCriterion Time -limit <sec>
-                -rounded true [-initialSolution <path>] [-initialOmega <v>] -outpath <sol_path>
+                -rounded true [-initialSolution <path>] [-initialOmega <v>]
+                [-boundaryMask <path>] -outpath <sol_path>
 
         The ``seed`` argument is ignored (no seed flag in AILS-II yet). ``sol_path``
         is the direct output file path. JVM options precede ``-jar``.
@@ -89,6 +91,8 @@ class Ails2Solver(_SubprocessSolver):
             cmd.extend(["-initialSolution", str(initial_solution_path)])
         if initial_omega is not None:
             cmd.extend(["-initialOmega", str(float(initial_omega))])
+        if boundary_mask_path is not None:
+            cmd.extend(["-boundaryMask", str(boundary_mask_path)])
         cmd.extend(["-outpath", str(sol_path)])
         return cmd
 
@@ -117,12 +121,15 @@ class Ails2Solver(_SubprocessSolver):
         initial_omega: float | None = None,
         seed: int = 42,
         touch_dump_path: Path | None = None,
+        boundary_mask_path: Path | None = None,
     ) -> list[Route]:
         """
         Improve from an existing solution file (``-initialSolution``).
 
         When ``initial_omega`` is set, passes ``-initialOmega`` (BG-AILS); otherwise
-        post-SP/SC style improvement only. When ``touch_dump_path`` is set, copies
+        post-SP/SC style improvement only. When ``boundary_mask_path`` is set, passes
+        ``-boundaryMask`` so the first local-search pass only browses routes that
+        contain listed customers. When ``touch_dump_path`` is set, copies
         the instrumented sidecar ``<outpath>.touch.tsv`` after the process exits.
         """
         with TemporaryDirectory() as tmpdir:
@@ -137,6 +144,7 @@ class Ails2Solver(_SubprocessSolver):
                 seed,
                 initial_solution_path=initial_solution_path,
                 initial_omega=initial_omega,
+                boundary_mask_path=boundary_mask_path,
             )
             self._run_subprocess(cmd, time_limit)
             if touch_dump_path is not None:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Figure 3 — touch concentration by boundary-rank decile, arms A/B/C."""
+"""Figure 3 — touch concentration by boundary-rank decile, arms A/B/E."""
 
 from __future__ import annotations
 
@@ -16,6 +16,8 @@ from scripts.thesis_figstyle import OKABE_ITO, apply, fig_size  # noqa: E402
 
 DATA = ROOT / "data/results/bg_ails_ablation/figure3_concentration.json"
 OUT = ROOT / "thesis/figures/bgails_concentration.pdf"
+ARMS = ("A", "B", "E")
+COLORS = {"A": OKABE_ITO[5], "B": OKABE_ITO[1], "E": OKABE_ITO[6]}
 
 
 def main() -> None:
@@ -23,13 +25,12 @@ def main() -> None:
     data = json.loads(DATA.read_text(encoding="utf-8"))
     x = np.arange(1, 11)
     fig, ax = plt.subplots(figsize=fig_size(1.0, 200))
-    colors = {"A": OKABE_ITO[5], "B": OKABE_ITO[1], "C": OKABE_ITO[6]}
-    for arm in ("A", "B", "C"):
+    for arm in ARMS:
         mean = np.array(data["mean_share"][arm], dtype=np.float64)
         lo = np.array(data["ci_lo"][arm], dtype=np.float64)
         hi = np.array(data["ci_hi"][arm], dtype=np.float64)
-        ax.plot(x, mean, color=colors[arm], lw=1.6, label=arm)
-        ax.fill_between(x, lo, hi, color=colors[arm], alpha=0.18, linewidth=0)
+        ax.plot(x, mean, color=COLORS[arm], lw=1.6, label=arm)
+        ax.fill_between(x, lo, hi, color=COLORS[arm], alpha=0.18, linewidth=0)
     tau_x = data.get("tau_decile_position", 5.5)
     ax.axvline(tau_x, color="#333333", ls="--", lw=0.8)
     ax.set_xlabel(r"boundary-rank decile (pre-threshold $\hat b_i$)")

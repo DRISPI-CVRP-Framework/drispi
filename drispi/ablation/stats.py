@@ -18,17 +18,35 @@ def _collect_performance(root: Path | None = None) -> list[dict[str, Any]]:
     base = root or ac.PERF_DIR
     rows: list[dict[str, Any]] = []
     for path in sorted(base.glob("*/*/performance_summary.json")):
-        rows.append(json.loads(path.read_text(encoding="utf-8")))
+        row = json.loads(path.read_text(encoding="utf-8"))
+        if not str(row.get("instance", "")).startswith("XL-"):
+            continue
+        rows.append(row)
     return rows
 
 
+def checkpoint_cost(row: dict[str, Any]) -> float:
+    """Unperturbed concatenated cost. Arm A's ``cost_in`` is that solution."""
+    if "cost_input" in row:
+        return float(row["cost_input"])
+    return float(row["arms"]["A"]["cost_in"])
+
+
+def pct_vs_checkpoint(row: dict[str, Any], arm: str) -> float:
+    """100 · (checkpoint − cost_out) / checkpoint. Positive is a better tour."""
+    ck = checkpoint_cost(row)
+    if ck <= 0:
+        return float("nan")
+    return 100.0 * (ck - float(row["arms"][arm]["cost_out"])) / ck
+
+
 def instance_means(rows: list[dict[str, Any]]) -> dict[str, dict[str, float]]:
-    """Average percentage improvement over checkpoints, per instance and arm."""
+    """Average percentage improvement vs the checkpoint, per instance and arm."""
     buckets: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
     for row in rows:
         inst = row["instance"]
-        for arm, rec in row["arms"].items():
-            buckets[inst][arm].append(float(rec["pct_improvement"]))
+        for arm in row["arms"]:
+            buckets[inst][arm].append(pct_vs_checkpoint(row, arm))
     return {
         inst: {arm: float(np.mean(vals)) for arm, vals in arms.items()}
         for inst, arms in buckets.items()
@@ -123,6 +141,11 @@ def analyse_performance(root: Path | None = None) -> dict[str, Any]:
     t_b = [float(r["t_perturb_B_s"]) / float(r["T"]) for r in rows if r["T"] > 0]
     t_c = [float(r["t_perturb_C_s"]) / float(r["T"]) for r in rows if r["T"] > 0]
     t_m = [float(r["t_matrix_s"]) / float(r["T"]) for r in rows if r["T"] > 0]
+    t_d = [
+        float(r["t_perturb_D_s"]) / float(r["T"])
+        for r in rows
+        if r["T"] > 0 and r.get("t_perturb_D_s") is not None
+    ]
     r64 = [
         n
         for n in names
@@ -141,15 +164,83 @@ def analyse_performance(root: Path | None = None) -> dict[str, Any]:
             "C_minus_B": {"hodges_lehmann": hl_cb_r, "ci95": list(ci_cb_r)},
             "instances": r64,
         }
+        d_r64 = [n for n in r64 if "D" in means[n]]
+        if d_r64:
+            d_dc_r = np.array([means[n]["D"] - means[n]["C"] for n in d_r64])
+            hl_dc_r, ci_dc_r = hodges_lehmann(d_dc_r)
+            r64_out["D_minus_C"] = {"hodges_lehmann": hl_dc_r, "ci95": list(ci_dc_r)}
+    arm_level = {
+        arm: {
+            "mean": float(np.mean(vec)),
+            "median": float(np.median(vec)),
+        }
+        for arm, vec in (("A", a), ("B", b), ("C", c))
+        if len(vec)
+    }
+    d_names = [n for n in names if "D" in means[n]]
+    d_block: dict[str, Any] | None = None
+    if d_names:
+        d_vec = np.array([means[n]["D"] for n in d_names], dtype=np.float64)
+        c_for_d = np.array([means[n]["C"] for n in d_names], dtype=np.float64)
+        a_for_d = np.array([means[n]["A"] for n in d_names], dtype=np.float64)
+        b_for_d = np.array([means[n]["B"] for n in d_names], dtype=np.float64)
+        arm_level["D"] = {
+            "mean": float(np.mean(d_vec)),
+            "median": float(np.median(d_vec)),
+        }
+        d_block = {
+            "n_instances": len(d_names),
+            "note": "follow-up contrast; not in the C−A / C−B Holm family",
+            "D_minus_C": _pair_block(d_vec - c_for_d),
+            "D_minus_A": _pair_block(d_vec - a_for_d),
+            "D_minus_B": _pair_block(d_vec - b_for_d),
+        }
+    e_names = [n for n in names if "E" in means[n]]
+    e_block: dict[str, Any] | None = None
+    if e_names:
+        e_vec = np.array([means[n]["E"] for n in e_names], dtype=np.float64)
+        arm_level["E"] = {
+            "mean": float(np.mean(e_vec)),
+            "median": float(np.median(e_vec)),
+        }
+        e_block = {
+            "n_instances": len(e_names),
+            "note": (
+                "arm E = D unique-first kick + first-LS boundary mask; "
+                "not in the C−A / C−B Holm family"
+            ),
+            "E_minus_D": _pair_block(
+                e_vec - np.array([means[n]["D"] for n in e_names], dtype=np.float64)
+            )
+            if all("D" in means[n] for n in e_names)
+            else None,
+            "E_minus_C": _pair_block(
+                e_vec - np.array([means[n]["C"] for n in e_names], dtype=np.float64)
+            ),
+            "E_minus_A": _pair_block(
+                e_vec - np.array([means[n]["A"] for n in e_names], dtype=np.float64)
+            ),
+        }
+        if r64_out is not None:
+            e_r64 = [n for n in r64 if "E" in means[n]]
+            if e_r64 and all("D" in means[n] for n in e_r64):
+                d_ed_r = np.array([means[n]["E"] - means[n]["D"] for n in e_r64])
+                hl_ed_r, ci_ed_r = hodges_lehmann(d_ed_r)
+                r64_out["E_minus_D"] = {"hodges_lehmann": hl_ed_r, "ci95": list(ci_ed_r)}
     return {
         "n_instances": len(names),
         "n_cells": len(rows),
+        "response": "pct_improvement_vs_checkpoint",
+        "arm_instance_means": arm_level,
         "C_minus_A": block_ca,
         "C_minus_B": block_cb,
         "family_size": 2,
+        "D_followup": d_block,
+        "E_followup": e_block,
         "t_perturb_over_T_median": {
             "B": float(np.median(t_b)) if t_b else None,
             "C": float(np.median(t_c)) if t_c else None,
+            "D": float(np.median(t_d)) if t_d else None,
         },
         "t_matrix_over_T_median": float(np.median(t_m)) if t_m else None,
         "instances": names,

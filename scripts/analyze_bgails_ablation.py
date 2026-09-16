@@ -20,6 +20,23 @@ from drispi.ablation import config as ac  # noqa: E402
 from drispi.ablation.checkpoint import load_checkpoint  # noqa: E402
 from drispi.ablation.stats import analyse_performance, share_above_tau  # noqa: E402
 from drispi.core.instance import CVRPInstance  # noqa: E402
+from drispi.utils.io import read_sol  # noqa: E402
+
+FIGURE3_ARMS = ("A", "B", "E")
+
+
+def _local_artifact(path_str: str) -> Path:
+    """Rewrite Docker ``/app/artifacts/...`` paths onto this repo."""
+    raw = Path(path_str)
+    if raw.is_file():
+        return raw
+    text = path_str.replace("\\", "/")
+    marker = "/artifacts/"
+    if marker in text:
+        candidate = ac.ROOT / "artifacts" / text.split(marker, 1)[1]
+        if candidate.is_file():
+            return candidate
+    raise FileNotFoundError(path_str)
 
 
 def _bootstrap_ci(values: np.ndarray, rng: np.random.Generator) -> tuple[float, float]:
@@ -32,15 +49,17 @@ def _bootstrap_ci(values: np.ndarray, rng: np.random.Generator) -> tuple[float, 
 def write_figure3(meas_root: Path, dest: Path) -> dict:
     """Normalize within checkpoint, average checkpoints per instance, then instances."""
     inst_deciles: dict[str, dict[str, list[np.ndarray]]] = defaultdict(
-        lambda: {"A": [], "B": [], "C": []}
+        lambda: {arm: [] for arm in FIGURE3_ARMS}
     )
     inst_shares: dict[str, dict[str, list[float]]] = defaultdict(
-        lambda: {"A": [], "B": [], "C": []}
+        lambda: {arm: [] for arm in FIGURE3_ARMS}
     )
     inst_tau: dict[str, list[float]] = defaultdict(list)
     for summary_path in sorted(meas_root.glob("*/*/measurement_summary.json")):
         row = json.loads(summary_path.read_text(encoding="utf-8"))
         inst = row["instance"]
+        if not str(inst).startswith("XL-"):
+            continue
         pert = json.loads((summary_path.parent / "perturb.json").read_text(encoding="utf-8"))
         ranks = np.array(pert["ranks_hat"], dtype=np.float64)
         order = np.argsort(ranks)
@@ -48,8 +67,10 @@ def write_figure3(meas_root: Path, dest: Path) -> dict:
         if n < 10:
             continue
         inst_tau[inst].append(float(np.mean(ranks <= ac.PINNED_TAU) * 10.0))
-        for arm in ("A", "B", "C"):
+        for arm in FIGURE3_ARMS:
             arm_json = summary_path.parent / f"arm{arm}_measurement.json"
+            if not arm_json.is_file():
+                continue
             rec = json.loads(arm_json.read_text(encoding="utf-8"))
             touches = np.array(rec["eval"], dtype=np.float64)
             total = touches.sum()
@@ -62,12 +83,12 @@ def write_figure3(meas_root: Path, dest: Path) -> dict:
             for d in range(10):
                 share[d] = ranked_t[edges[d] : edges[d + 1]].sum() / total
             inst_deciles[inst][arm].append(share)
-    per_arm: dict[str, list[np.ndarray]] = {"A": [], "B": [], "C": []}
-    shares = {"A": [], "B": [], "C": []}
+    per_arm: dict[str, list[np.ndarray]] = {arm: [] for arm in FIGURE3_ARMS}
+    shares = {arm: [] for arm in FIGURE3_ARMS}
     tau_quantiles: list[float] = []
     for inst, arms in inst_deciles.items():
         tau_quantiles.append(float(np.mean(inst_tau[inst])))
-        for arm in ("A", "B", "C"):
+        for arm in FIGURE3_ARMS:
             if arms[arm]:
                 per_arm[arm].append(np.mean(np.vstack(arms[arm]), axis=0))
             if inst_shares[inst][arm]:
@@ -81,8 +102,9 @@ def write_figure3(meas_root: Path, dest: Path) -> dict:
         "tau_decile_position": float(np.mean(tau_quantiles)) if tau_quantiles else 5.5,
         "aggregation": "normalize within instance, then average across instances",
         "n_instances": len(inst_deciles),
+        "arms": list(FIGURE3_ARMS),
     }
-    for arm in ("A", "B", "C"):
+    for arm in FIGURE3_ARMS:
         mat = np.vstack(per_arm[arm]) if per_arm[arm] else np.zeros((1, 10))
         out["mean_share"][arm] = mat.mean(axis=0).tolist()
         lo, hi = [], []
@@ -107,12 +129,14 @@ def write_figures_1_2(dest_dir: Path, instance: str, seed: int) -> None:
         for c in group:
             labels[c] = k
     coords = {str(c): list(inst.coordinates[c]) for c in inst.customers}
-    rec_c = json.loads((meas / "armC_measurement.json").read_text(encoding="utf-8"))
+    rec_e = json.loads((meas / "armE_measurement.json").read_text(encoding="utf-8"))
     rec_a = json.loads((meas / "armA_measurement.json").read_text(encoding="utf-8"))
-    from drispi.utils.io import read_sol
-
-    pert_c, _ = read_sol(Path(pert["init_sol"]["C"]))
-    result_seqs, _ = read_sol(Path(rec_c["out_sol"]))
+    init_key = "E" if "E" in (pert.get("init_sol") or {}) else "D"
+    if init_key not in (pert.get("init_sol") or {}):
+        init_key = "C"
+    pert_e, _ = read_sol(_local_artifact(pert["init_sol"][init_key]))
+    result_seqs, _ = read_sol(_local_artifact(rec_e["out_sol"]))
+    guided_trace = pert.get("guided_d_trace") or pert["guided_trace"]
     fig1 = {
         "instance": instance,
         "generator_seed": seed,
@@ -122,12 +146,13 @@ def write_figures_1_2(dest_dir: Path, instance: str, seed: int) -> None:
         "coordinates": coords,
         "labels": {str(k): v for k, v in labels.items()},
         "input_seqs": ckpt["combined_seqs"],
-        "perturbed_seqs": pert_c,
-        "guided_trace": pert["guided_trace"],
+        "perturbed_seqs": pert_e,
+        "guided_trace": guided_trace,
         "ranks_hat": pert["ranks_hat"],
-        "eval_touches": rec_c["eval"],
+        "eval_touches": rec_e["eval"],
         "result_seqs": result_seqs,
-        "jar_sha256_measurement": rec_c["jar_sha256"],
+        "jar_sha256_measurement": rec_e["jar_sha256"],
+        "mechanism_arm": "E",
     }
     dest_dir.mkdir(parents=True, exist_ok=True)
     (dest_dir / "figure1_mechanism.json").write_text(json.dumps(fig1), encoding="utf-8")
@@ -140,10 +165,11 @@ def write_figures_1_2(dest_dir: Path, instance: str, seed: int) -> None:
         "coordinates": coords,
         "labels": {str(k): v for k, v in labels.items()},
         "eval_A": rec_a["eval"],
-        "eval_C": rec_c["eval"],
-        "jar_sha256_measurement": rec_c["jar_sha256"],
+        "eval_E": rec_e["eval"],
+        "jar_sha256_measurement": rec_e["jar_sha256"],
         "counter": "eval",
         "normalization": "shared LogNorm across panels",
+        "panels": ["A", "E"],
     }
     (dest_dir / "figure2_touchmaps.json").write_text(json.dumps(fig2), encoding="utf-8")
 

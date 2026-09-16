@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Figure 2 — evaluated-touch maps, arm A vs arm C, shared LogNorm."""
+"""Figure 2 — evaluated-touch maps, arm A vs arm E, shared LogNorm."""
 
 from __future__ import annotations
 
@@ -43,12 +43,12 @@ def main() -> None:
     customers = data["customers"]
     xy = np.array([data["coordinates"][str(c)] for c in customers])
     eval_a = np.array(data["eval_A"], dtype=np.float64)
-    eval_c = np.array(data["eval_C"], dtype=np.float64)
-    vmin = max(1.0, float(np.min(np.concatenate([eval_a, eval_c]).clip(min=1))))
-    vmax = float(np.max(np.concatenate([eval_a, eval_c]).clip(min=1)))
+    eval_e = np.array(data.get("eval_E", data.get("eval_C")), dtype=np.float64)
+    vmin = max(1.0, float(np.min(np.concatenate([eval_a, eval_e]).clip(min=1))))
+    vmax = float(np.max(np.concatenate([eval_a, eval_e]).clip(min=1)))
     norm = LogNorm(vmin=vmin, vmax=max(vmax, vmin * 1.01))
     fig, axes = plt.subplots(1, 2, figsize=fig_size(1.0, 220))
-    for ax, touches in ((axes[0], eval_a), (axes[1], eval_c)):
+    for ax, touches, title in ((axes[0], eval_a, "A"), (axes[1], eval_e, "E")):
         _hulls(ax, data)
         sc = ax.scatter(
             xy[:, 0],
@@ -64,6 +64,7 @@ def main() -> None:
         ax.set_aspect("equal")
         ax.set_xticks([])
         ax.set_yticks([])
+        ax.set_title(title)
     fig.colorbar(sc, ax=axes.ravel().tolist(), fraction=0.03, pad=0.02)
     fig.savefig(OUT)
     print(f"wrote {OUT}")

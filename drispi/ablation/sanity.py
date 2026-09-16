@@ -41,19 +41,28 @@ def modified_customers(
     return changed
 
 
+def uncovered_modifications(
+    changed: set[int],
+    accept: dict[int, int],
+    perturb: dict[int, int],
+) -> list[int]:
+    """Customers whose neighbour/membership changed with zero accept+perturb."""
+    return sorted(
+        c
+        for c in changed
+        if accept.get(c, 0) + perturb.get(c, 0) == 0
+    )
+
+
 def assert_touch_covers_modifications(
     changed: set[int],
     accept: dict[int, int],
     perturb: dict[int, int],
 ) -> None:
     """Fail if a neighbour-pair change has zero accept+perturb touches."""
-    missing = [
-        c
-        for c in changed
-        if accept.get(c, 0) + perturb.get(c, 0) == 0
-    ]
+    missing = uncovered_modifications(changed, accept, perturb)
     if missing:
         raise AssertionError(
             f"customers with a changed neighbour/membership but zero "
-            f"accept+perturb touches: {sorted(missing)[:20]} (n={len(missing)})"
+            f"accept+perturb touches: {missing[:20]} (n={len(missing)})"
         )

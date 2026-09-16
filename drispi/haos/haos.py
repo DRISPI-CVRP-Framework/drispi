@@ -14,7 +14,12 @@ LOGGER = logging.getLogger(__name__)
 
 @dataclass
 class HAOSSelection:
-    """Full operator selection for one DRI iteration."""
+    """Full operator selection for one DRI iteration.
+
+    ``k`` is the value used for clustering and may be clipped to the live
+    route count. ``k_rolled`` is the level-1 wheel choice and is what HAOS
+    tags and deferred credit look up; it is never overwritten by clipping.
+    """
 
     k: int
     lambda_demand: float
@@ -26,10 +31,15 @@ class HAOSSelection:
     paradigm_index: int
     method_index: int
     solver_index: int
+    k_rolled: int | None = None
+
+    def __post_init__(self) -> None:
+        if self.k_rolled is None:
+            self.k_rolled = self.k
 
     def to_tag(self, iteration: int, *, is_improvement_route: bool = False) -> HAOSTag:
         return HAOSTag(
-            k=self.k,
+            k=self.k_rolled if self.k_rolled is not None else self.k,
             lambda_demand=self.lambda_demand,
             paradigm=self.paradigm,
             method=self.method,
@@ -104,6 +114,7 @@ class HAOS:
             paradigm_index=paradigm_index,
             method_index=method_index,
             solver_index=solver_index,
+            k_rolled=k,
         )
 
     def coerce_vertex_when_no_routes(
@@ -139,8 +150,9 @@ class HAOS:
 
         Never raises: with a scale-adaptive domain the rolled k can exceed the
         incumbent's route count, so the partition just uses fewer clusters.
-        ``k_index`` is kept so HAOS credit still lands on the arm that was
-        actually rolled.
+        ``k_index`` and ``k_rolled`` are kept so immediate and deferred HAOS
+        credit still land on the arm that was actually rolled, even when the
+        applied ``k`` is not a domain value.
         """
         if selection.paradigm != "route" or selection.k <= n_routes:
             return selection

@@ -92,14 +92,6 @@ def _changed_route_indices(before: list[Route], after: list[Route]) -> list[int]
     return [i for i, r in enumerate(after) if frozenset(r) not in before_sets]
 
 
-def _require_k_domain_int(value: int | None, field_name: str) -> int:
-    if value is None:
-        raise ValueError(
-            f"{field_name} is required (set it in the config file; there is no code default)"
-        )
-    return value
-
-
 def _build_haos_config(config: DRISPIConfig) -> HAOSConfig:
     """Build internal HAOSConfig from flat DRISPIConfig fields."""
     return HAOSConfig(
@@ -118,14 +110,8 @@ def _build_haos_config(config: DRISPIConfig) -> HAOSConfig:
         k_base_arms=list(config.decomp_k_base_arms),
         k_max_arms=config.decomp_k_max_arms,
         k_ext_per_1000=config.decomp_k_ext_per_1000,
-        k_min_routes_per_cluster=_require_k_domain_int(
-            config.decomp_k_min_routes_per_cluster,
-            "decomposition.k_domain.min_routes_per_cluster",
-        ),
-        k_min_arm_spacing=_require_k_domain_int(
-            config.decomp_k_min_arm_spacing,
-            "decomposition.k_domain.min_arm_spacing",
-        ),
+        k_min_routes_per_cluster=config.decomp_k_min_routes_per_cluster,
+        k_min_arm_spacing=config.decomp_k_min_arm_spacing,
         min_weight_k=config.haos_min_weight_k,
         lambda_demand_values=list(config.haos_lambda_demand_values),
         min_weight_lambda=config.haos_min_weight_lambda,

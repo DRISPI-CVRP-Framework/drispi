@@ -11,13 +11,13 @@ from drispi.haos.k_domain import DEFAULT_BASE_ARMS, KDomainResolution, parse_n_k
 class HAOSRewardConfig:
     """Immediate and deferred HAOS reward scores."""
 
-    reward_new_best: float = 8.0
-    reward_improvement: float = 3.0
+    reward_new_best: float = 10.0
+    reward_improvement: float = 4.0
     reward_no_improvement: float = 1.0
     reward_no_solution: float = 0.0
 
-    deferred_new_best: float = 5.0
-    deferred_improvement: float = 2.0
+    deferred_new_best: float = 7.0
+    deferred_improvement: float = 3.0
     deferred_no_improvement: float = 0.0
 
 
@@ -34,8 +34,8 @@ class HAOSConfig:
     k_base_arms: list[int] = field(default_factory=lambda: list(DEFAULT_BASE_ARMS))
     k_max_arms: int = 10
     k_ext_per_1000: int = 4
-    k_min_routes_per_cluster: int = field(kw_only=True)
-    k_min_arm_spacing: int = field(kw_only=True)
+    k_min_routes_per_cluster: int = field(default=8, kw_only=True)
+    k_min_arm_spacing: int = field(default=2, kw_only=True)
     min_weight_k: float = 0.025
 
     lambda_demand_values: list[float] = field(
@@ -51,7 +51,6 @@ class HAOSConfig:
             "kmeans",
             "agglomerative_avg",
             "agglomerative_complete",
-            "agglomerative_single",
             "kmedoids",
             "fcm",
             # "spectral",  # disabled in HAOS roll: too slow on large n with default sklearn settings
@@ -64,7 +63,6 @@ class HAOSConfig:
             "kmeans",
             "agglomerative_avg",
             "agglomerative_complete",
-            "agglomerative_single",
         ]
     )
     min_weight_route_method: float = 0.05

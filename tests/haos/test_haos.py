@@ -95,6 +95,8 @@ def test_cap_k_for_route_clustering_clips_k_and_keeps_k_index() -> None:
     assert capped.k == 2
     # Credit stays on the arm that was actually rolled.
     assert capped.k_index == route_selection.k_index
+    assert capped.k_rolled == 4
+    assert capped.to_tag(iteration=0).k == 4
 
 
 def test_cap_k_for_route_clustering_clips_below_domain_without_raising() -> None:
@@ -115,6 +117,8 @@ def test_cap_k_for_route_clustering_clips_below_domain_without_raising() -> None
     capped = haos.cap_k_for_route_clustering(route_selection, n_routes=1)
     assert capped.k == 1
     assert capped.k_index == route_selection.k_index
+    assert capped.k_rolled == 4
+    assert capped.to_tag(iteration=0).k == 4
 
 
 def test_cap_k_for_route_clustering_noop_when_k_within_route_count() -> None:
@@ -230,6 +234,7 @@ def test_to_tag_from_selection() -> None:
     selection = haos.select(iteration=3, rng=random.Random(3))
     tag = selection.to_tag(iteration=3)
     assert tag.k == selection.k
+    assert tag.k == selection.k_rolled
     assert tag.lambda_demand == selection.lambda_demand
     assert tag.paradigm == selection.paradigm
     assert tag.method == selection.method
@@ -382,3 +387,36 @@ def test_update_deferred_ignores_improvement_route_tags() -> None:
     haos_with_filtered_deferred.update_final(sel_b, iteration=2)
 
     assert haos_with_filtered_deferred.state_dict() == baseline
+
+
+def test_deferred_credits_rolled_k_when_applied_k_not_in_domain() -> None:
+    """Clipped applied k is not a wheel choice; deferred credit still hits the rolled arm."""
+    config = HAOSConfig(haos_warmup=0, decay=1.0, k_min_routes_per_cluster=0, k_min_arm_spacing=1)
+    haos = HAOS(config=config, instance=make_instance_20())
+    k_index = haos.wheel_1_k.choices.index(4)
+    route_selection = HAOSSelection(
+        k=4,
+        lambda_demand=0.4,
+        paradigm="route",
+        method="kmeans",
+        solver="pyvrp",
+        k_index=k_index,
+        lambda_index=2,
+        paradigm_index=1,
+        method_index=0,
+        solver_index=0,
+    )
+    capped = haos.cap_k_for_route_clustering(route_selection, n_routes=1)
+    assert capped.k == 1
+    assert 1 not in haos.wheel_1_k.choices
+
+    tag = capped.to_tag(iteration=2)
+    assert tag.k == 4
+    haos.update_deferred([tag], iteration=2, deferred_reward=2.5)
+    haos.update_final(capped, iteration=2)
+
+    weights = haos.state_dict()["level_1_k"]["raw_weights"]
+    assert weights[k_index] == pytest.approx(12.5)
+    for i, weight in enumerate(weights):
+        if i != k_index:
+            assert weight == pytest.approx(10.0)

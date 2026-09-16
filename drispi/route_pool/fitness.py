@@ -16,7 +16,7 @@ def _is_scored(entry: RouteEntry) -> bool:
 
 def compute_fitness_ranks(
     entries: list[RouteEntry],
-    diversity_weight: float = 1.0,
+    diversity_weight: float = 0.5,
 ) -> dict[frozenset[int], float]:
     """
     Compute aggregate fitness score for each non-elite route entry.
@@ -74,7 +74,7 @@ def select_for_eviction(
     entries: list[RouteEntry],
     current_size: int,
     max_size: int,
-    diversity_weight: float = 1.0,
+    diversity_weight: float = 0.5,
 ) -> list[frozenset[int]]:
     """
     Select customer-set keys to evict in order to satisfy max pool size.

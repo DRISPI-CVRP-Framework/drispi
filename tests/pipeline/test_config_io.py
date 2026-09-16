@@ -62,7 +62,7 @@ def test_merge_cli_overrides() -> None:
     merged = merge_cli_overrides(config, {"seed": 555, "time_limit": 10.0})
     assert merged.seed == 555
     assert merged.time_limit == 10.0
-    assert config.seed == 123
+    assert config.seed == 42
 
 
 def test_merge_cli_overrides_unknown_field() -> None:
@@ -344,12 +344,47 @@ def test_confirmation_profiles_differ_only_in_k_domain() -> None:
         assert loaded.decomp_k_min_arm_spacing == 2
 
 
-def test_build_haos_config_requires_k_domain_fields() -> None:
-    with pytest.raises(ValueError, match="min_routes_per_cluster is required"):
-        _build_haos_config(DRISPIConfig())
-    with pytest.raises(ValueError, match="min_arm_spacing is required"):
-        _build_haos_config(DRISPIConfig(decomp_k_min_routes_per_cluster=8))
+def test_build_haos_config_uses_dataclass_k_domain_defaults() -> None:
+    haos_config = _build_haos_config(DRISPIConfig())
+    assert haos_config.k_min_routes_per_cluster == 8
+    assert haos_config.k_min_arm_spacing == 2
+    assert haos_config.rewards.reward_new_best == 10.0
+    assert haos_config.rewards.deferred_new_best == 7.0
+    assert haos_config.vertex_method_values == [
+        "kmeans",
+        "agglomerative_avg",
+        "agglomerative_complete",
+        "kmedoids",
+        "fcm",
+    ]
+    assert haos_config.route_method_values == [
+        "kmeans",
+        "agglomerative_avg",
+        "agglomerative_complete",
+    ]
 
+
+def test_dataclass_defaults_match_default_yaml() -> None:
+    repo_root = Path(__file__).resolve().parents[2]
+    loaded = load_config(repo_root / "configs" / "default.yaml")
+    bare = DRISPIConfig()
+    assert bare.max_no_improve == loaded.max_no_improve == 1000
+    assert bare.interval_minutes == loaded.interval_minutes == 19.0
+    assert bare.warmup_iterations == loaded.warmup_iterations == 5
+    assert bare.sp_time_limit == loaded.sp_time_limit == 720.0
+    assert bare.mip_gap == loaded.mip_gap == 0.00025
+    assert bare.decomp_k_min_routes_per_cluster == loaded.decomp_k_min_routes_per_cluster == 8
+    assert bare.decomp_k_min_arm_spacing == loaded.decomp_k_min_arm_spacing == 2
+    assert bare.standard_improvement_time_limit == loaded.standard_improvement_time_limit == 360.0
+    assert bare.pool_diversity_weight == loaded.pool_diversity_weight == 0.5
+    assert bare.haos_reward_new_best == loaded.haos_reward_new_best == 10.0
+    assert bare.haos_reward_improvement == loaded.haos_reward_improvement == 4.0
+    assert bare.haos_deferred_new_best == loaded.haos_deferred_new_best == 7.0
+    assert bare.haos_deferred_improvement == loaded.haos_deferred_improvement == 3.0
+    assert bare.seed == loaded.seed == 42
+    assert bare.run_analysis is loaded.run_analysis is True
+    assert bare.haos_vertex_method_values == loaded.haos_vertex_method_values
+    assert bare.haos_route_method_values == loaded.haos_route_method_values
 
 def test_default_yaml_k_domain_reaches_compute_k_values() -> None:
     repo_root = Path(__file__).resolve().parents[2]

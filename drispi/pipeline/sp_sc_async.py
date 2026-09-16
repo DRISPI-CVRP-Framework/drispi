@@ -391,8 +391,8 @@ class AsyncSpScController:
         xmx: str = "4g",
         overlap_policy: OverlapPolicy = "skip",
         trigger: TriggerMode = "wallclock",
-        interval_minutes: float = 20.0,
-        warmup_iterations: int = 10,
+        interval_minutes: float = 19.0,
+        warmup_iterations: int = 5,
         sp_interval: int = 3,
         join_timeout_s: float = 30.0,
     ) -> None:

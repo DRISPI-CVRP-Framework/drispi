@@ -8,11 +8,16 @@ from pathlib import Path
 
 @dataclass
 class DRISPIConfig:
-    """Single source of truth for all DRISPI parameters."""
+    """Single source of truth for all DRISPI parameters.
+
+    Defaults match ``configs/default.yaml``. Profile YAMLs merge on top of
+    that file; constructing ``DRISPIConfig()`` without YAML now yields the
+    same deployed values.
+    """
 
     # ── Stopping criteria ─────────────────────────────────────────────
     time_limit: float = 7200.0
-    max_no_improve: int = 100
+    max_no_improve: int = 1000
 
     # ── Parallelism ───────────────────────────────────────────────────
     # Legacy single-instance worker count when ``cores:`` is absent.
@@ -30,13 +35,13 @@ class DRISPIConfig:
     # warmup_iterations always gates every trigger.
     sp_sc_mode: str = "sync"
     sp_sc_trigger: str = "iteration"
-    interval_minutes: float = 20.0
+    interval_minutes: float = 19.0
     overlap_policy: str = "skip"
-    warmup_iterations: int = 10
+    warmup_iterations: int = 5
     sp_interval: int = 3
     min_coverage: int = 5
-    sp_time_limit: float = 300.0
-    mip_gap: float = 0.0005
+    sp_time_limit: float = 720.0
+    mip_gap: float = 0.00025
 
     # ── Decomposition (k domain + subcluster budget) ──────────────────
     # Scale-adaptive HAOS level-1 k domain, computed once per instance at
@@ -48,8 +53,8 @@ class DRISPIConfig:
     )
     decomp_k_max_arms: int = 10
     decomp_k_ext_per_1000: int = 4
-    decomp_k_min_routes_per_cluster: int | None = None
-    decomp_k_min_arm_spacing: int | None = None
+    decomp_k_min_routes_per_cluster: int = 8
+    decomp_k_min_arm_spacing: int = 2
     # Per-cluster solver budget = max(floor_s, size * rate_s_per_customer).
     subcluster_rate_s_per_customer: float = 0.06
     subcluster_floor_s: float = 5.0
@@ -80,11 +85,11 @@ class DRISPIConfig:
     bg_ails_boundary_mask_first_ls: bool = True
 
     # ── Standard improvement ──────────────────────────────────────────
-    standard_improvement_time_limit: float = 120.0
+    standard_improvement_time_limit: float = 360.0
 
     # ── Route pool ────────────────────────────────────────────────────
     max_pool_size: int = 10000
-    pool_diversity_weight: float = 1.0
+    pool_diversity_weight: float = 0.5
 
     # ── HAOS ──────────────────────────────────────────────────────────
     haos_decay: float = 0.95
@@ -123,17 +128,17 @@ class DRISPIConfig:
     )
 
     # ── HAOS rewards ──────────────────────────────────────────────────
-    haos_reward_new_best: float = 8.0
-    haos_reward_improvement: float = 3.0
+    haos_reward_new_best: float = 10.0
+    haos_reward_improvement: float = 4.0
     haos_reward_no_improvement: float = 1.0
     haos_reward_no_solution: float = 0.0
-    haos_deferred_new_best: float = 5.0
-    haos_deferred_improvement: float = 2.0
+    haos_deferred_new_best: float = 7.0
+    haos_deferred_improvement: float = 3.0
     haos_deferred_no_improvement: float = 0.0
 
     # ── Seed ──────────────────────────────────────────────────────────
-    seed: int = 123
+    seed: int = 42
 
     # ── Output ────────────────────────────────────────────────────────
     output_dir: Path = field(default_factory=lambda: Path("artifacts/runs"))
-    run_analysis: bool = False
+    run_analysis: bool = True

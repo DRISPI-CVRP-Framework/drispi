@@ -315,7 +315,7 @@ improve_events = data.get_improve_events(run_dir)
 
 bks = meta.get("bks") if meta else None
 instance_name = _instance_name_from_run_dir(run_dir, meta)
-max_no_improve = (meta.get("config") or {}).get("max_no_improve", 100) if meta else 100
+max_no_improve = (meta.get("config") or {}).get("max_no_improve", 1000) if meta else 1000
 
 current_iter_0 = data.get_current_iteration_0(run_dir, state)
 iteration_disp = current_iter_0 + 1

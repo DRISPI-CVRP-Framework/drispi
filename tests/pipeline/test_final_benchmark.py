@@ -112,7 +112,32 @@ def test_dry_run_default_xl_count(capsys: pytest.CaptureFixture[str]) -> None:
     assert "pending: 300" in out
 
 
+def test_parse_ordered_cpu_list_preserves_order() -> None:
+    assert fb._parse_ordered_cpu_list("0,2,4,1,3,5") == [0, 2, 4, 1, 3, 5]
+    assert fb._parse_ordered_cpu_list("0-3,8-9") == [0, 1, 2, 3, 8, 9]
+    with pytest.raises(ValueError, match="duplicate"):
+        fb._parse_ordered_cpu_list("0,2,0")
+
+
+def test_build_jobs_cpu_ids_chunks_in_order(tmp_path: Path) -> None:
+    instances = [tmp_path / "XL-n100-k1.vrp", tmp_path / "XL-n200-k1.vrp"]
+    cpu_ids = [0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15]
+    jobs = fb._build_jobs(
+        instances,
+        [10],
+        cpu_base=0,
+        cores_per_slice=8,
+        slices_per_wave=2,
+        cpu_ids=cpu_ids,
+    )
+    assert [j["cpus"] for j in sorted(jobs, key=lambda x: x["slot"])] == [
+        "0,2,4,6,8,10,12,14",
+        "1,3,5,7,9,11,13,15",
+    ]
+
+
 def test_config_io_final_benchmark_inherits_seed() -> None:
     repo_root = Path(__file__).resolve().parents[2]
     loaded = load_config(repo_root / "configs" / "final_benchmark.yaml")
     assert loaded.seed == 42
+

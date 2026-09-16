@@ -12,6 +12,7 @@ Usage (orchestrator)::
 
     python scripts/run_final_benchmark.py --dry-run
     python scripts/run_final_benchmark.py --cpu-base 0 --total-cores 32
+    python scripts/run_final_benchmark.py --cpu-list 0,2,4,6,8,10,12,14,1,3,5,7,9,11,13,15
 
 Usage (single slice)::
 
@@ -93,9 +94,61 @@ def _cpu_spec(cpus: list[int]) -> str:
     return ",".join(str(c) for c in cpus)
 
 
+def _parse_ordered_cpu_list(spec: str) -> list[int]:
+    """Parse a CPU spec preserving caller order (NUMA packing).
+
+    ``parse_cpu_list`` sorts; that would undo a socket-grouped layout.
+    """
+    text = spec.strip()
+    if not text:
+        raise ValueError("CPU list string is empty")
+    cpus: list[int] = []
+    seen: set[int] = set()
+    for part in text.split(","):
+        token = part.strip()
+        if not token:
+            continue
+        if "-" in token:
+            left, right = token.split("-", 1)
+            start = int(left.strip())
+            end = int(right.strip())
+            if end < start:
+                raise ValueError(f"Invalid CPU range {token!r}: end < start")
+            chunk = list(range(start, end + 1))
+        else:
+            chunk = [int(token)]
+        for cpu in chunk:
+            if cpu in seen:
+                raise ValueError(f"duplicate CPU {cpu} in {spec!r}")
+            seen.add(cpu)
+            cpus.append(cpu)
+    if not cpus:
+        raise ValueError(f"No CPUs parsed from {spec!r}")
+    return cpus
+
+
 def _slice_cpus(cpu_base: int, slot: int, cores_per_slice: int) -> list[int]:
     start = cpu_base + slot * cores_per_slice
     return list(range(start, start + cores_per_slice))
+
+
+def _cpus_for_slot(
+    slot: int,
+    *,
+    cpu_base: int,
+    cores_per_slice: int,
+    cpu_ids: list[int] | None,
+) -> list[int]:
+    if cpu_ids is None:
+        return _slice_cpus(cpu_base, slot, cores_per_slice)
+    start = slot * cores_per_slice
+    cpus = cpu_ids[start : start + cores_per_slice]
+    if len(cpus) != cores_per_slice:
+        raise ValueError(
+            f"cpu-list too short for slot {slot}: need {cores_per_slice} ids, "
+            f"got {len(cpus)}"
+        )
+    return cpus
 
 
 def _instance_n(path: Path) -> int:
@@ -283,9 +336,16 @@ def _build_jobs(
     cpu_base: int,
     cores_per_slice: int,
     slices_per_wave: int,
+    cpu_ids: list[int] | None = None,
 ) -> list[dict[str, Any]]:
     if slices_per_wave < 1:
         raise ValueError(f"slices_per_wave must be >= 1, got {slices_per_wave}")
+    if cpu_ids is not None and len(cpu_ids) != slices_per_wave * cores_per_slice:
+        raise ValueError(
+            "cpu-list length must equal slices-per-wave × cores-per-slice "
+            f"({slices_per_wave}×{cores_per_slice}={slices_per_wave * cores_per_slice}, "
+            f"got {len(cpu_ids)})"
+        )
     ordered = sorted(instances, key=_instance_n)
     flat: list[tuple[Path, int]] = []
     for seed in seeds:
@@ -295,7 +355,12 @@ def _build_jobs(
     for i, (inst, seed) in enumerate(flat):
         wave_idx = i // slices_per_wave + 1
         slot = i % slices_per_wave
-        cpus = _slice_cpus(cpu_base, slot, cores_per_slice)
+        cpus = _cpus_for_slot(
+            slot,
+            cpu_base=cpu_base,
+            cores_per_slice=cores_per_slice,
+            cpu_ids=cpu_ids,
+        )
         jobs.append(
             {
                 "wave": wave_idx,
@@ -382,6 +447,16 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--cpu-base", type=int, default=0)
     p.add_argument("--total-cores", type=int, default=32)
     p.add_argument("--cores-per-slice", type=int, default=8)
+    p.add_argument(
+        "--cpu-list",
+        type=str,
+        default=None,
+        help=(
+            "Ordered host CPU ids for the campaign (order preserved, chunked "
+            "into --cores-per-slice islands). Overrides --cpu-base/--total-cores. "
+            "Use this to skip SMT siblings and keep slices on one NUMA node."
+        ),
+    )
     p.add_argument("--dry-run", action="store_true")
     p.add_argument(
         "--no-resume",
@@ -427,9 +502,19 @@ def main(argv: list[str] | None = None) -> None:
     if not instances:
         raise SystemExit("No .vrp instances found")
     seeds = [int(s) for s in args.seeds]
-    if args.total_cores % args.cores_per_slice != 0:
-        raise SystemExit("total-cores must be divisible by cores-per-slice")
-    slices_per_wave = args.total_cores // args.cores_per_slice
+    cpu_ids: list[int] | None = None
+    if args.cpu_list:
+        try:
+            cpu_ids = _parse_ordered_cpu_list(args.cpu_list)
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
+        if len(cpu_ids) % args.cores_per_slice != 0:
+            raise SystemExit("cpu-list length must be divisible by cores-per-slice")
+        slices_per_wave = len(cpu_ids) // args.cores_per_slice
+    else:
+        if args.total_cores % args.cores_per_slice != 0:
+            raise SystemExit("total-cores must be divisible by cores-per-slice")
+        slices_per_wave = args.total_cores // args.cores_per_slice
     if len(instances) < slices_per_wave:
         log.warning(
             f"Only {len(instances)} instances for {slices_per_wave} slices/wave; "
@@ -441,6 +526,7 @@ def main(argv: list[str] | None = None) -> None:
         cpu_base=args.cpu_base,
         cores_per_slice=args.cores_per_slice,
         slices_per_wave=slices_per_wave,
+        cpu_ids=cpu_ids,
     )
     campaign_jsonl = _resolve_repo_path(args.campaign_jsonl)
     completed = set() if args.no_resume else _load_completed(campaign_jsonl)

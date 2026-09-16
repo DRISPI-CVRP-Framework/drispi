@@ -29,11 +29,11 @@ def test_compute_fitness_ranks_excludes_elite_routes() -> None:
     assert frozenset([4, 5]) in result
 
 
-def test_compute_fitness_ranks_worse_quality_and_diversity_scores_higher() -> None:
-    strong = _entry([2, 3], quality=[0.2], diversity=[0.9])
-    weak = _entry([4, 5], quality=[0.8], diversity=[0.1])
+def test_compute_fitness_ranks_higher_quality_and_diversity_score_higher() -> None:
+    strong = _entry([2, 3], quality=[0.8], diversity=[0.9])
+    weak = _entry([4, 5], quality=[0.2], diversity=[0.1])
     result = compute_fitness_ranks([strong, weak], diversity_weight=1.0)
-    assert result[weak.customer_set] > result[strong.customer_set]
+    assert result[strong.customer_set] > result[weak.customer_set]
 
 
 def test_select_for_eviction_empty_when_within_limit() -> None:
@@ -66,22 +66,38 @@ def test_select_for_eviction_returns_required_number_of_keys() -> None:
     assert len(selected) == 2
 
 
+def test_select_for_eviction_takes_lowest_fitness_first() -> None:
+    """Weak and redundant routes have the lowest fitness and are evicted first."""
+    strong_unique = _entry([2, 3], quality=[0.9], diversity=[0.9])
+    weak_redundant = _entry([4, 5], quality=[0.1], diversity=[0.1])
+    strong_redundant = _entry([6, 7], quality=[0.9], diversity=[0.1])
+    weak_unique = _entry([8, 9], quality=[0.1], diversity=[0.9])
+
+    selected = select_for_eviction(
+        [strong_unique, weak_redundant, strong_redundant, weak_unique],
+        current_size=4,
+        max_size=3,
+        diversity_weight=1.0,
+    )
+    assert selected == [weak_redundant.customer_set]
+
+
 def test_select_for_eviction_prefers_scored_over_unscored() -> None:
     """Soft-protect: do not evict unscored when scored can cover overflow."""
-    scored_weak = _entry([2, 3], quality=[0.9], diversity=[0.1])
-    scored_strong = _entry([4, 5], quality=[0.1], diversity=[0.9])
+    scored_a = _entry([2, 3], quality=[0.9], diversity=[0.1])
+    scored_b = _entry([4, 5], quality=[0.1], diversity=[0.9])
     unscored_a = _entry([6, 7])
     unscored_b = _entry([8, 9])
 
     selected = select_for_eviction(
-        [scored_weak, scored_strong, unscored_a, unscored_b],
+        [scored_a, scored_b, unscored_a, unscored_b],
         current_size=4,
         max_size=2,
         diversity_weight=1.0,
     )
     assert len(selected) == 2
-    assert scored_weak.customer_set in selected
-    assert scored_strong.customer_set in selected
+    assert scored_a.customer_set in selected
+    assert scored_b.customer_set in selected
     assert unscored_a.customer_set not in selected
     assert unscored_b.customer_set not in selected
 

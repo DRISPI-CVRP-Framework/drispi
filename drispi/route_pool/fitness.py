@@ -21,7 +21,10 @@ def compute_fitness_ranks(
     """
     Compute aggregate fitness score for each non-elite route entry.
 
-    Higher aggregate score means a stronger eviction candidate.
+    Both component rankings are ascending in the raw score: rank one is the
+    weakest LP weight / most redundant route, and the highest rank is the
+    strongest / most unique. Higher aggregate fitness is better; eviction
+    takes the lowest fitness first.
     """
     candidates = [entry for entry in entries if not entry.is_elite]
     if not candidates:
@@ -30,7 +33,6 @@ def compute_fitness_ranks(
     quality_sorted = sorted(
         candidates,
         key=lambda entry: (
-            len(entry.quality_scores) == 0,
             entry.quality_rank_score,
             _stable_key(entry),
         ),
@@ -38,8 +40,7 @@ def compute_fitness_ranks(
     diversity_sorted = sorted(
         candidates,
         key=lambda entry: (
-            len(entry.diversity_scores) == 0,
-            -entry.diversity_rank_score,
+            entry.diversity_rank_score,
             _stable_key(entry),
         ),
     )
@@ -62,11 +63,11 @@ def _eviction_order(
     entries: list[RouteEntry],
     diversity_weight: float,
 ) -> list[frozenset[int]]:
-    """Highest-eviction-first keys among ``entries`` (assumed non-elite)."""
+    """Lowest-fitness-first keys among ``entries`` (assumed non-elite)."""
     if not entries:
         return []
     fitness = compute_fitness_ranks(entries, diversity_weight=diversity_weight)
-    return sorted(fitness, key=lambda key: fitness[key], reverse=True)
+    return sorted(fitness, key=lambda key: fitness[key])
 
 
 def select_for_eviction(

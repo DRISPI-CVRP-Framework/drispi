@@ -605,6 +605,8 @@ class DRISPIPipeline:
                     small_cluster_alpha=self._config.bg_ails_small_cluster_alpha,
                     pair_selection=self._config.bg_ails_pair_selection,
                     n_chains_mode=self._config.bg_ails_n_chains_mode,
+                    unique_first_routes=self._config.bg_ails_unique_first_routes,
+                    boundary_mask_first_ls=self._config.bg_ails_boundary_mask_first_ls,
                     op_tag=op_tag,
                 )
                 self._bg_launched += 1
@@ -665,7 +667,7 @@ class DRISPIPipeline:
                 n_chains_mode=self._config.bg_ails_n_chains_mode,  # type: ignore[arg-type]
             )
             assert dissim is not None
-            perturbed_sol, perturbed_indices = run_bg_ails_perturb(
+            perturbed_sol, perturbed_indices, ranks_hat = run_bg_ails_perturb(
                 self._instance,
                 combined_sol,
                 dissim,
@@ -676,6 +678,7 @@ class DRISPIPipeline:
                 seed=bg_seed,
                 pair_selection=self._config.bg_ails_pair_selection,
                 n_chains_mode=self._config.bg_ails_n_chains_mode,
+                unique_first_routes=self._config.bg_ails_unique_first_routes,
             )
             self._write_phase_snapshot(
                 iteration,
@@ -698,6 +701,9 @@ class DRISPIPipeline:
                 time_limit=bg_ails_budget,
                 seed=bg_seed,
                 solver=self._ails2_solver(),
+                ranks_hat=ranks_hat,
+                boundary_threshold=self._config.bg_ails_boundary_threshold,
+                boundary_mask_first_ls=self._config.bg_ails_boundary_mask_first_ls,
             )
             bg_elapsed = time.perf_counter() - t0
             pert_seqs = _solution_routes_to_seqs(perturbed_sol)

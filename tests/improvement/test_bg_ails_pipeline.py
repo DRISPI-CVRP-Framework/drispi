@@ -107,6 +107,46 @@ def test_run_bg_ails_passes_initial_omega(monkeypatch: pytest.MonkeyPatch) -> No
     )
     _args, kwargs = mock_solver.run_improvement.call_args
     assert kwargs["initial_omega"] == 18.0
+    assert kwargs.get("boundary_mask_path") is not None
+
+
+def test_run_bg_ails_can_disable_boundary_mask(monkeypatch: pytest.MonkeyPatch) -> None:
+    inst = _inst()
+    routes = [Route(customers=[2, 3], cost=1.0), Route(customers=[4, 5], cost=1.0)]
+    d = np.ones((4, 4), dtype=np.float64) * 3.0
+    np.fill_diagonal(d, 0.0)
+    partition = [[2, 3], [4, 5]]
+    mock_solver = MagicMock(spec=Ails2Solver)
+    mock_solver.run_improvement.return_value = routes
+
+    run_bg_ails(
+        inst,
+        routes,
+        d,
+        partition,
+        initial_omega=18.0,
+        time_limit=10.0,
+        solver=mock_solver,
+        boundary_mask_first_ls=False,
+        **_BG_KW,
+    )
+    _args, kwargs = mock_solver.run_improvement.call_args
+    assert kwargs.get("boundary_mask_path") is None
+
+
+def test_write_boundary_mask_file_filters_tau(tmp_path: Path) -> None:
+    from drispi.improvement.bg_ails import write_boundary_mask_file
+
+    path = tmp_path / "mask.txt"
+    n = write_boundary_mask_file(
+        path,
+        customers=[2, 3, 4, 5],
+        ranks_hat=np.array([0.1, 0.6, 0.5, 0.9]),
+        tau=0.5,
+    )
+    assert n == 2
+    active = [ln for ln in path.read_text(encoding="utf-8").splitlines() if ln.isdigit()]
+    assert active == ["3", "5"]
 
 
 def test_run_bg_ails_preserves_customer_multiset(monkeypatch: pytest.MonkeyPatch) -> None:

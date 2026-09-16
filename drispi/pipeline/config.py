@@ -75,6 +75,9 @@ class DRISPIConfig:
     bg_ails_small_cluster_alpha: float = 0.5
     bg_ails_pair_selection: str = "greedy"  # "stochastic" | "greedy"
     bg_ails_n_chains_mode: str = "k"  # "k_minus_1" | "k"
+    # Arm-E production defaults: unique-first kick + first-LS boundary mask.
+    bg_ails_unique_first_routes: bool = True
+    bg_ails_boundary_mask_first_ls: bool = True
 
     # ── Standard improvement ──────────────────────────────────────────
     standard_improvement_time_limit: float = 120.0

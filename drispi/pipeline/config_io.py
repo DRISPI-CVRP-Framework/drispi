@@ -53,6 +53,8 @@ _SECTION_FIELDS: dict[str, list[str]] = {
         "bg_ails_small_cluster_alpha",
         "bg_ails_pair_selection",
         "bg_ails_n_chains_mode",
+        "bg_ails_unique_first_routes",
+        "bg_ails_boundary_mask_first_ls",
     ],
     "standard_improvement": ["standard_improvement_time_limit"],
     "pool": ["max_pool_size", "pool_diversity_weight"],
@@ -117,6 +119,8 @@ _BG_AILS_NESTED_KEYS = {
     "small_cluster_alpha": "bg_ails_small_cluster_alpha",
     "pair_selection": "bg_ails_pair_selection",
     "n_chains_mode": "bg_ails_n_chains_mode",
+    "unique_first_routes": "bg_ails_unique_first_routes",
+    "boundary_mask_first_ls": "bg_ails_boundary_mask_first_ls",
 }
 
 _BG_AILS_BUDGET_NESTED_KEYS = {

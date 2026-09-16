@@ -364,7 +364,9 @@ def test_sync_and_async_share_rng_stream_order(
 
     def _fake_perturb(instance, solution, *args, **kwargs):
         del args, kwargs
-        return solution, []
+        import numpy as np
+
+        return solution, [], np.ones(instance.n_customers, dtype=np.float64)
 
     def _fake_improve(instance, perturbed, *args, **kwargs):
         del instance, args, kwargs

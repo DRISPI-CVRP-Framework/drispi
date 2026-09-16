@@ -54,8 +54,10 @@ def test_drispi_pipeline_smoke_one_iteration(small_instance: CVRPInstance, tmp_p
 
     def fake_bg_perturb(inst: CVRPInstance, sol: list[SolutionRoute], *a, **k):
         del a, k, sol
+        import numpy as np
+
         routes = _seqs_to_solution_routes(inst, [list(inst.customers)])
-        return routes, []
+        return routes, [], np.ones(inst.n_customers, dtype=np.float64)
 
     def fake_bg_improve(
         inst: CVRPInstance,

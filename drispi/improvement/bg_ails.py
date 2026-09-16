@@ -422,6 +422,32 @@ def export_boundary_ranks_csv(path: Path, customers: list[int], ranks: np.ndarra
             w.writerow([c, f"{float(r):.8f}"])
 
 
+def write_boundary_mask_file(
+    path: Path,
+    customers: list[int],
+    ranks_hat: np.ndarray,
+    *,
+    tau: float,
+) -> int:
+    """Write VRPLIB ids with ``ranks_hat > tau`` for AILS-II ``-boundaryMask``.
+
+    Returns the number of active customers written (0 ⇒ caller should skip the flag).
+    """
+    active = [
+        int(c)
+        for c, r in zip(customers, ranks_hat, strict=True)
+        if float(r) > float(tau)
+    ]
+    lines = [
+        f"# tau {tau}",
+        f"# n_active {len(active)}",
+        *[str(c) for c in active],
+        "",
+    ]
+    path.write_text("\n".join(lines), encoding="utf-8")
+    return len(active)
+
+
 def run_standard_improvement(
     instance: CVRPInstance,
     solution: list[Route],
@@ -459,15 +485,17 @@ def run_bg_ails_perturb(
     pair_selection: PairSelection = "stochastic",
     n_chains_mode: NChainsMode = "k_minus_1",
     unique_first_routes: bool = True,
-) -> tuple[list[Route], list[int]]:
+) -> tuple[list[Route], list[int], np.ndarray]:
     """
     Boundary ranks + cross-reconnect perturbation only (no AILS-II).
 
-    Returns ``(perturbed_routes, perturbed_route_indices)`` where indices refer to
-    the input ``solution`` route list (routes chosen for perturbation).
+    Returns ``(perturbed_routes, perturbed_route_indices, ranks_hat)`` where
+    indices refer to the input ``solution`` route list and ``ranks_hat`` are
+    pre-threshold boundary ranks aligned with ``instance.customers``.
     """
     if len(partition) <= 1:
-        return solution, []
+        n = len(instance.customers)
+        return solution, [], np.ones(n, dtype=np.float64)
     rng = np.random.default_rng(seed)
     customers = list(instance.customers)
     ranks = compute_boundary_ranks(
@@ -489,7 +517,7 @@ def run_bg_ails_perturb(
         n_chains_mode=n_chains_mode,
         unique_first_routes=unique_first_routes,
     )
-    return pert, idx
+    return pert, idx, ranks
 
 
 def run_blind_perturb(
@@ -571,8 +599,16 @@ def run_bg_ails_improve(
     time_limit: float,
     solver: Ails2Solver | None = None,
     seed: int,
+    ranks_hat: np.ndarray | None = None,
+    boundary_threshold: float = 0.5,
+    boundary_mask_first_ls: bool = True,
 ) -> list[Route]:
-    """Run AILS-II on a (possibly perturbed) solution with ``-initialOmega`` when multi-cluster."""
+    """Run AILS-II on a (possibly perturbed) solution with ``-initialOmega`` when multi-cluster.
+
+    When ``boundary_mask_first_ls`` is true and ``ranks_hat`` is provided, writes a
+    temporary ``-boundaryMask`` of customers with rank above ``boundary_threshold``
+    so the first local-search pass focuses on boundary routes (ablation arm E).
+    """
     if len(partition) <= 1:
         return run_standard_improvement(
             instance,
@@ -587,12 +623,28 @@ def run_bg_ails_improve(
         root = Path(tmp)
         init_sol = root / "init.sol"
         write_sol(seqs, cost, init_sol)
+        mask_path: Path | None = None
+        if (
+            boundary_mask_first_ls
+            and ranks_hat is not None
+            and len(ranks_hat) == len(instance.customers)
+        ):
+            candidate = root / "boundary_mask.txt"
+            n_active = write_boundary_mask_file(
+                candidate,
+                list(instance.customers),
+                ranks_hat,
+                tau=boundary_threshold,
+            )
+            if n_active > 0:
+                mask_path = candidate
         return solv.run_improvement(
             instance,
             float(time_limit),
             init_sol,
             initial_omega=float(initial_omega),
             seed=seed,
+            boundary_mask_path=mask_path,
         )
 
 
@@ -612,6 +664,7 @@ def run_bg_ails(
     pair_selection: PairSelection = "stochastic",
     n_chains_mode: NChainsMode = "k_minus_1",
     unique_first_routes: bool = True,
+    boundary_mask_first_ls: bool = True,
 ) -> tuple[list[Route], list[int], list[Route]]:
     """
     Full BG-AILS pipeline: ranks → weighted perturbation → AILS-II with injected
@@ -624,10 +677,9 @@ def run_bg_ails(
     If ``partition`` has at most one cluster, delegates to
     :func:`run_standard_improvement` (same ``time_limit``).
 
-    Cross-reconnect chains per run default to ``k - 1`` (``n_chains_mode``), or
-    ``k`` when ``n_chains_mode="k"``. Pair selection is stochastic or greedy.
+    Defaults match ablation arm E: unique-first kick and first-LS boundary mask.
     """
-    pert, perturbed_indices = run_bg_ails_perturb(
+    pert, perturbed_indices, ranks_hat = run_bg_ails_perturb(
         instance,
         solution,
         dissimilarity_matrix,
@@ -648,6 +700,9 @@ def run_bg_ails(
         time_limit=time_limit,
         solver=solver,
         seed=seed,
+        ranks_hat=ranks_hat,
+        boundary_threshold=boundary_threshold,
+        boundary_mask_first_ls=boundary_mask_first_ls,
     )
     return pert, perturbed_indices, improved
 
@@ -695,6 +750,7 @@ class BgAilsImprovement(BaseImprovement):
         pair_selection: PairSelection = "stochastic",
         n_chains_mode: NChainsMode = "k_minus_1",
         unique_first_routes: bool = True,
+        boundary_mask_first_ls: bool = True,
     ) -> None:
         self._d = np.asarray(dissimilarity_matrix, dtype=np.float64)
         self._partition = partition
@@ -707,6 +763,7 @@ class BgAilsImprovement(BaseImprovement):
         self._pair_selection = pair_selection
         self._n_chains_mode = n_chains_mode
         self._unique_first_routes = unique_first_routes
+        self._boundary_mask_first_ls = boundary_mask_first_ls
         self.last_perturbed_route_indices: list[int] = []
 
     def improve(self, solution: Solution, instance: CVRPInstance, time_limit: float) -> Solution:
@@ -725,6 +782,7 @@ class BgAilsImprovement(BaseImprovement):
             pair_selection=self._pair_selection,
             n_chains_mode=self._n_chains_mode,
             unique_first_routes=self._unique_first_routes,
+            boundary_mask_first_ls=self._boundary_mask_first_ls,
         )
         self.last_perturbed_route_indices = perturbed
         total = float(sum(r.cost for r in out_routes))

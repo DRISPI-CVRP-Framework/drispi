@@ -45,9 +45,11 @@ def _fake_cluster_instance(
 
 def _fake_bg_perturb(instance: CVRPInstance, solution: list[SolutionRoute], *args, **kwargs):
     del args, kwargs, solution
+    import numpy as np
+
     seqs = [[2, 3, 4, 5], [6, 7, 8, 9], [10, 11, 12, 13]]
     routes = [SolutionRoute(customers=list(s), cost=instance.route_cost(s)) for s in seqs]
-    return routes, []
+    return routes, [], np.ones(instance.n_customers, dtype=np.float64)
 
 
 def _fake_bg_improve(
@@ -105,12 +107,14 @@ def test_bg_ails_improvement_kept_on_sp_sc_iteration(
         solution: list[SolutionRoute],
         *args: object,
         **kwargs: object,
-    ) -> tuple[list[SolutionRoute], list[int]]:
+    ):
         del instance, solution, args, kwargs
+        import numpy as np
+
         routes = [
             SolutionRoute(customers=list(s), cost=instance_12.route_cost(s)) for s in cheap_seqs
         ]
-        return routes, []
+        return routes, [], np.ones(instance_12.n_customers, dtype=np.float64)
 
     def fake_bg_improve(
         instance: CVRPInstance,

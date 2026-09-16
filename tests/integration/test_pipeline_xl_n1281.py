@@ -81,8 +81,10 @@ def test_xl_n1281_pipeline_smoke_short(xl_n1281: CVRPInstance) -> None:
 
     def fake_bg_perturb(inst: CVRPInstance, sol: list[SolutionRoute], *a, **k):
         del a, k, sol
+        import numpy as np
+
         routes = _seqs_to_solution_routes(inst, [list(inst.customers)])
-        return routes, []
+        return routes, [], np.ones(inst.n_customers, dtype=np.float64)
 
     def fake_bg_improve(
         inst: CVRPInstance,

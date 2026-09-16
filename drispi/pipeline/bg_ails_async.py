@@ -63,6 +63,8 @@ class BgAilsJob:
     small_cluster_alpha: float
     pair_selection: str
     n_chains_mode: str
+    unique_first_routes: bool
+    boundary_mask_first_ls: bool
     op_tag: HAOSTag
     enqueue_ts: float
 
@@ -103,7 +105,7 @@ def _process_job(job: BgAilsJob, *, instance: CVRPInstance, xmx: str) -> BgAilsR
     dissim = compute_dissimilarity_matrix(
         instance, job.lambda_demand, job.angular_offset
     )
-    perturbed_sol, perturbed_indices = run_bg_ails_perturb(
+    perturbed_sol, perturbed_indices, ranks_hat = run_bg_ails_perturb(
         instance,
         combined_sol,
         dissim,
@@ -114,6 +116,7 @@ def _process_job(job: BgAilsJob, *, instance: CVRPInstance, xmx: str) -> BgAilsR
         seed=job.seed,
         pair_selection=job.pair_selection,  # type: ignore[arg-type]
         n_chains_mode=job.n_chains_mode,  # type: ignore[arg-type]
+        unique_first_routes=job.unique_first_routes,
     )
     # Free the O(n^2) matrix before the JVM starts so numpy and -Xmx peaks
     # never overlap inside this process.
@@ -129,6 +132,9 @@ def _process_job(job: BgAilsJob, *, instance: CVRPInstance, xmx: str) -> BgAilsR
         time_limit=job.time_limit,
         seed=job.seed,
         solver=Ails2Solver(active_processor_count=1, xmx=xmx),
+        ranks_hat=ranks_hat,
+        boundary_threshold=job.boundary_threshold,
+        boundary_mask_first_ls=job.boundary_mask_first_ls,
     )
     improve_wall_s = time.perf_counter() - t1
 
@@ -297,6 +303,8 @@ class AsyncBgAilsController:
         pair_selection: str,
         n_chains_mode: str,
         op_tag: HAOSTag,
+        unique_first_routes: bool = True,
+        boundary_mask_first_ls: bool = True,
     ) -> int:
         """Enqueue one job (deep-copied payload). Raises when a job is in flight."""
         if not self._started or self._job_queue is None:
@@ -320,6 +328,8 @@ class AsyncBgAilsController:
             small_cluster_alpha=float(small_cluster_alpha),
             pair_selection=str(pair_selection),
             n_chains_mode=str(n_chains_mode),
+            unique_first_routes=bool(unique_first_routes),
+            boundary_mask_first_ls=bool(boundary_mask_first_ls),
             op_tag=op_tag,
             enqueue_ts=time.time(),
         )

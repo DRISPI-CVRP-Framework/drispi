@@ -4,8 +4,8 @@ characteristic, for Section 5.2.2 (Performance by Instance Characteristics).
 
 Panels: (a) depot position, (b) customer distribution, (c) demand
 distribution -- each a bar of the per-category mean gap with a
-one-sample-SD error bar and the category's instance count in the tick
-label -- and (d) a plain scatter of gap against n, with no fitted line,
+one-sample-SD error bar -- and (d) a plain scatter of gap against n, with
+no fitted line,
 since Section 5.2.2's own regression coefficients are inserted separately
 as \\todo{NUMBER: ...} placeholders pending the author's own regression run.
 
@@ -28,28 +28,18 @@ from __future__ import annotations
 
 import json
 import statistics
+import sys
 from pathlib import Path
 
-import matplotlib
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from scripts.thesis_figstyle import apply, fig_size  # noqa: E402
 
-matplotlib.use("pdf")
 import matplotlib.pyplot as plt
 
-ROOT = Path(__file__).resolve().parents[1]
 DATA_FILE = ROOT / "data/results/xl_solver_comparison.json"
 SUMMARY_TABLE = ROOT / "thesis/tables/xl_summary_table.tex"
 OUTPUT = ROOT / "thesis/figures/characteristics_panels.pdf"
-
-plt.rcParams.update(
-    {
-        "font.family": "serif",
-        "font.size": 9.5,
-        "axes.labelsize": 9.5,
-        "axes.titlesize": 10,
-        "xtick.labelsize": 8,
-        "ytick.labelsize": 8,
-    }
-)
 
 
 def _gap_pct(cost: float, bks: float) -> float:
@@ -95,11 +85,10 @@ def plot_bar_panel(ax, stats, label_map, title):
     labels = [label_map.get(cat, cat) if label_map else cat for cat, _, _, _ in stats]
     means = [m for _, m, _, _ in stats]
     sds = [s for _, _, s, _ in stats]
-    counts = [n for _, _, _, n in stats]
     x = range(len(stats))
     ax.bar(x, means, yerr=sds, capsize=3, color="#7f9fd6", edgecolor="black", linewidth=0.6, width=0.6)
     ax.set_xticks(list(x))
-    ax.set_xticklabels([f"{lab}\n(n={n})" for lab, n in zip(labels, counts)])
+    ax.set_xticklabels(labels)
     ax.set_ylabel("Mean-of-3 gap (%)")
     ax.set_title(title)
     ax.set_ylim(bottom=0)
@@ -107,6 +96,7 @@ def plot_bar_panel(ax, stats, label_map, title):
 
 
 def main() -> None:
+    apply()
     data = json.loads(DATA_FILE.read_text(encoding="utf-8"))
     rows = parse_summary_table()
 
@@ -136,7 +126,7 @@ def main() -> None:
     dep_full = {"R": "Random", "C": "Central", "E": "Eccentric"}
     cust_full = {"R": "Random", "C": "Clustered", "RC": "Random-\nClustered"}
 
-    fig, axes = plt.subplots(2, 2, figsize=(6.8, 6.0))
+    fig, axes = plt.subplots(2, 2, figsize=fig_size(1.0, 430))
 
     plot_bar_panel(axes[0][0], dep_stats, dep_full, "(a) Depot position")
     plot_bar_panel(axes[0][1], cust_stats, cust_full, "(b) Customer distribution")

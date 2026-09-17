@@ -203,23 +203,35 @@ def analyse_performance(root: Path | None = None) -> dict[str, Any]:
             "mean": float(np.mean(e_vec)),
             "median": float(np.median(e_vec)),
         }
+        e_minus_a = _pair_block(
+            e_vec - np.array([means[n]["A"] for n in e_names], dtype=np.float64)
+        )
+        e_minus_b = _pair_block(
+            e_vec - np.array([means[n]["B"] for n in e_names], dtype=np.float64)
+        )
+        e_minus_c = _pair_block(
+            e_vec - np.array([means[n]["C"] for n in e_names], dtype=np.float64)
+        )
+        raw_e = [e_minus_a["wilcoxon_p"], e_minus_b["wilcoxon_p"]]
+        if None not in raw_e:
+            adj_e = holm([float(p) for p in raw_e])
+            e_minus_a["holm_p"] = adj_e[0]
+            e_minus_b["holm_p"] = adj_e[1]
         e_block = {
             "n_instances": len(e_names),
             "note": (
                 "arm E = D unique-first kick + first-LS boundary mask; "
-                "not in the C−A / C−B Holm family"
+                "E−A / E−B Holm family of two (deployed BG-AILS vs AILS-II and Control)"
             ),
+            "family_size": 2,
             "E_minus_D": _pair_block(
                 e_vec - np.array([means[n]["D"] for n in e_names], dtype=np.float64)
             )
             if all("D" in means[n] for n in e_names)
             else None,
-            "E_minus_C": _pair_block(
-                e_vec - np.array([means[n]["C"] for n in e_names], dtype=np.float64)
-            ),
-            "E_minus_A": _pair_block(
-                e_vec - np.array([means[n]["A"] for n in e_names], dtype=np.float64)
-            ),
+            "E_minus_C": e_minus_c,
+            "E_minus_A": e_minus_a,
+            "E_minus_B": e_minus_b,
         }
         if r64_out is not None:
             e_r64 = [n for n in r64 if "E" in means[n]]

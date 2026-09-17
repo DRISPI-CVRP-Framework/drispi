@@ -47,8 +47,11 @@ def main() -> None:
     vmin = max(1.0, float(np.min(np.concatenate([eval_a, eval_e]).clip(min=1))))
     vmax = float(np.max(np.concatenate([eval_a, eval_e]).clip(min=1)))
     norm = LogNorm(vmin=vmin, vmax=max(vmax, vmin * 1.01))
-    fig, axes = plt.subplots(1, 2, figsize=fig_size(1.0, 220))
-    for ax, touches, title in ((axes[0], eval_a, "A"), (axes[1], eval_e, "E")):
+    fig, axes = plt.subplots(1, 2, figsize=fig_size(1.0, 240), constrained_layout=True)
+    for ax, touches, title in (
+        (axes[0], eval_a, "AILS-II"),
+        (axes[1], eval_e, "BG-AILS"),
+    ):
         _hulls(ax, data)
         sc = ax.scatter(
             xy[:, 0],
@@ -65,7 +68,9 @@ def main() -> None:
         ax.set_xticks([])
         ax.set_yticks([])
         ax.set_title(title)
-    fig.colorbar(sc, ax=axes.ravel().tolist(), fraction=0.03, pad=0.02)
+    cbar = fig.colorbar(sc, ax=axes.ravel().tolist(), fraction=0.03, pad=0.02)
+    cbar.set_label("Evaluated touches")
+    OUT.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(OUT)
     print(f"wrote {OUT}")
 

@@ -1,41 +1,138 @@
 \chapter{Literature Review}\label{chapter:literature}
-Cite papers with \verb+\cite{BibTeX key}+\\
-There is a comprehensive introduction to Operations Research by \citet{Winston.2007}.
-It may be beneficial to consult comprehensive review articles within the relevant research domains 
-\citep{Dekker.2012, Matl.2018, Zhang.2023}.
 
-Also use the introduction to this chapter to outline the general field of VRP and related problems. Explain np-hardness, the background VRP and CVRP, and how research has been progressing in the field.
+The truck dispatching model of \citet{truck_dantzig_1959} is the origin of the vehicle routing family. Subsequent research has treated the \gls{cvrp} as the canonical member of that family: a homogeneous fleet, capacity constraints, and a requirement that each customer is visited once \citep{tothVehicleRouting2014}. \citet{vidalConciseGuideExisting2020} map how that core model has been extended along objectives, tactical integration, and operational detail.
+
+This chapter states the \gls{cvrp} as used in the computational study (Section~\ref{sec:lit-problem}), reviews the methods that are competitive on the XL instances of \citet{queirogaXLInstancesCapacitated2026} (Section~\ref{sec:lit-large-cvrp}), the strategies used to scale routing search (Section~\ref{sec:lit-scalability}), and the decompose-route-improve family of wrapping frameworks (Section~\ref{sec:lit-frameworks}), and locates the remaining research gap (Section~\ref{sec:lit-gap}).
+
+\section{Problem Statement}\label{sec:lit-problem}\label{chapter:problem}
+
+The \gls{cvrp} is defined on a complete undirected graph $G = (V, E)$, where $V = \{0\} \cup C$ is the set of locations. Node $0$ represents the depot, and $C = \{1, \ldots, n\}$ is the set of customers to be served, so that $n = |C|$ is the customer count excluding the depot. Each edge $\{i, j\} \in E$ carries a non-negative travel cost $d_{ij} \geq 0$, and each customer $i \in C$ has an associated demand $q_i > 0$. A homogeneous fleet of vehicles, each with capacity $Q$, is dispatched from and returns to the depot. The objective is a set of routes, each starting and ending at the depot, such that every customer is visited exactly once, no route exceeds $Q$, and the total travel cost is minimized.
+
+The \gls{cvrp} is NP-hard \citep{lenstraComplexityVehicleRouting1981}, as a generalization of the Traveling Salesman Problem. The number of feasible solutions grows factorially with $n$. Branch-cut-and-price algorithms solve instances with a few hundred customers to proven optimality \citep{improved_pecin_2017,generic_pessoa_2020,exact_costa_2019}. They are not viable at the scales considered here. Heuristic and metaheuristic methods therefore trade an optimality guarantee for feasible solutions within a practical wall-clock budget.
+
+The computational study uses the XL instances of the CVRPLib benchmark set \citep{queirogaXLInstancesCapacitated2026}: 100 \gls{cvrp} instances with $n$ from 1{,}000 to 10{,}000. The set follows the generation scheme of the X instances of \citet{uchoaNewBenchmarkInstances2017} and varies depot position, customer distribution, demand, and average route length. Other large collections exist. The AGS instances of \citet{efficiently_arnold_2019} cover a few thousand to 30{,}000 customers from Belgian parcel operations, and \citet{accorsiRoutingOneMillion2024} test up to one million customers on projected Italian address data. \citet{queirogaXLInstancesCapacitated2026} note that those collections are few in number and that their demands are sampled from a narrow discrete range.
 
 \section{State-of-the-Art Solvers for Large-Scale CVRP}\label{sec:lit-large-cvrp}
-Namedrop the big monotlithic solvers for CVRP and their limitations. Especially mention the four solvers which are used in DRISPI: AILS-II, FILO, FILO2, and HGS-CVRP. 
 
-The main limitation to be mentioned here is the computational complexity and how it scales superexponentially with size of the problem.
+On the XL set, the methods that produced the initial \gls{bks} are highly engineered metaheuristics that search over a complete solution. We call a method \emph{monolithic} when it maintains one complete feasible solution, or a population of complete solutions, under a single search process that can in principle modify any route. Neighborhoods may be localized or sparsified. Independent customer partitions that are solved separately and merged by an outer recombination layer fall outside this definition.
 
-Also explain the general approaches of these monoliths and what else is out there.
+\citet{queirogaXLInstancesCapacitated2026} ran AILS-II, FILO, FILO2, KGLS-XXL, HGS-CVRP, SISRs, LKH-3, and OR-Tools for 60 seeds of two hours per XL instance, each on a single thread. Of the 100 initial \gls{bks} values, AILS-II found 93, FILO2 six, and FILO one. The mean gaps they report are relative to those initial \gls{bks} values: 0.07\% for AILS-II, 0.21\% for FILO2, 0.25\% for FILO, and 1.00\% for KGLS-XXL. HGS-CVRP, SISRs, LKH-3, and OR-Tools were reported as an indication; they were not calibrated for $n$ up to 10{,}000, and the two-hour limit is the same wall-clock budget previously used on X instances with at most 1{,}000 customers. The public HGS-CVRP code carries an explicit disclaimer that it is designed for medium-scale instances with up to 1{,}000 customers. LKH-3 found no feasible solution on ten XL instances within the time limit.
+
+\citet{maximoAILSIIAdaptiveIterated2024} developed AILS-II as an adaptive iterated local search for large-scale \gls{cvrp}. It keeps an elite pool and adapts perturbation strength during the search, but the object of search remains a complete routing solution. \citet{accorsiFastScalableHeuristic2021,accorsiRoutingOneMillion2024} developed FILO and FILO2 around iterated local search with granular neighborhoods \citep{tothGranularTabuSearch2003} and selective vertex caching. Granular neighborhoods restrict move evaluation to a subset of promising arcs. Selective vertex caching further restricts evaluation to recently changed vertices. Those devices localize search inside one full solution; they do not partition the customer set into independently solved subproblems.
+
+\citet{vidalHybridGeneticSearchCVRP2022} published HGS-CVRP, a hybrid genetic search with the SWAP* neighborhood, as an open implementation of the line begun in \citet{vidalHybridGeneticAlgorithm2012}. \citet{woudaPyVRPHighPerformanceVRP2024} provide PyVRP, a separate implementation of hybrid genetic search. The Queiroga comparison uses the HGS-CVRP binary.
+
+The same Queiroga experiments also show a change of leading method with scale. On instances with 100 customers, and on the lower half of the X set (up to about 330 customers), HGS-CVRP has the best mean quality among the eight codes. On the upper half of X and on XL, AILS-II leads. \citet{queirogaXLInstancesCapacitated2026} describe this as a shift from population-based search, which evolves several complete solutions, to methods that localize neighborhood evaluation inside one solution.
+
+\citet{christiaensSlackInductionString2020} proposed SISRs, a ruin-and-recreate heuristic based on string removals. \citet{knowledgeguided_arnold_2019} proposed knowledge-guided local search; \citet{efficiently_arnold_2019} extended that line to very large instances as KGLS-XXL.
+
+None of these methods scale by growing an exact branch-and-price tree. Factorial growth of the solution space is a statement about feasibility, not about heuristic runtime. What grows with $n$ for a local-search heuristic is the cost of neighborhood evaluation, the memory needed for move descriptors and caches, and the number of iterations required to reach a given quality \citep{accorsiFastScalableHeuristic2021,efficiently_arnold_2019}. Early variable neighborhood search already targeted that engineering problem on instances with up to 20{,}000 customers \citep{kytojokiEfficientVariableNeighborhood2007}. \citet{helsgaunExtensionLinKernighan2017} transforms constrained routing problems into a TSP with penalties in LKH-3, which remains a strong local-search engine when a feasible tour can be found.
+
+POPMUSIC \citep{queirogaPOPMUSICMatheuristic2021} is the contrast case among competitive large-scale methods: it is not monolithic in the sense above. It extracts subproblems from a complete incumbent and reoptimizes them with a branch-cut-and-price solver used as a heuristic. Section~\ref{sec:lit-cfrs} returns to it.
 
 \section{Scalability Strategies}\label{sec:lit-scalability}
-Write here about different approaches to scale when it comes VRPs. This should include parallelization (-> prepares for DRISPI), decomposition or divide and conquer approaches (-> prepares for DRI), and maybe some recent machine learning approaches (-> prepares for HAOS).
+
+Four strategies appear in the literature as responses to that cost: parallel execution of search, recombination of stored routes by set covering or set partitioning, decomposition of the customer set, and learned or adaptive control of operators. They have been studied mostly one at a time.
 
 \subsection{Parallelization}\label{sec:lit-parallelization}
-xyz
+
+\citet{crainicParallelSolutionMethods2008} and \citet{crainicParallelMetaheuristics2010} classify parallel metaheuristics by how they split the search: parallel neighborhood exploration inside one trajectory, multiple independent trajectories, and cooperative pools that exchange complete solutions. Applied to vehicle routing, these designs multiply processor effort on the full instance.
+
+\citet{jinCooperativeParallelMetaheuristic2014} run cooperative parallel tabu-search threads that share a common solution pool. Solutions entering the pool are clustered by similarity, and that clustering then guides intensification or diversification of the tabu threads. \citet{groerParallelAlgorithmVehicle2011} combine heuristic local search with integer programming across as many as 129 processors. In both cases the object of search remains a complete routing solution. Parallelism changes how many neighborhoods or incumbents are examined per wall-clock second; it does not change the fact that each worker is still solving the original customer set.
+
+That is a different use of parallelism from solving independent customer subsets concurrently and concatenating the routes. The second pattern needs a decomposition layer, which Section~\ref{sec:lit-decomposition} treats.
 
 \subsection{Set Covering and Set Partitioning}\label{sec:lit-set-covering}
-xyz
+
+Set covering and set partitioning are older than local-search metaheuristics. \citet{balinskiIntegerProgramDelivery1964} formulated delivery as an integer program over routes. \citet{garfinkelSetPartitioningProblemSetCovering1969} treated set partitioning as set covering with equality constraints. Once a collection of feasible routes exists, selecting a subset that covers each customer once (or at least once) is an integer program whose size tracks the pool, not $n$ directly.
+
+\citet{rochatProbabilisticDiversificationIntensification1995} stored elite routes and recombined them by a probabilistic set-covering step, using the pool as adaptive memory. The local search that generated the routes and the covering model that recombined them were already distinct components. \citet{hybrid_subramanian_2013} hybridized iterated local search with a set-partitioning model over generated routes for a class of vehicle routing problems. \citet{cavaliereIntegratedLocalsearchSetpartitioning2022} entangled LKH-3 local search with a restricted set-partitioning integer program and improved large \gls{cvrp} solutions, including some CVRPLIB \gls{bks} records.
+
+Route-pool SC/SP recombination is therefore an established intensification device. It does not, by itself, decide how the instance is split, which solver is applied to a split, or how those choices should change during a run.
 
 \subsection{Decomposition}\label{sec:lit-decomposition}
-xyz
+
+A decomposition method splits the instance into smaller subproblems, solves each piece, and reassembles a complete solution. The quality of the assembled solution depends on where the cuts fall, how often they are redrawn, and how the pieces are glued back together. Two classical construction orders, cluster-first route-second and route-first cluster-second, fix that cut in opposite ways. Wrappers that start from an already feasible routing solution can then form the next cut either on customers or on the current routes.
+
+\subsubsection{Cluster-First Route-Second and Route-First Cluster-Second}\label{sec:lit-cfrs}
+
+Cluster-first route-second (CFRS) partitions the customers and then routes each cluster. The sweep algorithm of \citet{gillettHeuristicAlgorithmVehicleDispatch1974} forms clusters by polar angle around the depot and then solves a traveling salesman problem on each cluster. \citet{fisherGeneralizedAssignmentHeuristic1981} assign customers to vehicle seeds by a generalized assignment problem and then route each assignment. \citet{parallel_taillard_1993} used geographic partitions and parallel iterative search on vehicle routing problems in the same tradition. \citet{kerscherDecomposerouteimproveFrameworkSolving2025} cluster customers with a spatial-temporal-demand dissimilarity, route each cluster with an existing algorithm, and repair the cluster boundaries; that is CFRS with an improvement pass. \citet{karaahmetogluAdaptiveClusterFirst2026} likewise build one customer partition and then route the clusters.
+
+Route-first cluster-second (RFCS) constructs a single ordering of the customers and then cuts that ordering into capacity-feasible routes. \citet{simple_prins_2004} encode a \gls{cvrp} solution as a giant tour, a permutation of all customers, and apply a split procedure that inserts depot returns so that each resulting trip respects $Q$. The clustering step therefore operates on a complete customer sequence rather than on an unstructured point set.
+
+POPMUSIC \citep{queirogaPOPMUSICMatheuristic2021} is not a one-shot construction heuristic of either kind. From a complete incumbent it extracts subproblems of typically 25 to 200 customers and solves them with a branch-cut-and-price algorithm used as a heuristic. The main experiments cover instances with 302 to 1{,}000 customers. Starting from strong incumbents or from CVRPLIB \gls{bks} records, long runs improved several best known solutions, including some very large instances. The method needs a complete solution before it can cut, and it uses a fixed subproblem policy rather than learning which partition to form. Its exact subsolver is also not an interchangeable off-the-shelf heuristic in the sense used later for DRI and DRSCI.
+
+\subsubsection{Vertex-Based and Route-Based Clustering}\label{sec:lit-clustering-paradigms}
+
+Given a partition budget, the clusters themselves can be formed from customer coordinates or from an incumbent routing solution.
+
+Vertex-based clustering partitions the customer set directly. That is the clustering step of CFRS: customers that are close in space, angle, or a composite dissimilarity are grouped, and each group is then routed. The sweep and generalized-assignment procedures above are vertex-based in this sense, as is the customer clustering of \citet{kerscherDecomposerouteimproveFrameworkSolving2025}.
+
+Route-based clustering requires a complete incumbent. It groups customers that already share a route, or it clusters the routes themselves (for example by route barycenters) and then re-solves the customer sets of those route groups. \citet{santiniDecompositionStrategiesVehicle2023} compared decomposition strategies inside the adaptive large neighborhood search of \citet{pisingerGeneralHeuristicVehicle2007} and the hybrid genetic search of \citet{vidalHybridGeneticAlgorithm2012} on the X instances of \citet{uchoaNewBenchmarkInstances2017}, with $n$ up to 1{,}000. Route-based decompositions, which group customers that already share a route, outperformed path-based coarsening, which merges customers into supernodes. Barycenter clustering was the strongest strategy overall and improved both host algorithms relative to runs without decomposition. The same study shows that a poor decomposition can fail to help: the benefit is strategy- and instance-dependent, and subproblem size and decomposition frequency require calibration. Their ALNS learns destroy and repair weights within the run; the decomposition method itself is a fixed, calibrated choice.
+
+\citet{kerscherSolvingHeterogeneousVehicle} use both customer-based and route-based clustering inside an iterative wrapper. Customer-based clustering is vertex-based CFRS. Route-based clustering cuts an incumbent, as in the Santini route-based family, and therefore cannot be applied before a feasible solution exists.
 
 \subsection{Machine Learning}\label{sec:lit-machine-learning}
-xyz
+
+Three lines of work learn or adapt how a routing method is configured: offline-learned partitioning or delegation, online operator adaptation, and pretrained-policy decomposition control without solution-cost feedback.
+
+The first line learns partitions or delegation offline. \citet{liLearningDelegate2021} train a Transformer to choose which spatially local subtour to send to a black-box subsolver, then apply that policy iteratively on instances with roughly 500 to 3{,}000 customers. \citet{houGeneralizeLearnedHeuristics2023} train a two-stage divide method (TAM) to partition a \gls{cvrp} into sub-TSPs and report real-time solutions beyond 5{,}000 nodes. \citet{yeGLOP2024} train GLOP to combine a global partition policy with local construction, evaluated on large synthetic \gls{cvrp} instances and some CVRPLIB instances. These policies are trained before the test instance is solved. At test time they can be applied iteratively, but the mapping from instance features to partition or delegation is not updated from the costs observed on that instance.
+
+The second line adapts operators online from search feedback. The adaptive large neighborhood search of \citet{ropkeAdaptiveLargeNeighborhood2006} updates roulette weights of destroy and repair heuristics during the run; \citet{pisingerGeneralHeuristicVehicle2007} apply the same layer across five vehicle routing variants. Bandit analyses of adaptive operator selection \citep{auerFinitetimeAnalysisMultiarmed2002,fialhoAnalyzingBanditbasedAdaptive2010} formalize the exploration-exploitation problem of choosing among operators whose rewards are observed only for the arm just taken. Hyper-heuristic surveys place this work in a broader literature on selecting heuristics \citep{burkeHyperheuristicsSurvey2013,karimiMamaghanMachineLearning2022}. The adapted objects are typically local-search operators, not the decomposition of the instance and the choice of subsolver.
+
+The third line uses a pretrained policy to control decomposition without updating it from solution cost. \citet{karaahmetogluAdaptiveClusterFirst2026} propose A-DEC: a pretrained large language model (Qwen2.5/3) selects clustering, balancing, and refinement actions over a hierarchical cluster tree, based on partition diagnostics. There is no learning from solution-cost feedback. The method builds one partition per run, then routes with OR-Tools guided local search; there is no route pool or SC/SP\@. It addresses heterogeneous-fleet \gls{cvrp} with a missed-demand penalty. Evaluation uses AGS-derived and synthetic instances with up to 500{,}000 customers, without X or XL \gls{bks} gap figures.
 
 \section{Algorithmic Frameworks}\label{sec:lit-frameworks}
-Idk about this section, but this would be a great way to introduce the approaches of Christoph (DRI for CCRPTW and DRSCI for HVRP). Maybe there are other approaches like this which include different strategies.
 
-I need to be clear here what the difference between a framework, solver, and heuristic is. But if done well, this is a very nice way to introduce these terms and concepts and a good bridge to the research gap.
+\citet{sorensenMetaheuristicsMetaphorExposed2015} distinguishes a metaheuristic as a problem-independent framework, a set of guidelines and operators, from a problem-specific implementation of those guidelines; \citet{sorensenHistoryMetaheuristics2018} keep that vocabulary. This thesis uses three terms. A \emph{framework} is a reusable control structure that can wrap existing solvers. A \emph{solver} is a concrete implementation that searches a routing instance (AILS-II, FILO, FILO2, PyVRP). A \emph{heuristic} is any procedure that returns a feasible solution without an optimality guarantee. Every solver named above is a heuristic; not every heuristic is a framework.
+
+\citet{kerscherDecomposerouteimproveFrameworkSolving2025} proposed the decompose-route-improve (DRI) framework for the vehicle routing problem with time windows. Customers are clustered with a spatial-temporal-demand dissimilarity metric; each cluster is solved by an existing algorithm; pruned local search repairs the cluster boundaries. Clustering hyperparameters, including the number of clusters, are parameterized and compared offline. The computational study includes instances with up to 30{,}000 customers. Configuration is not learned during a run.
+
+\citet{kerscherSolvingHeterogeneousVehicle} proposed DRSCI for heterogeneous vehicle routing problems. Each iteration decomposes the instance with customer- and route-based clustering, solves homogeneous subproblems with existing routing software, stores routes in a pool, and recombines them by set covering. Clustering technique and routing formulation are selected uniformly at random each iteration; the cluster count is randomized so that subproblems contain on the order of 50 to 200 customers. The study examines heterogeneous-fleet instances with at least 300 customers, reported in size classes through more than 800 customers, and fleet-size-and-mix instances with time windows. Time windows enter through those experiments, not through the published title.
+
+An unpublished project study adapted DRSCI to \gls{cvrp} with the same uniform random arm selection and reported a 0.53\% mean gap to the initial XL \gls{bks} \citep{altendeiteringDRSCICVRP2026}.
 
 \section{Remaining Research Gap}\label{sec:lit-gap}
-This should seemlessly connect to the research questions and pick them back up. It should present the state of the art approaches as unfit for the future of larger and larger VRPs.
 
-Also, it should present that a combination of different strategies to tackle scale is unexplored and that the release of this new problem set is the perfect opportunity to explore this.
+No published decomposition framework learns its decomposition and subsolver configuration within a run from solution-quality feedback. Existing approaches configure that choice by a fixed rule \citep{parallel_taillard_1993,queirogaPOPMUSICMatheuristic2021,santiniDecompositionStrategiesVehicle2023}, by offline tuning \citep{kerscherDecomposerouteimproveFrameworkSolving2025}, by uniform randomization \citep{kerscherSolvingHeterogeneousVehicle}, by an offline-trained policy \citep{liLearningDelegate2021,houGeneralizeLearnedHeuristics2023,yeGLOP2024}, or by a pretrained policy that reacts to partition diagnostics without cost feedback \citep{karaahmetogluAdaptiveClusterFirst2026}.
 
-This section should get a sick figure/table to illustrate the research gap and how DRISPI combines all these scalability strategies which have been explored only in isolation so far.
+Algorithm-agnostic solver plug-in, parallel subproblem solving, route-pool SC/SP recombination, and evaluation on the XL set of \citet{queirogaXLInstancesCapacitated2026} are in the scope of this thesis. They are not, taken separately, the gap. Table~\ref{tab:lit-research-gap} records which published methods combine which of them.
+
+The primary research question is whether an algorithm-agnostic, adaptive decomposition framework that learns its decomposition and solving strategy within a single run can produce solutions competitive with the monolithic XL solvers of Section~\ref{sec:lit-large-cvrp}, without instance-specific tuning \citep{queirogaXLInstancesCapacitated2026,maximoAILSIIAdaptiveIterated2024,accorsiRoutingOneMillion2024}.
+
+A secondary question is whether the learned operator-weight distributions yield interpretable information about instance structure and thereby reduce the need for manual parameter tuning across instance classes. \citet{eibenParameterControlEvolutionary1999} distinguish parameter tuning, which sets values before a run, from parameter control, which updates them during a run. Control does not remove the design problem; it relocates it to the update rule. An online controller still has decay, probability floors, reward values, and a warm-up. Chapter~\ref{chapter:study} reports weight trajectories; it does not include a fixed-configuration control arm, so the secondary question is answered descriptively.
+
+\begin{sidewaystable}
+\caption{Research-gap matrix for large-scale routing methods. Features: P~=~parallel subproblem solving; D~=~customer-set decomposition; SC~=~route-pool set covering or set partitioning; Ag~=~algorithm-agnostic solver plug-in. Configuration control: fixed; tuned offline; random; learned offline; pretrained policy, no solution-cost feedback; learned within run from feedback. $\sim$ marks a partial capability.}
+\label{tab:lit-research-gap}
+\small
+{\centering
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{@{}lcccc p{5.6cm} l@{}}
+\toprule
+Approach & P & D & SC & Ag & Configuration control & Largest $n$ \\
+\midrule
+AILS-II \citep{maximoAILSIIAdaptiveIterated2024} & no & no\textsuperscript{a} & no & -- & fixed (internal adaptive LS) & XL $10{,}001$\textsuperscript{d} \\
+FILO2 \citep{accorsiRoutingOneMillion2024} & no & no\textsuperscript{a} & no & -- & fixed & $10^{6}$ \\
+POPMUSIC \citep{queirogaPOPMUSICMatheuristic2021} & $\sim$\textsuperscript{b} & yes & no & $\sim$ & fixed & $302$--$1{,}000$\textsuperscript{e} \\
+Rochat and Taillard \citep{rochatProbabilisticDiversificationIntensification1995} & no & no & yes & -- & fixed & classical VRP \\
+Cavaliere et al.\ \citep{cavaliereIntegratedLocalsearchSetpartitioning2022} & no & no & yes & -- & fixed & CVRPLIB \\
+Santini et al.\ \citep{santiniDecompositionStrategiesVehicle2023} & $\sim$ & yes & no & -- & fixed decomp.; ALNS learns operators & X $1{,}000$ \\
+L2D \citep{liLearningDelegate2021} & $\sim$ & yes & no & yes & learned offline & $500$--$3{,}000$ \\
+A-DEC \citep{karaahmetogluAdaptiveClusterFirst2026} & yes & yes & no & $\sim$ & pretrained; no cost feedback & $500{,}000$ \\
+DRI \citep{kerscherDecomposerouteimproveFrameworkSolving2025} & $\sim$ & yes & no & yes & tuned offline & $30{,}000$ \\
+DRSCI \citep{kerscherSolvingHeterogeneousVehicle}\textsuperscript{c} & $\sim$ & yes & yes & yes & random & HVRP ${>}800$ \\
+DRISPI (this thesis) & yes & yes & yes & yes & learned within run from feedback & XL $10{,}001$ \\
+\bottomrule
+\end{tabular}
+\par}
+
+\vspace{0.6em}
+\noindent{\footnotesize\raggedright
+\textsuperscript{a} Localized neighborhoods (granular arcs; selective vertex caching) are not customer-set decomposition \citep{tothGranularTabuSearch2003,accorsiFastScalableHeuristic2021}.\\
+\textsuperscript{b} Subproblems are optimized in a POPMUSIC intensification loop rather than as a standing parallel subproblem layer.\\
+\textsuperscript{c} CVRP adaptation in an unpublished project study \citep{altendeiteringDRSCICVRP2026}, also with uniform random arm selection.\\
+\textsuperscript{d} Scale as evaluated for the initial XL \gls{bks} by \citet{queirogaXLInstancesCapacitated2026}; gaps in that study are relative to the initial \gls{bks}.\\
+\textsuperscript{e} Main experimental range; long runs also improved some larger CVRPLIB \gls{bks} records \citep{queirogaPOPMUSICMatheuristic2021}.
+\par}
+\end{sidewaystable}

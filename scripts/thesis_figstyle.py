@@ -1,15 +1,22 @@
-"""Shared matplotlib style for BG-AILS ablation figures.
+"""Shared matplotlib style for thesis figures.
 
-Text width is the KOMA ``scrreprt`` 12pt A4 ``\\textwidth`` from a local
-``\\the\\textwidth`` measurement: 426.79135 pt. Do not pass a width to
-``\\includegraphics``.
+Text width is the KOMA ``scrreprt`` 12pt A4 ``\\textwidth`` under
+``geometry`` left=50mm, right=20mm on A4: 140 mm = 398.33858 pt.
+Do not pass a width to ``\\includegraphics``.
+
+Body text uses Times via ``\\usepackage{times}`` (Nimbus Roman on this
+system). Figures register that OpenType family and use 10 pt for labels
+and 9 pt for ticks, matching caption scale under a 12 pt document class.
 """
 
 from __future__ import annotations
 
-import matplotlib as mpl
+from pathlib import Path
 
-TEXTWIDTH_PT = 426.79135
+import matplotlib as mpl
+from matplotlib import font_manager as fm
+
+TEXTWIDTH_PT = 398.33858
 OKABE_ITO = [
     "#000000",
     "#E69F00",
@@ -21,25 +28,54 @@ OKABE_ITO = [
     "#CC79A7",
 ]
 
+_NIMBUS_DIR = Path("/usr/share/fonts/opentype/urw-base35")
+_NIMBUS_FILES = (
+    "NimbusRoman-Regular.otf",
+    "NimbusRoman-Bold.otf",
+    "NimbusRoman-Italic.otf",
+    "NimbusRoman-BoldItalic.otf",
+)
+_SERIF = [
+    "Nimbus Roman",
+    "Times New Roman",
+    "Times",
+    "TeX Gyre Termes",
+    "Liberation Serif",
+    "DejaVu Serif",
+]
+
+
+def _register_nimbus() -> None:
+    for name in _NIMBUS_FILES:
+        path = _NIMBUS_DIR / name
+        if path.is_file():
+            try:
+                fm.fontManager.addfont(str(path))
+            except (RuntimeError, OSError, ValueError):
+                pass
+
 
 def apply() -> None:
     mpl.use("pdf")
+    _register_nimbus()
     mpl.rcParams.update(
         {
             "font.family": "serif",
-            "font.serif": ["Latin Modern Roman", "LMRoman10", "Times"],
+            "font.serif": _SERIF,
+            "mathtext.fontset": "stix",
             "text.usetex": False,
             "font.size": 10,
             "axes.labelsize": 10,
-            "legend.fontsize": 8.5,
+            "axes.titlesize": 10,
+            "legend.fontsize": 9,
             "xtick.labelsize": 9,
             "ytick.labelsize": 9,
-            "axes.titlesize": 10,
             "figure.facecolor": "white",
             "axes.facecolor": "white",
             "axes.grid": False,
             "pdf.fonttype": 42,
             "ps.fonttype": 42,
+            "axes.unicode_minus": False,
         }
     )
 

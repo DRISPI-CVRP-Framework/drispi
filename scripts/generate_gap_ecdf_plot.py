@@ -26,27 +26,17 @@ Usage:
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
-import matplotlib
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from scripts.thesis_figstyle import apply, fig_size  # noqa: E402
 
-matplotlib.use("pdf")
 import matplotlib.pyplot as plt
 
-ROOT = Path(__file__).resolve().parents[1]
 DATA_FILE = ROOT / "data/results/xl_solver_comparison.json"
 OUTPUT = ROOT / "thesis/figures/gap_ecdf.pdf"
-
-plt.rcParams.update(
-    {
-        "font.family": "serif",
-        "font.size": 10,
-        "axes.labelsize": 10,
-        "legend.fontsize": 8.5,
-        "xtick.labelsize": 9,
-        "ytick.labelsize": 9,
-    }
-)
 
 # Ordered by mean-of-N gap, ascending (Table 5.2), except DRISPI is kept last
 # regardless of rank since it is the thesis's own method and is drawn on top
@@ -77,9 +67,10 @@ def _series(data: dict, solver: str) -> list[float]:
 
 
 def main() -> None:
+    apply()
     data = json.loads(DATA_FILE.read_text(encoding="utf-8"))
 
-    fig, ax = plt.subplots(figsize=(5.4, 3.7))
+    fig, ax = plt.subplots(figsize=fig_size(0.85, 270))
     for solver, color, linestyle, linewidth in PLOTS:
         vals = _series(data, solver)
         n = len(vals)

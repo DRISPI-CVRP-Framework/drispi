@@ -75,7 +75,7 @@ If build fails in the UI, open the LaTeX Workshop output / problem panel, or che
 | Path | Role |
 |---|---|
 | `chapters/0_Abstract.tex` | Abstract |
-| `chapters/1_Introduction.tex` … `6_Conclusion.tex` | Main chapters |
+| `chapters/1_Introduction.tex` … `5_Conclusion.tex` | Main chapters |
 | `chapters/Appendix.tex` | Appendix |
 | `chapters/Declaration of Authorship.tex` | Authorship declaration |
 | `chapters/Declaration of AI Use.tex` | AI-use declaration |

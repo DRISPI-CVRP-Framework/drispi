@@ -2,7 +2,7 @@
 % TODO(style): deviates from template -- HAOS, BG-AILS, the DRI loop, and
 % SC/SP are introduced by manual spelling below rather than through
 % \gls{}/\newacronym, matching every other use of these terms in this
-% chapter (Sections 4.1-4.6, written before this intro). Flagged per
+% chapter (Sections 3.1-3.7, written before this intro). Flagged per
 % STYLE.md \S8 rather than silently rewritten; a future pass could add
 % glossary entries for all four and switch the whole chapter over at once.
 
@@ -13,46 +13,84 @@ Figure~\ref{fig:dri-overview} shows the resulting control flow for one instance.
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[
-    x=1cm, y=1cm,
-    startstop/.style={ellipse, draw, thick, minimum width=2.1cm, minimum height=0.9cm, align=center, fill=gray!12},
-    process/.style={rectangle, draw, thick, rounded corners=2pt, minimum width=4.4cm, minimum height=1.05cm, align=center, fill=blue!6},
-    decision/.style={diamond, draw, thick, aspect=2.4, inner sep=1pt, align=center, fill=orange!8, text width=2.7cm},
-    poolbox/.style={rectangle, draw, thick, dashed, minimum width=2.5cm, minimum height=10.2cm, align=center, fill=gray!5},
-    arr/.style={-{Latex[length=2.2mm,width=1.6mm]}, thick},
-    lbl/.style={font=\footnotesize},
-    ]
+  font=\small,
+  >={Latex[length=2mm]},
+  line/.style={draw, thick, ->},
+  box/.style={rectangle, draw, thick, fill=black!4, align=center,
+              minimum width=5.6cm, minimum height=0.9cm, inner sep=3pt},
+  phase/.style={box, fill=blue!6},
+  lane/.style={rectangle, draw, thick, fill=blue!6, align=center,
+               minimum width=1.6cm, minimum height=0.8cm, inner sep=2pt},
+  term/.style={ellipse, draw, thick, fill=black!10, minimum width=2.2cm, minimum height=0.8cm},
+  dec/.style={diamond, draw, thick, fill=orange!8, align=center, aspect=3.2,
+              inner sep=1pt, minimum width=5.6cm},
+  tag/.style={rectangle, draw, thick, fill=blue!30!black!80, text=white,
+              font=\small\bfseries\sffamily, minimum width=0.75cm, inner sep=0pt},
+  bar/.style={fill=black, inner sep=0pt, minimum height=3pt},
+  lbl/.style={font=\footnotesize},
+]
+\def\W{5.6cm}
 
-   
-    \node[startstop] (start) at (3,21.0) {Start};
-    \node[process]   (haos)    at (3,19.1) {HAOS draws a configuration};
-    \node[process]   (decomp)  at (3,17.4) {Decomposition into $k$ subclusters};
-    \node[process]   (routing) at (3,15.7) {Routing (parallel, then concatenated)};
-    \node[process]   (bgails)  at (3,14.0) {BG-AILS};
-    \node[decision]  (dec1)    at (3,11.7) {SC/SP scheduled?};
-    \node[process]   (scsp)    at (3,9.2)  {SC/SP};
-    \node[process]   (improve) at (3,7.5)  {Improvement (AILS-II)};
-    \node[decision]  (dec2)    at (3,4.6)  {Stopping criterion met?};
-    \node[startstop] (end)     at (3,2.4)  {End};
-    \node[poolbox]   (pool)    at (8.7,12.4) {};
-    \node[lbl] at (8.7,16.6) {Route Pool};
+\node[term]                          (start) {Start};
+\node[box,   below=0.6cm of start]   (haos)  {HAOS draws a configuration};
+\node[phase, below=0.6cm of haos]    (dec)   {Decomposition into $k$ subclusters};
 
-    \draw[arr] (start) -- (haos);
-    \draw[arr] (haos) -- (decomp);
-    \draw[arr] (decomp) -- (routing);
-    \draw[arr] (routing) -- (bgails);
-    \draw[arr] (bgails) -- (dec1);
-    \draw[arr] (dec1) -- node[lbl,left] {yes} (scsp);
-    \draw[arr] (scsp) -- (improve);
-    \draw[arr] (improve) -- (6.2,6.1) -- (dec2);
-    \draw[arr] (dec1.east) -- node[lbl,above] {no} (10.6,11.7) -- (10.6,6.1) -- (dec2.east);
-    \draw[arr] (dec2) -- node[lbl,left] {yes} (end);
-    \draw[arr] (dec2.west) -- node[lbl,above,pos=0.75] {no} (-1.6,4.6) -- (-1.6,19.1) -- (haos.west);
-    \node[lbl] at (-1.6,12.0) {\rotatebox{90}{next iteration}};
+\node[bar, minimum width=4.8cm, below=0.55cm of dec] (fork) {};
+\node[lane, below=0.4cm of fork]           (l2) {$\cdots$};
+\node[lane, left=0.2cm of l2]              (l1) {Solve $\mathcal{P}_1$};
+\node[lane, right=0.2cm of l2]             (l3) {Solve $\mathcal{P}_k$};
+\node[bar, minimum width=4.8cm, below=0.4cm of l2] (join) {};
+\node[draw, thick, dashed, rounded corners=2pt, inner xsep=0pt, inner ysep=5pt,
+      minimum width=\W, fit=(fork)(join)(l1)(l3)] (route) {};
 
-    \draw[arr] (routing.east) -- node[lbl,above] {feed} (7.45,15.7);
-    \draw[arr] (bgails.east) -- node[lbl,above] {feed} (7.45,14.0);
-    \draw[arr] (improve.east) -- node[lbl,above] {feed} (7.45,7.5);
-    \draw[arr] (7.45,9.2) -- node[lbl,above] {read} (scsp.east);
+\node[phase, below=0.6cm of route]   (bg)    {BG-AILS};
+\node[dec,   below=0.5cm of bg]      (q1)    {SC/SP scheduled?};
+\node[phase, below=0.5cm of q1]      (sp)    {SC/SP};
+\node[phase, below=0.6cm of sp]      (imp)   {Improvement (AILS-II)};
+\coordinate[below=0.5cm of imp]      (merge);
+\node[dec,   below=0.5cm of merge]   (q2)    {Stopping criterion met?};
+\node[term,  below=0.5cm of q2]      (end)   {End};
+
+\foreach \n/\t in {dec/D, bg/I, sp/SP, imp/I}
+  \node[tag, anchor=east, minimum height=0.9cm] at (\n.west) {\t};
+\path let \p1=($(route.north)-(route.south)$) in
+  node[tag, anchor=north east, minimum height=\y1] at (route.north west) {R};
+
+\draw[line] (start) -- (haos);
+\draw[line] (haos)  -- (dec);
+\draw[line] (dec)   -- (fork);
+\foreach \l in {l1,l2,l3} {
+  \draw[line] (fork.south -| \l) -- (\l);
+  \draw[line] (\l) -- (join.north -| \l);
+}
+\draw[line] (join) -- node[lbl, right, pos=0.45] {concatenate} (bg);
+\draw[line] (bg)   -- (q1);
+\draw[line] (q1)   -- node[lbl, right] {yes} (sp);
+\draw[line] (sp)   -- (imp);
+\draw[thick] (imp.south) -- (merge);
+\draw[line] (merge) -- (q2);
+\draw[line] (q2)   -- node[lbl, right] {yes} (end);
+
+\def\xin{-4.0cm}
+\def\xout{-4.9cm}
+\draw[thick] (q1.west) -- node[lbl, above] {no} (\xin, 0 |- q1.west)
+            |- (merge);
+\fill (merge) circle (1.6pt);
+
+\draw[line] (q2.west) -- node[lbl, above] {no} (\xout, 0 |- q2.west)
+            |- node[lbl, pos=0.25, sloped, above] {next iteration} (haos.west);
+
+\def\xpool{4.6cm}
+\path let \p1=($(route.north)-(imp.south)$) in
+  node[draw, thick, dashed, fill=black!3, minimum width=1.7cm,
+       minimum height=\y1, anchor=north, align=center] (pool)
+  at (\xpool, 0 |- route.north) {};
+\node[align=center, font=\small] at (pool.center) {Route\\pool};
+
+\draw[line] (route.east) -- node[lbl, above] {feed} (pool.west |- route.east);
+\draw[line] (bg.east)    -- node[lbl, above] {feed} (pool.west |- bg.east);
+\draw[line] (pool.west |- sp.east) -- node[lbl, above] {read} (sp.east);
+\draw[line] (imp.east)   -- node[lbl, above] {feed} (pool.west |- imp.east);
 \end{tikzpicture}
 \caption{Sequential control flow of one DRISPI run: the DRI loop, the route pool, and periodic SC/SP recombination.}
 \label{fig:dri-overview}
@@ -69,9 +107,31 @@ The operator choices can also be interpreted as arms of a multi-armed bandit. Af
 % not entirely happy with this paragraph. Foreshadowing usually indicates poor structure. Evaluate later.
 
 % Maybe write the Levels in bold? Or use a different way to explain them clearer. Like an indented enumeration
-At the beginning of every DRI iteration HAOS draws one configuration across five levels. Level one selects the number of subclusters $k$ from a scale-adaptive domain. Its base values are clipped to the instance's minimum feasible fleet size and extended geometrically for larger instances. The number of arms is capped at ten to allow for convergence to occur within a reasonable wallclock time. Level two selects the demand weight $\lambda_q$ from six evenly spaced values between zero and one; this value controls how strongly differences in customer demand influence the decomposition. Level three selects whether customers are clustered directly (the vertex-based paradigm) or through the routes of the current incumbent solution (the route-based paradigm). Level four selects a clustering method from the wheel associated with the chosen paradigm, with five vertex-based and three route-based methods in the deployed configuration. This conditional fourth level makes the selection hierarchical since the selection on level four directly depends on level three. Level five selects one of four routing solvers and applies it to every subcluster generated during the iteration. The first four levels therefore configure decomposition, and the fifth configures subproblem routing.
+At the beginning of every DRI iteration HAOS draws one configuration across five levels. Level one selects the number of subclusters $k$ from a scale-adaptive domain. Its base values are clipped to the instance's minimum feasible fleet size and extended geometrically for larger instances. The number of arms is capped at ten to allow for convergence to occur within a reasonable wallclock time. Level two selects the demand weight $\lambda_q$ from six evenly spaced values between zero and one; this value controls how strongly differences in customer demand influence the decomposition. Level three selects the clustering paradigm $\pi$: whether customers are clustered directly (the vertex-based paradigm) or through the routes of the current incumbent solution (the route-based paradigm). Level four selects a clustering method $m$ from the wheel associated with $\pi$, with five vertex-based and three route-based methods in the deployed configuration. This conditional fourth level makes the selection hierarchical since the selection of $m$ depends on $\pi$. Level five selects one of four routing solvers $s$ and applies it to every subcluster generated during the iteration. The first four levels therefore configure decomposition, and the fifth configures subproblem routing. Write $\theta = (k, \lambda_q, \pi, m, s)$ for this five-level configuration.
 
-Two feasibility adjustments apply before the configuration is used; Algorithm~\ref{alg:haos} gives the draw and update in full. Route-based clustering requires an incumbent solution. Without one, HAOS uses the vertex-based paradigm and redraws the method from the vertex wheel; these applied choices receive the subsequent credit. If $k$ exceeds the number of incumbent routes under route-based clustering, the applied $k$ is clipped to the route count. The immediate update retains the index of the $k$ arm originally drawn, while route tags record the configuration that was applied. Each iteration is logged with the complete operator selection and the product of the five selected probabilities, which reports the joint probability of the realized configuration under the current wheels.
+Two feasibility adjustments apply before the configuration is used; Algorithm~\ref{alg:haos} gives Draw, Credit, and Decay. Route-based clustering requires an incumbent solution. Without one, HAOS uses the vertex-based paradigm and redraws the method from the vertex wheel; these applied choices receive the subsequent credit. If $k$ exceeds the number of incumbent routes under route-based clustering, the applied $k$ is clipped to the route count. The immediate update retains the index of the $k$ arm originally drawn, while route tags record the configuration that was applied. Each iteration is logged with the complete operator selection and the product of the five selected probabilities, which reports the joint probability of the realized configuration under the current wheels.
+
+\begin{algorithm}[tbp]
+\caption{Hierarchical adaptive operator selection}\label{alg:haos}
+\KwIn{wheels $W_1, W_2, W_3, W_4^{\mathrm{v}}, W_4^{\mathrm{r}}, W_5$; floors $p_{\min}^{(\ell)}$; decay $\gamma$; base weight $w_0$; warm-up $i_0 = 10$}
+\BlankLine
+\Fn{\Draw{$S^\star$}}{
+  draw $k$, $\lambda_q$, $\pi$, $s$ from $W_1, W_2, W_3, W_5$ with probabilities (\ref{eq:haos-probability})\;
+  \lIf{$\pi = \text{route}$ \KwAnd $S^\star$ is undefined}{$\pi \gets \text{vertex}$}
+  draw method $m$ from $W_4^{\pi}$\;
+  $\theta \gets (k, \lambda_q, \pi, m, s)$ \tcp*[r]{credited}
+  \lIf{$\pi = \text{route}$}{$k \gets \min(k, |S^\star|)$}
+  \Return credited $\theta$ and applied $(k, \lambda_q, \pi, m, s)$\;
+}
+\BlankLine
+\Fn{\Credit{$\theta, r$}}{
+  \lIf{$i \geq i_0$}{$w_a \gets \max(w_a + r,\, w_0)$ for every arm $a \in \theta$ by (\ref{eq:haos-update})}
+}
+\BlankLine
+\Fn{\Decay{}}{
+  \lIf{$i \geq i_0$}{$w_a \gets \max(\gamma w_a,\, w_0)$ for every arm of every wheel by (\ref{eq:haos-decay})}
+}
+\end{algorithm}
 
 HAOS maintains six roulette wheels for the five levels, because of the conditional clustering method level. Each wheel tracks one weight per option. A reward $r$ adds to the weight of every arm selected for the credited configuration. Once per iteration, every weight is also multiplied by a common decay factor. This uniform decay is the only temporal mechanism in the weights. Both operations retain the starting weight as a lower bound:
 \begin{align}
@@ -103,41 +163,9 @@ No solution & 0.0 & 0.0 \\
 \end{tabular}
 \end{table}
 
-The immediate channel scores two candidates: the solution obtained after decomposition and subproblem routing, and the solution obtained after BG-AILS. Both rewards are credited to the same five-level configuration drawn for that iteration and therefore accumulate. Each selected arm receives the full reward. By doing so, HAOS learns from the performance of the complete configuration but does not isolate the contribution of one level or model interactions between levels.
+The immediate channel scores two candidates: the solution obtained after decomposition and subproblem routing, and the solution obtained after BG-AILS. Both rewards are credited to the same five-level configuration drawn for that iteration and therefore accumulate. Each selected arm receives the full reward. By doing so, HAOS learns from the performance of the complete configuration but does not isolate the contribution of one level or model interactions between levels. In the asynchronous pipeline of Section~\ref{sec:fra-pipeline} the BG-AILS reward of iteration~$i$ is credited only after decompose-route of iteration~$i{+}1$, so the next HAOS draw does not yet see it; both rewards still land on the $\theta$ of iteration~$i$.
 
-\begin{algorithm}[H]
-\DontPrintSemicolon
-\LinesNumbered
-\SetKwInOut{Input}{Input}
-\SetKwInOut{Output}{Output}
-\Input{wheels $W_1, W_2, W_3, W_{4v}, W_{4r}, W_5$; incumbent route count $m_{\mathrm{inc}}$; floors $p_{\min}^{(1)}, \ldots, p_{\min}^{(5)}$; decay $\gamma$; base weight $w_0$}
-\Output{applied configuration $(k, \lambda_q, \mathrm{paradigm}, \mathrm{method}, \mathrm{solver})$}
-draw $k, \lambda_q, \mathrm{paradigm}, \mathrm{solver}$ from $W_1, W_2, W_3, W_5$ \tcp*{Eq.~\ref{eq:haos-probability}}
-\eIf{paradigm $=$ route}{draw method from $W_{4r}$}{draw method from $W_{4v}$}
-credited $\gets (k, \lambda_q, \mathrm{paradigm}, \mathrm{method}, \mathrm{solver})$ \tcp*{as drawn}
-\If{paradigm $=$ route and $m_{\mathrm{inc}}$ undefined}{
-  paradigm $\gets$ vertex; redraw method from $W_{4v}$; overwrite it in credited\;
-}
-$k_{\mathrm{applied}} \gets k$\;
-\If{paradigm $=$ route and $k > m_{\mathrm{inc}}$}{
-  $k_{\mathrm{applied}} \gets m_{\mathrm{inc}}$ \tcp*{credited keeps the drawn $k$}
-}
-run decomposition and routing under $(k_{\mathrm{applied}}, \lambda_q, \mathrm{paradigm}, \mathrm{method}, \mathrm{solver})$\;
-tag every produced route with this applied configuration\;
-\ForEach{candidate $\in$ (decompose-route solution, BG-AILS solution)}{
-  $r \gets$ reward of candidate from Table~\ref{tab:haos-rewards}\;
-  \ForEach{arm $i \in$ credited}{
-    $w_i \gets \max(w_i + r,\ w_0)$ \tcp*{Eq.~\ref{eq:haos-update}}
-  }
-}
-\ForEach{wheel $W \in \{W_1, W_2, W_3, W_{4v}, W_{4r}, W_5\}$, arm $i \in W$}{
-  $w_i \gets \max(\gamma w_i,\ w_0)$ \tcp*{Eq.~\ref{eq:haos-decay}}
-}
-\caption{HAOS: five-level draw and weight update for one DRI iteration}
-\label{alg:haos}
-\end{algorithm}
-
-Lines 10-11 are the feasibility clipping that matters for correctness: when route-based clustering draws a $k$ larger than the incumbent route count, only $k_{\mathrm{applied}}$ on line 11 changes; the credited configuration fixed on line 6 keeps the originally drawn $k$-arm. Lines 14-17 are the reward credit itself: both the decompose-route candidate and the BG-AILS candidate (line 14) add their reward (line 15) to every arm in credited (lines 16-17), so a single iteration's two immediate rewards accumulate on the same five arms regardless of whether $k$ had to be clipped on line 11. This is why clipping does not by itself distort the immediate update: the arm being rewarded is the one HAOS drew on line 6, not the one the pipeline used after line 11.
+When route-based clustering draws a $k$ larger than the incumbent route count, only the applied $k$ changes; the credited configuration $\theta$ keeps the originally drawn $k$-arm.
 
 The deferred channel is evaluated after SC/SP has selected routes from the pool and the resulting solution has received its unrestricted improvement pass. Every stored route carries a tag containing the complete configuration under which it was generated. The deferred reward is credited once to every distinct tag among the routes selected by SC/SP, even if those tags originate from much earlier iterations. Routes created only during the unrestricted improvement pass are excluded because no HAOS selection produced them. Deferred attribution is necessary because the usefulness of one stored route may become visible only when it is combined with routes generated later.
 
@@ -222,7 +250,7 @@ The decomposition introduces structural local optima by drawing partitions that 
 
 At its core, BG-AILS is AILS-II \citep{maximoAILSIIAdaptiveIterated2024}, the same monolithic solver DRISPI can also draw as a HAOS routing arm (Section~\ref{sec:fra-routing}), run here purely as an improvement operator rather than a cold-start solver. Two additions to stock AILS-II, both introduced for this thesis, make that role possible: a \texttt{-initialSolution} flag that seeds the search with the combined post-decompose-route solution instead of building one from scratch, and a \texttt{-initialOmega} flag that overrides the starting value of $\omega$, AILS-II's own diversification-control parameter governing how strongly its internal perturbation cycle disturbs the incumbent before every local-search pass \citep{maximoHybridAdaptiveIterated2021}. Seeding AILS-II with the concatenated solution is not sufficient on its own, however: a local search that starts from that solution and only ever considers its immediate neighborhood tends to repair it straight back toward the same seam defects the decomposition introduced, because nothing has told it that the seams, rather than a subcluster's interior, are where a profitable move is more likely to be waiting. BG-AILS therefore precedes the AILS-II call with a purpose-built perturbation step, implemented in Python, that displaces customers specifically across the boundaries between subclusters, using a single, large-neighborhood move rather than the small single-customer or single-edge moves a subsequent local search pass could trivially undo in one or two steps. This mirrors the classical iterated-local-search argument, introduced for the double-bridge move on the traveling salesman problem \citep{martinLargestepMarkovChains1991} and generalized since \citep{lourencoIteratedLocalSearch2003}, that perturbation strength must be calibrated so that the following local search neither collapses straight back into the same local optimum nor is reduced to an effective random restart. No formal proof establishes this property for an arbitrary local search and perturbation pair; the argument, for the double bridge as for cross-reconnect, is structural rather than a theorem: both disconnect the current solution through a simultaneous multi-edge change that a local search built from smaller, incremental moves does not consider as a single step, and so is unlikely to reverse in one move of its own.
 
-The perturbation step reuses the dissimilarity matrix built for the decomposition stage (Section~\ref{sec:fra-decomposition}) rather than defining a separate notion of distance, so that ``boundary'' means the same thing to BG-AILS as it did to whichever clustering method drew the partition. Algorithm~\ref{alg:bgails} gives the full perturbation procedure, from boundary scoring through the chain of cross-reconnects, ending at the AILS-II call itself. For every customer $i$ with cluster label $\kappa(i)$ under the current partition, BG-AILS first scores how close $i$ sits to a customer outside its own cluster,
+The perturbation step reuses the dissimilarity matrix built for the decomposition stage (Section~\ref{sec:fra-decomposition}) rather than defining a separate notion of distance, so that ``boundary'' means the same thing to BG-AILS as it did to whichever clustering method drew the partition. The deployed worker rebuilds that matrix from the same $(\lambda_q, \phi)$ rather than receiving $d_{ij}$. Algorithm~\ref{alg:bgails} gives the full perturbation procedure, from boundary scoring through the chain of cross-reconnects, ending at the AILS-II call itself. For every customer $i$ with cluster label $\kappa(i)$ under the current partition, BG-AILS first scores how close $i$ sits to a customer outside its own cluster,
 \begin{align}
 b_i &= 1 - \frac{\min_{j:\ \kappa(j) \neq \kappa(i)} d_{ij} - d_{\min}}{d_{\max} - d_{\min}}, \label{eq:bg-ails-boundary}\\
 \tilde b_i &= \frac{b_i}{|\kappa(i)|}\left(1 + \alpha \max\!\left(0,\ \frac{\sigma - |\kappa(i)|}{\sigma}\right)\right), \label{eq:bg-ails-weighted}
@@ -236,40 +264,27 @@ setting ranks at or below $\tau$ to zero and rescaling the remainder linearly ba
 
 Boundary ranks are defined per customer, but the only perturbation BG-AILS applies acts on whole routes at once: a cross-reconnect move that cuts two routes at a random position each and exchanges their tails, so routes $r_i$ and $r_j$ cut after position $a$ and $b$ respectively become $r_i[{:}a] \frown r_j[b{:}]$ and $r_j[{:}b] \frown r_i[a{:}]$. This is the only perturbation operator BG-AILS implements. It is a large-neighborhood move by construction, since it can reassign an arbitrarily long tail of customers between two routes in a single step, which is precisely what keeps it from being trivially undone by the small single-customer and single-edge moves of a subsequent local search pass. A route's own weight for perturbation is the maximum boundary rank among its customers, and the first route of a cross-reconnect pair is drawn from these weights, either by roulette-wheel sampling or, under DRISPI's default \texttt{greedy} pair-selection setting, by taking the arg-max outright. Its partner is not drawn from the same weights again but from a per-route affinity toward each other cluster -- the inverse of the mean dissimilarity between that route's customers and a given cluster's customers, row-normalized to sum to one -- used first to pick which neighboring cluster to reach into from the first route's own affinity row, then to pick, among the routes majority-assigned to that cluster, the one with the highest affinity back toward the first route's own cluster. This two-step draw is what keeps a cross-reconnect pair spatially adjacent across one real cluster boundary, rather than pairing two routes that both happen to contain a boundary customer but face away from each other. BG-AILS repeats this draw-and-reconnect step for a chain of $k$ iterations by default, one per subcluster (a $k-1$ variant is also implemented but is not the deployed default), with each step in the chain acting on the routes as already modified by the previous one. When decomposition realizes only a single cluster, there is no boundary to guide perturbation toward, and BG-AILS skips the perturbation step entirely, falling back to a plain AILS-II improvement pass on the unperturbed combined solution.
 
-\begin{algorithm}[H]
-\DontPrintSemicolon
-\LinesNumbered
-\SetKwInOut{Input}{Input}
-\SetKwInOut{Output}{Output}
-\Input{routes $\mathcal{S} = \{r_1, \ldots\}$; dissimilarity matrix $d_{ij}$; labels $\kappa(\cdot)$; subcluster count $k$; parameters $\sigma, \alpha, \tau$}
-\Output{perturbed solution, passed to the AILS-II call}
-\If{$k = 1$}{
-  \Return{$\mathcal{S}$ unperturbed} \tcp*{single-cluster fallback}
+\begin{algorithm}[tbp]
+\caption{Boundary-guided adaptive iterated local search}\label{alg:bgails}
+\KwIn{solution $S$; labels $\kappa(\cdot)$; $\lambda_q$; $\phi$; subcluster count $k$; budget $T$}
+\KwPar{$\sigma$, $\alpha$, $\tau$, $\omega_0$ (Table~\ref{tab:bg-ails-params})}
+\BlankLine
+\If{$k > 1$}{
+  rebuild $d_{ij}$ from $(\lambda_q, \phi)$\;
+  compute $\tilde b_i$ by (\ref{eq:bg-ails-boundary})--(\ref{eq:bg-ails-weighted}) and $\rho_i$ by (\ref{eq:bg-ails-threshold}) for every customer $i$\;
+  $\rho(r) \gets \max_{i \in r} \rho_i$ for every route $r \in S$\;
+  \For{$t \gets 1$ \KwTo $k$}{
+    $r_a \gets \arg\max_{r \in S} \rho(r)$\;
+    draw a neighboring cluster $c$ from the affinity row $A_{r_a,\cdot}$\;
+    $r_b \gets \arg\max \{ A_{r,\kappa(r_a)} : r \in S \text{ assigned to } c \}$\;
+    cut $r_a$ and $r_b$ at random positions $p_a$, $p_b$ and exchange their tails\;
+    update $\rho(r_a)$ and $\rho(r_b)$\;
+  }
 }
-\ForEach{customer $i$}{
-  compute $b_i$ (Eq.~\ref{eq:bg-ails-boundary}) and $\tilde b_i$ (Eq.~\ref{eq:bg-ails-weighted})\;
-}
-min--max normalize $\tilde b_i$ over all customers to obtain $\hat b_i$\;
-\ForEach{customer $i$}{
-  $\rho_i \gets$ Eq.~\ref{eq:bg-ails-threshold} \tcp*{boundary rank}
-}
-\ForEach{route $r \in \mathcal{S}$}{
-  $\rho(r) \gets \max_{i \in r} \rho_i$ \tcp*{route weight}
-}
-\For{$t \gets 1$ \KwTo $k$}{
-  $r_a \gets \arg\max_{r \in \mathcal{S}} \rho(r)$ \tcp*{greedy by default}
-  $c \gets$ cluster drawn from $r_a$'s affinity row $A_{r_a, \cdot}$ \tcp*{affinity row}
-  $r_b \gets \arg\max\{A_{r, \kappa(r_a)} : r \in \mathcal{S},\ \mathrm{majority\ cluster}(r) = c\}$ \tcp*{highest affinity back}
-  cut $r_a$ after random position $p_a$, $r_b$ after random position $p_b$\;
-  $r_a, r_b \gets r_a[{:}p_a] \frown r_b[p_b{:}],\ \ r_b[{:}p_b] \frown r_a[p_a{:}]$ \tcp*{cross-reconnect}
-  update $\mathcal{S}$ with the reconnected $r_a, r_b$; recompute $\rho(r_a), \rho(r_b)$\;
-}
-call AILS-II on $\mathcal{S}$ with \texttt{-initialSolution} and \texttt{-initialOmega}\;
-\caption{BG-AILS: boundary-guided perturbation preceding the AILS-II call}
-\label{alg:bgails}
+\Return $\solver(S,\ \omega_0,\ T)$\;
 \end{algorithm}
 
-Lines 12-13 are the partner draw that keeps a cross-reconnect pair spatially meaningful: the first route (line 11) is the greedy arg-max over route weights, but its partner is not drawn from those same weights again, it is drawn in two steps from $r_a$'s own affinity row, first to a neighboring cluster (line 12) and then to the route inside that cluster with the highest affinity back (line 13). This is why the operator pairs routes across one real boundary rather than two routes that both happen to touch a boundary customer without facing each other. The chain compounds because line 16 recomputes $\rho(r_a)$ and $\rho(r_b)$ after every reconnect before the loop re-enters lines 11-13, so each of the $k$ steps can select a route another step in the same call already changed, rather than $k$ independent draws against the original partition.
+The partner of the greedy first route is drawn in two steps from that route's affinity row: first a neighboring cluster, then the route inside it with the highest affinity back. The chain compounds because the route weights are recomputed after every reconnect, so each of the $k$ steps can act on a route an earlier step already changed.
 
 Figure~\ref{fig:bgails-mechanism} walks through one such call on XL-n1281-k29. Panel (a) is the concatenated decompose-route input, customers colored by the six subclusters of the pinned K-Medoids partition. Panel (b) maps pre-threshold boundary rank $\hat b_i$ and highlights the six route pairs the chain selects. Panel (c) shows those routes after the cross-reconnect cuts. Panel (d) is the solution after the AILS-II pass, customers colored by evaluated-move count from a separate instrumented run under the same input solution and budget.
 
@@ -307,9 +322,9 @@ The key difference between BG-AILS and a plain AILS-II improvement pass is there
 \text{budget} &= \max\bigl(60\text{s},\ 1.0 \times \widehat{T}_{\mathrm{DR}}\bigr), \label{eq:bg-ails-budget}\\
 \widehat{T}_{\mathrm{DR}} &= 0.976 \times n_{\mathrm{waves}}^{-0.180} \times \sum_{\text{waves}} \max(\text{per-cluster budgets in wave}), \label{eq:bg-ails-dr-wall}
 \end{align}
-refit on 835 post-strip pilot DRI iterations, where waves pack the current iteration's per-subcluster solver budgets (Section~\ref{sec:fra-routing}) into the granted DRI worker count in partition-submit order. This choice is deliberate: DRISPI can run BG-AILS in an asynchronous mode where a dedicated worker process perturbs and improves the current iteration's solution while the main process moves straight on to decomposing and routing the next iteration, with a single-slot handoff bounding the resulting lag to exactly one iteration. Sizing the BG-AILS budget after the very decompose-route stage it overlaps with is what keeps that overlap efficient rather than leaving either side idle; Section~\ref{sec:fra-pipeline} covers the resulting core split and this asynchronous handoff in full. By default, however, BG-AILS instead runs synchronously within the DRI iteration, still under the same Equation~\ref{eq:bg-ails-budget} budget.
+refit on 835 post-strip pilot DRI iterations, where waves pack the current iteration's per-subcluster solver budgets (Section~\ref{sec:fra-routing}) into the granted DRI worker count in partition-submit order. The campaign of Chapter~\ref{chapter:study} runs BG-AILS asynchronously under this budget: a dedicated worker perturbs and improves the current iteration's solution while the main process decomposes and routes the next one. Section~\ref{sec:fra-pipeline} returns to Equation~\ref{eq:bg-ails-budget} as the quantity that keeps that handoff tight.
 
-Under this comparatively short wall-clock budget, BG-AILS should outperform an unguided AILS-II pass over the same combined solution, because the unguided pass spends an unknown and likely large share of that budget searching subcluster interiors the decomposition had already solved well. We tested this on all 100 XL instances (Section~\ref{sec:stu-dataset}) at three checkpointed decompose-route solutions each, all arms forked from the same checkpoint: a stock AILS-II pass at the solver's own defaults, a blind control that applies one cross-reconnect per subcluster to uniformly drawn route pairs, and BG-AILS in its deployed configuration (without-replacement first-route selection and a first local-search pass restricted to customers above $\tau$), the control and BG-AILS at $\omega = 10$. Every arm receives the same AILS-II budget, the checkpoint's own Equation~\ref{eq:bg-ails-budget} value; the Python-side perturbation of the two perturbing arms is a surplus on top of it, a median 0.28\% of that budget for BG-AILS and 0.010\% for the control. The checkpoints are generated under one pinned decomposition configuration, vertex K-Medoids, with HAOS, the route pool, and SC/SP out of the loop, so what is compared is one improvement stage against another on identical input, not two full runs.
+Under this comparatively short wall-clock budget, BG-AILS should outperform an unguided AILS-II pass over the same combined solution, because the unguided pass spends an unknown and likely large share of that budget searching subcluster interiors the decomposition had already solved well. We tested this on all 100 XL instances (Section~\ref{sec:stu-dataset}) at three checkpointed decompose-route solutions each, all arms forked from the same checkpoint: a stock AILS-II pass at the solver's own defaults, a blind control that applies one cross-reconnect per subcluster to uniformly drawn route pairs, and BG-AILS in its deployed configuration (greedy first-route selection and no local-search mask), the control and BG-AILS at $\omega = 10$. Every arm receives the same AILS-II budget, the checkpoint's own Equation~\ref{eq:bg-ails-budget} value; the Python-side perturbation of the two perturbing arms is a surplus on top of it, a median 0.28\% of that budget for BG-AILS and 0.010\% for the control. The checkpoints are generated under one pinned decomposition configuration, vertex K-Medoids, with HAOS, the route pool, and SC/SP out of the loop, so what is compared is one improvement stage against another on identical input, not two full runs.
 
 BG-AILS statistically significantly outperforms both baselines (paired Wilcoxon signed-rank tests, alternative greater, Holm-corrected in a family of two). It improves on the stock AILS-II pass by 0.056~pp of cost improvement over the input solution (Hodges--Lehmann paired difference, 95\% CI $[0.049, 0.063]$, Holm-corrected $p = 7.0 \times 10^{-11}$, ahead on 85 of 100 instances) and on the blind control by 0.058~pp (95\% CI $[0.052, 0.065]$, Holm-corrected $p = 2.7 \times 10^{-12}$, ahead on 89 of 100). The AILS-II comparison is the practical one and carries the perturbation together with the $\omega$ override as the package the framework deploys. The control comparison holds $\omega$ and chain length fixed and isolates the boundary guidance itself. The paired difference between the control and stock AILS-II is consistent with zero (Hodges--Lehmann $-0.004$~pp, 95\% CI $[-0.011, 0.002]$), so the gain is not explained by perturbing the concatenated solution at all. Figure~\ref{fig:bgails-comparison} shows the arm means and the paired differences behind those tests.
 
@@ -372,79 +387,58 @@ The refined routes feed back into the route pool exactly like every other stage'
 
 This is also where the deferred half of HAOS's reward system (Section~\ref{sec:fra-haos}) closes. The pass's outcome, a new best, an improvement over the previous iteration without beating the incumbent, or neither, is scored through the deferred branch of HAOS's reward function and credited not to the current iteration's own draw but to every distinct HAOS tag the routes SC/SP selected already carried, that is, to whichever earlier decompose-route or BG-AILS draws produced those specific routes, regardless of how many iterations ago that was. Improvement-route tags are excluded from this credit, since AILS-II created them without any HAOS draw of their own to reward.
 
-\section{Pipeline Orchestration}\label{sec:fra-pipeline}
-The preceding sections describe HAOS, decomposition, routing, BG-AILS, the route pool and SC/SP, and the post-SC/SP improvement pass as if the DRI loop executed them one after another, the sequential picture Figure~\ref{fig:dri-overview} shows. DRISPI instead runs three of these stages as separate worker groups sharing one CPU allocation, so that a DRI iteration and the BG-AILS or SC/SP work left over from an earlier one can occupy the same wall-clock interval instead of queuing behind each other. This section describes that parallelized pipeline.
+\section{Parallelized Pipeline Orchestration}\label{sec:fra-pipeline}
+The preceding sections describe HAOS, decomposition, routing, BG-AILS, the route pool and SC/SP, and the post-SC/SP improvement pass as if the DRI loop executed them one after another, the sequential picture Figure~\ref{fig:dri-overview} shows. DRISPI instead splits eight cores into three disjoint groups: six for the main loop and the DRI routing pool of Section~\ref{sec:fra-routing}, one for the BG-AILS worker of Section~\ref{sec:fra-bg-ails}, and one for the SC/SP and post-SC/SP improvement worker of Sections~\ref{sec:fra-sp} and~\ref{sec:fra-improve}. The main process shares the six DRI cores rather than occupying a ninth.
 
-DRISPI splits its CPU allocation into three disjoint worker groups: $\mathrm{dri}$ cores for the subcluster routing pool of Section~\ref{sec:fra-routing}, $\mathrm{bg}$ cores for the BG-AILS worker of Section~\ref{sec:fra-bg-ails}, and $\mathrm{sp}$ cores for the SC/SP and post-SC/SP improvement worker of Sections~\ref{sec:fra-sp} and~\ref{sec:fra-improve}. The deployed split for the 100-instance campaign of Chapter~\ref{chapter:study} is 6+1+1 inside each 8-core Docker container (Section~\ref{sec:stu-implementation}), the \texttt{cores} block of \texttt{configs/final\_benchmark.yaml}; the split is a configuration value, not a fixed architectural constant, and a deployment with more cores per container widens $\mathrm{dri}$ rather than the other two groups, since subcluster routing is the stage with an unbounded number of independent jobs per iteration.
-
-BG-AILS and SC/SP each support a synchronous and an asynchronous mode, and the two modes differ in the same way for both stages: synchronously, the stage runs inline inside the current DRI iteration and the loop waits for it; asynchronously, a long-lived worker process owns the stage's reserved cores across iterations, and the main loop dispatches a job to it without waiting for the result. DRISPI's own configuration default is synchronous for both stages, matching the sequential description of Section~\ref{sec:fra-bg-ails} and Section~\ref{sec:fra-sp}; the asynchronous mode is implemented for both and is what \texttt{configs/final\_benchmark.yaml} enables for the campaign behind Chapter~\ref{chapter:study}, since only the asynchronous mode lets the $\mathrm{bg}$ and $\mathrm{sp}$ cores do anything while the $\mathrm{dri}$ cores are busy on the next iteration.
-
-The BG-AILS worker uses a single-slot handoff: at most one BG-AILS job is ever in flight. The main loop dispatches the current iteration's combined decompose-route solution to the worker and moves straight on to decomposing and routing the next iteration on the $\mathrm{dri}$ cores; at the start of the iteration after that, before drawing a new HAOS configuration, the loop blocks until the worker returns, drains the result, and only then dispatches the next job. This bounds the resulting lag to exactly one iteration by construction, never more, because the loop will not dispatch a second job while the first is outstanding. Equation~\ref{eq:bg-ails-budget} sizes the BG-AILS wall-clock budget against a fitted model of the very decompose-route stage it overlaps with, rather than against instance size directly, precisely because that overlap is the point of running BG-AILS asynchronously: a budget much shorter than the next decompose-route stage would leave the $\mathrm{bg}$ core idle before the handoff, and a budget much longer would leave the $\mathrm{dri}$ cores waiting on a BG-AILS job that already had the next iteration's input ready.
-
-The SC/SP worker instead uses a skip overlap policy rather than a blocking handoff. When a scheduled SC/SP trigger comes due, either every \texttt{sp\_interval} iterations or, as configured for the campaign, every 20 minutes of wall-clock time, DRISPI dispatches a snapshot of the route pool and the current incumbent to the SP worker only if that worker is not already busy with a previous job; if it is, the trigger is skipped outright rather than queued, and the pipeline tries again at the next scheduled trigger. This is why the SC/SP branch never stalls the $\mathrm{dri}$ or $\mathrm{bg}$ workers: a slow SP solve, the 720-second time limit of Section~\ref{sec:fra-sp} is a ceiling, not a typical duration, can only cause a later trigger to be skipped, never a delay elsewhere in the loop. The SP worker owns both the SC/SP solve and the post-SC/SP improvement pass of Section~\ref{sec:fra-improve} for a given job, running them one after another on the same $\mathrm{sp}$-core reservation before the result becomes available for the main loop to drain.
-
-Figure~\ref{fig:pipeline-swimlane} shows this overlap across two consecutive iterations, one lane per worker group: the $\mathrm{dri}$ lane occupied by decomposition and routing in every iteration, the $\mathrm{bg}$ lane running one iteration behind it under the single-slot handoff, and the $\mathrm{sp}$ lane occupied only when a trigger fires, spanning several $\mathrm{dri}$ iterations without blocking them.
+Figure~\ref{fig:pipeline-swimlane} shows this overlap across two consecutive iterations. After decompose-route of iteration~$i$ the loop waits for job~$i{-}1$ and drains it~\mk{1}, then launches job~$i$ on the new solution~\mk{2}. After decompose-route of iteration~$i{+}1$ the same pair of steps waits for job~$i$, drains it, and launches job~$i{+}1$. A finished SC/SP job is drained without blocking~\mk{3} at the start of the following iteration, before the next HAOS draw.
 
 \begin{figure}[H]
 \centering
-\todo{FIGURE: swimlane diagram over wall-clock time, one horizontal lane each
-for the dri, bg, and sp worker groups, spanning two consecutive DRI
-iterations. dri lane: back-to-back decompose+route blocks, one per
-iteration. bg lane: one perturb+improve block per iteration, offset to
-start when the dri block of the same iteration ends and to finish before
-the dri block of the iteration after next begins (single-slot handoff,
-one-iteration lag). sp lane: mostly idle, with one long solve+improve
-block spanning multiple dri iterations, triggered every 20 minutes of
-wall-clock time (final\_benchmark.yaml), with an arrow marking a
-would-be trigger that is skipped because the previous sp block is still
-running. Requires the actual per-stage wall-clock durations from a
-representative run; not fabricated here.}
-\caption{Core allocation and cross-iteration overlap in DRISPI's parallelized pipeline.}
+\resizebox{\linewidth}{!}{\input{figures/pipeline_swimlane}}
+\caption{Two consecutive DRISPI iterations in one 8-core container (6 dri + 1 bg + 1 sp). Block lengths are illustrative.}
 \label{fig:pipeline-swimlane}
 \end{figure}
 
-Algorithm~\ref{alg:pipeline} gives the resulting control loop from the main process's perspective, in the asynchronous form both stages run under for the campaign of Chapter~\ref{chapter:study}; the synchronous default replaces every dispatch of a BG-AILS or SC/SP job with an inline call that blocks the loop until that job returns, collapsing the loop back to Figure~\ref{fig:dri-overview}'s sequential picture.
+Equation~\ref{eq:bg-ails-budget} sizes the BG-AILS budget to the decompose-route stage it overlaps with, which is what keeps the wait at~\mk{1} short. A budget much shorter than the next decompose-route pass would leave the BG-AILS core idle before the handoff; a budget much longer would leave the DRI cores blocked on a job that already had the next iteration's input ready. In Figure~\ref{fig:pipeline-swimlane} the wait after decompose-route of iteration~$i{+}1$ vanishes because job~$i$ finished during that pass.
+
+The SC/SP worker uses a skip policy rather than a blocking handoff. The campaign checks the trigger only at iteration boundaries, so a job starts at the first boundary after the 20-minute mark, not exactly at it. DRISPI then dispatches a snapshot of the route pool and the incumbent only if the worker is idle; if it is busy, the trigger is skipped rather than queued. The worker owns both the SC/SP solve and the post-SC/SP improvement pass of Section~\ref{sec:fra-improve}, running them one after another on the same core. Those two ceilings, 720~s and 360~s, sum to 18 minutes and therefore leave two minutes of slack under the 20-minute interval; a skip is possible only if enqueue and overhead consume that slack.
+
+Algorithm~\ref{alg:pipeline} is the deployed loop.
 
 \begin{algorithm}[H]
-\DontPrintSemicolon
-\LinesNumbered
-\SetKwInOut{Input}{Input}
-\SetKwInOut{Output}{Output}
-\Input{instance; HAOS wheels (Algorithm~\ref{alg:haos}); $\mathrm{dri}$/BG/SP workers; route pool $R \gets \emptyset$; incumbent $S^\star \gets \mathrm{None}$; limits $\Gamma, \Pi$}
-\Output{incumbent $S^\star$ at termination}
-$i \gets 0$\;
-\While{elapsed time $< \Gamma$ and iterations since improvement $< \Pi$}{
-  \If{$i > 0$ and the BG worker is busy}{
-    join (blocking): drain $S_{\mathrm{bg}}^{(i-1)}$\;
-    contribute its routes to $R$; adopt as $S^\star$ if improving; credit immediate reward\;
+\caption{DRISPI main loop as deployed (asynchronous BG-AILS and SC/SP)}\label{alg:drispi}\label{alg:pipeline}
+\KwIn{instance; time limit $\Gamma$; stall limit $\Pi$}
+\KwInit{$R \gets \emptyset$; $S^\star$ undefined; $i \gets 0$}
+\BlankLine
+\While{elapsed time $< \Gamma$ \KwAnd iterations without improvement $< \Pi$}{
+  \If{the SC/SP job has finished}{
+    \Absorb{$S_{\mathrm{SP}}, \Theta_{\mathrm{SP}}$, deferred} \tcp*[r]{$\Theta_{\mathrm{SP}}$: tags of selected routes}
   }
-  \If{the SP worker has a completed job}{
-    drain (non-blocking): contribute its routes to $R$; adopt as $S^\star$ if improving; credit deferred reward per tag; free the SP worker\;
+  $(\theta, \text{config}) \gets \Draw{$S^\star$}$ \tcp*[r]{Algorithm~\ref{alg:haos}}
+  decompose into $k$ subclusters under config and a fresh $\phi$ \tcp*[r]{Section~\ref{sec:fra-decomposition}}
+  \ParFor{each subcluster}{route it with the drawn solver \tcp*[r]{Section~\ref{sec:fra-routing}}}
+  $S_{\mathrm{DR}} \gets$ concatenated subcluster routes; \Absorb{$S_{\mathrm{DR}}, \{\theta\}$, immediate}\;
+  \If{a BG-AILS job is in flight}{
+    wait for its result $(S_{\mathrm{BG}}, \theta')$; \Absorb{$S_{\mathrm{BG}}, \{\theta'\}$, immediate}\;
   }
-  $(k, \lambda_q, \mathrm{paradigm}, \mathrm{method}, \mathrm{solver}) \gets$ HAOS-Draw() \tcp*{Algorithm~\ref{alg:haos}}
-  partition $\gets$ decompose $k$ subclusters under $(\lambda_q, \mathrm{paradigm}, \mathrm{method})$\;
-  dispatch one routing job per subcluster to the $\mathrm{dri}$ pool\;
-  join: collect all $k$ subcluster solutions\;
-  $S_{\mathrm{dr}}^{(i)} \gets$ concatenate them\;
-  contribute $S_{\mathrm{dr}}^{(i)}$ routes to $R$; adopt as $S^\star$ if improving; credit immediate reward\;
-  dispatch $(S_{\mathrm{dr}}^{(i)}, \mathrm{partition})$ to the BG worker \tcp*{single-slot handoff}
-  \If{SC/SP is scheduled at iteration $i$}{
-    \eIf{the SP worker is busy}{
-      skip this trigger \tcp*{overlap: skip, not queue}
-    }{
-      dispatch a snapshot of $(R, S^\star)$ to the SP worker\;
-      \lIf{coverage $\geq$ minimum in the snapshot}{solve SP}
-      \lElse{solve SC; deduplicate}
-      run the post-SC/SP improvement pass on the result\;
-    }
+  dispatch BG-AILS on $(S_{\mathrm{DR}}, \kappa, \lambda_q, \phi)$ \tcp*[r]{Algorithm~\ref{alg:bgails}; $\theta$ for credit}
+  \If{SC/SP is due \KwAnd the sp worker is idle}{
+    dispatch \SPJob{$R, S^\star$} to the sp worker\;
   }
-  $i \gets i + 1$\;
+  \Decay{}; $i \gets i + 1$\;
 }
-\Return{$S^\star$}
-\caption{DRISPI: parallelized pipeline control loop (asynchronous BG-AILS and SC/SP)}
-\label{alg:pipeline}
+\Return $S^\star$\;
+\BlankLine
+\Fn{\Absorb{$S, \Theta$, channel}}{
+  $r \gets$ reward of $S$ in this channel (Table~\ref{tab:haos-rewards})\;
+  add the routes of $S$ to $R$; \lIf{$c(S) < c(S^\star)$}{$S^\star \gets S$}
+  \lForEach{$\theta \in \Theta$}{\Credit{$\theta, r$}}
+}
+\BlankLine
+\Fn{\SPJob{$R, S^\star$}}{
+  \leIf{min.\ coverage of $R \geq 5$}{$S \gets \mathrm{SP}(R)$}{$S \gets \mathrm{dedup}(\mathrm{SC}(R))$}
+  \Return $\solver(S)$ under the improvement budget \tcp*[r]{Section~\ref{sec:fra-improve}}
+}
 \end{algorithm}
 
-Lines 15-22 are the scheduled SC/SP branch: the coverage check and the resulting SP-or-SC choice (lines 20-21) and the post-SC/SP improvement pass (line 22) are the same procedure Section~\ref{sec:fra-sp} and Section~\ref{sec:fra-improve} describe, dispatched as one job rather than run inline; line 17 is the skip that keeps a busy SP worker from ever blocking the loop above it. Lines 3-5 are the asynchronous BG-AILS handoff on the reading side: the join only happens once the worker is already busy from a previous dispatch (line 3), so the first iteration never blocks, and every iteration after that blocks on exactly one prior job (line 4) before line 14 hands the worker a new one, which is what keeps the BG lag fixed at one iteration regardless of how the rest of the loop's timing drifts.
-
-Lines 5, 7, and 13 are the three points where a candidate's routes enter $R$ before the pipeline decides whether to adopt it as $S^\star$, one per worker group, BG, SP, and DRI respectively, the contribute-before-adopt rule of Section~\ref{sec:fra-sp} applied uniformly across all three: a candidate that does not become the new incumbent still leaves its routes in the pool for a later SC/SP call to draw on. The post-SC/SP improvement pass on lines 19-22 produces a fourth candidate, but because that job runs asynchronously, its contribution and adopt check happen only when line 7 drains it in a later iteration, not inline within lines 15-22 themselves.
+After decompose-route the loop waits for the previous BG-AILS job~\mk{1}, drains it through Absorb, and launches the next job on $(S_{\mathrm{DR}}, \kappa, \lambda_q, \phi)$~\mk{2}, keeping $\theta$ only for later credit. A finished SC/SP job is absorbed without blocking~\mk{3} at the start of the next iteration. A synchronous mode that runs both stages inline is implemented as a code option and recovers the sequential picture of Figure~\ref{fig:dri-overview}.

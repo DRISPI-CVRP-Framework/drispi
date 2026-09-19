@@ -1,0 +1,89 @@
+\chapter{Conclusion}\label{chapter:conclusion}
+Short introduction. It should relect on the primary and secondary research questions.
+
+\section{Highlights}\label{sec:con-highlights}
+Mention the strengths (such as adaptiveness through online learning) and weaknesses (such as more CPU time required) of the framework.
+
+Also elaborate on the main contributions of the thesis.
+
+\section{Limitations}\label{sec:con-limitations}
+
+% --- 1. Hardware ----------------------------------------------------------
+Table~\ref{tab:solver-summary} compares runs that differ in hardware, parallelism, and total budget,
+and none of its gaps correct for these differences. \citet{queirogaXLInstancesCapacitated2026} ran
+every published solver on a single thread of a machine with two AMD EPYC~9654
+processors (Zen~4, 2.40\,GHz), 60~seeds of two hours per instance. DRISPI ran
+three seeds of two hours per instance on eight pinned cores of two Intel Xeon
+Platinum 8280L processors (Cascade Lake, 2.70\,GHz; Section~\ref{sec:stu-implementation}). Both machines were
+shared: the published runs executed as up to 50 parallel jobs on one machine,
+DRISPI as six concurrent containers, three per socket, pinned to physical cores.
+
+\citet{accorsiGuidelinesComputationalTesting2022} recommend bringing running times from different processors
+to a common scale with the PassMark single-thread rating before comparing them.
+The EPYC~9654 rates 2,898\footnote{\url{https://www.cpubenchmark.net/cpu.php?cpu=AMD+EPYC+9654&id=5088}, accessed September 19, 2026.} and the Platinum 8280L 2,316\footnote{\url{https://www.cpubenchmark.net/cpu.php?cpu=Intel+Xeon+Platinum+8280L+@+2.70GHz&id=6729}, accessed September 19, 2026.}, a factor of 1.25. That factor is a lower bound: the 8280L rating rests on few samples and is measured at the 4.0\,GHz single-core turbo, which the chip cannot hold with 24 of its 28 cores busy. Scaled this way, DRISPI's 7,200 seconds
+per run correspond to at most 5,800 seconds on the published solvers' processor,
+per core. Table~\ref{tab:solver-summary} reports unscaled gaps: DRISPI was not rerun with a longer
+limit to offset the slower hardware, and a single-thread rating says nothing
+about how well eight cores are used in parallel.
+
+% --- 2. Budget: mean vs best ------------------------------------------------
+The budget asymmetry points in opposite directions for the two columns of
+Table~\ref{tab:solver-summary}. Per run, DRISPI used 16 core-hours (at most 12.8 after PassMark scaling)
+against two CPU-hours for each published run, so the mean-of-$N$ column compares runs in which DRISPI had eight
+times the cores, on older hardware. Those eight cores do not deliver eight times
+the search. Subcluster routing runs in waves that leave \texttt{dri} cores idle
+whenever the last wave holds fewer than six subclusters, the main loop blocks
+while it waits for BG-AILS (Figure~\ref{fig:pipeline-swimlane}), and three containers share the memory
+bandwidth and last-level cache of each socket.
+% TODO: quantify if you have it (e.g. mean dri core utilization per iteration).
+Per instance, the relation reverses. A published best-of-60 draws on 120 CPU-hours
+and 120 hours of wall-clock time, DRISPI's best-of-3 on 48 core-hours (at most 38
+after PassMark scaling) and six hours. The minimum of 60 runs from a distribution lies systematically below the
+minimum of three, so the best-of-$N$ column favors the published solvers by
+construction. Neither column is an equal-resource ranking.
+
+% --- 3. Run length and HAOS convergence ------------------------------------
+The 7,200-second limit matches the published per-run budget, not the run length
+DRISPI needs. HAOS learns online. For the first ten iterations it draws uniformly
+and updates nothing (Section~3.1), and after that every draw of a weak arm still
+costs a full decomposition, routing, and BG-AILS pass. Under a fixed wall-clock
+limit, the number of completed iterations therefore bounds how far the wheels can
+move. That bound is tightest where one routing wave is expensive: large $n$ and,
+separately, long routes. Section~\ref{sec:stu-convergence} reports the realized iteration counts and
+[TODO: share of runs still improving in the final 20 minutes]. Whether a longer
+run would close the remaining gap on these instances was not tested.
+
+% --- 4. Statistical resolution (S = 3) ---------------------------------------
+$S = 3$ was sized for the grand mean $\bar{G}$ (Section~\ref{sec:stu-repetitions}) and supports claims
+at that level only. The forecast 95\% half-width of $\bar{G}$ is 0.013\,pp. For a
+single instance, the mean of three seeds at the pilot standard deviation of
+0.118\,pp has a standard error of 0.068\,pp and, with two degrees of freedom
+($t_{0.975,2} = 4.30$), a 95\% half-width of about 0.29\,pp. That is more than
+twenty times wider, and wider still on the high-variance instances. The
+per-instance results in Section~\ref{sec:stu-results} (the largest gaps in Table~\ref{tab:gap-tail}, the instances
+where DRISPI's best-of-3 matches or beats a published result in Table~\ref{tab:matches-beats}, and
+[TODO: small subgroups in Section~\ref{sec:stu-characteristics}]) are therefore descriptive. Across
+100 instances, some differences of that size will arise from the seed alone.
+
+The seed term is also not the largest source of error. Two pilot campaigns that
+differed only in execution environment showed a batch effect of about 0.039\,pp,
+three times the $S = 3$ half-width, and more seeds would not have reduced it.
+Shared-server load and Docker pinning are part of the measurement rather than a
+nuisance the design controlled.
+
+% --- 5. No fixed-configuration control arm ----------------------------------
+The contribution of HAOS is established descriptively, through the weight
+trajectories of Section~\ref{sec:stu-haos}, and not against a control arm that freezes the draw
+at one configuration for the whole run under the same budget. That arm was not
+run. The 300-run campaign behind Section~\ref{sec:stu-comparison} used the server allocation
+available for this thesis, and a controlled comparison needs a full campaign run
+alongside it; a subset carved out of the existing allocation would confound the
+two. \citet{altendeiteringDRSCICVRP2026} leave the same gap for DRSCI, a DRISPI
+predecessor that draws paradigm, $k$, and solver uniformly at random each
+iteration without learning. Whether HAOS pays a sampling cost relative to a single
+committed configuration, or improves on it, remains open.
+
+\section{Future Research}\label{sec:con-future}
+Use the HAOS weights to train an offline learning model and inject the results back into the framework. This effectively eliminates the warm-up period and will lead to a substential speed-up of the framework.
+
+Also mention that the framework, other than monolithic solvers, is highly adaptable to different instances and VRP variants. Since it only requires the plug-and-play of capable clustering methods and solvers on the their respective stages.

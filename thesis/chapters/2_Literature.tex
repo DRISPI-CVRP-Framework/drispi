@@ -98,41 +98,41 @@ No published decomposition framework learns its decomposition and subsolver conf
 
 Algorithm-agnostic solver plug-in, parallel subproblem solving, route-pool SC/SP recombination, and evaluation on the XL set of \citet{queirogaXLInstancesCapacitated2026} are in the scope of this thesis. They are not, taken separately, the gap. Table~\ref{tab:lit-research-gap} records which published methods combine which of them.
 
+\edef\gapfnbase{\the\value{footnote}}
+\begin{table}[H]
+\caption{Research-gap matrix for large-scale routing methods.}
+\label{tab:lit-research-gap}
+\footnotesize
+\centering
+\setlength{\tabcolsep}{2.5pt}
+\begin{tabular}{@{}llcccc ll@{}}
+\toprule
+Solver & Problem & P & D & SC & Ag & Configuration & Largest $n$ \\
+\midrule
+\citet{maximoAILSIIAdaptiveIterated2024} & CVRP & no & no\footnotemark[\numexpr\gapfnbase+1\relax] & no & -- & fixed & XL $10{,}001$ \\
+\citet{accorsiRoutingOneMillion2024} & CVRP & no & no\footnotemark[\numexpr\gapfnbase+1\relax] & no & -- & fixed & $1{,}000{,}000$ \\
+\citet{queirogaPOPMUSICMatheuristic2021} & CVRP & $\sim$\footnotemark[\numexpr\gapfnbase+2\relax] & yes & no & $\sim$ & fixed & $302$--$1{,}000$ \\
+\citet{rochatProbabilisticDiversificationIntensification1995} & VRP & no & no & yes & -- & fixed & classical VRP \\
+\citet{cavaliereIntegratedLocalsearchSetpartitioning2022} & CVRP & no & no & yes & -- & fixed & CVRPLIB \\
+\citet{santiniDecompositionStrategiesVehicle2023} & CVRP & $\sim$ & yes & no & -- & fixed & X $1{,}000$ \\
+\citet{liLearningDelegate2021} & CVRP & $\sim$ & yes & no & yes & learned offline & $500$--$3{,}000$ \\
+\citet{karaahmetogluAdaptiveClusterFirst2026} & HVRP & yes & yes & no & $\sim$ & learned offline & $500{,}000$ \\
+\citet{kerscherDecomposerouteimproveFrameworkSolving2025} & VRPTW & $\sim$ & yes & no & yes & learned offline & $30{,}000$ \\
+\citet{kerscherSolvingHeterogeneousVehicle} & HVRP & $\sim$ & yes & yes & yes & random & ${>}800$ \\
+\citet{altendeiteringDRSCICVRP2026} & CVRP & $\sim$ & yes & yes & yes & random & XL $10{,}001$ \\
+\midrule
+This Thesis & CVRP & yes & yes & yes & yes & learned online & XL $10{,}001$ \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.4em}
+\noindent{\footnotesize P~=~parallel subproblem solving; D~=~customer-set decomposition; SC~=~route-pool set covering or set partitioning; Ag~=~algorithm-agnostic solver plug-in. $\sim$ marks a partial capability.}
+\end{table}
+\addtocounter{footnote}{1}
+\footnotetext{Uses localized neighborhoods (granular arcs; selective vertex caching), not customer-set decomposition \citep{tothGranularTabuSearch2003,accorsiFastScalableHeuristic2021}.}
+\addtocounter{footnote}{1}
+\footnotetext{Subproblems are optimized in a intensification loop, not as standing parallel subproblem layer.}
+
 The primary research question is whether an algorithm-agnostic, adaptive decomposition framework that learns its decomposition and solving strategy within a single run can produce solutions competitive with the monolithic XL solvers of Section~\ref{sec:lit-large-cvrp}, without instance-specific tuning \citep{queirogaXLInstancesCapacitated2026,maximoAILSIIAdaptiveIterated2024,accorsiRoutingOneMillion2024}.
 
 A secondary question is whether the learned operator-weight distributions yield interpretable information about instance structure and thereby reduce the need for manual parameter tuning across instance classes. \citet{eibenParameterControlEvolutionary1999} distinguish parameter tuning, which sets values before a run, from parameter control, which updates them during a run. Control does not remove the design problem; it relocates it to the update rule. An online controller still has decay, probability floors, reward values, and a warm-up. Chapter~\ref{chapter:study} reports weight trajectories; it does not include a fixed-configuration control arm, so the secondary question is answered descriptively.
-
-\begin{sidewaystable}
-\caption{Research-gap matrix for large-scale routing methods. Features: P~=~parallel subproblem solving; D~=~customer-set decomposition; SC~=~route-pool set covering or set partitioning; Ag~=~algorithm-agnostic solver plug-in. Configuration control: fixed; tuned offline; random; learned offline; pretrained policy, no solution-cost feedback; learned within run from feedback. $\sim$ marks a partial capability.}
-\label{tab:lit-research-gap}
-\small
-{\centering
-\setlength{\tabcolsep}{5pt}
-\begin{tabular}{@{}lcccc p{5.6cm} l@{}}
-\toprule
-Approach & P & D & SC & Ag & Configuration control & Largest $n$ \\
-\midrule
-AILS-II \citep{maximoAILSIIAdaptiveIterated2024} & no & no\textsuperscript{a} & no & -- & fixed (internal adaptive LS) & XL $10{,}001$\textsuperscript{d} \\
-FILO2 \citep{accorsiRoutingOneMillion2024} & no & no\textsuperscript{a} & no & -- & fixed & $10^{6}$ \\
-POPMUSIC \citep{queirogaPOPMUSICMatheuristic2021} & $\sim$\textsuperscript{b} & yes & no & $\sim$ & fixed & $302$--$1{,}000$\textsuperscript{e} \\
-Rochat and Taillard \citep{rochatProbabilisticDiversificationIntensification1995} & no & no & yes & -- & fixed & classical VRP \\
-Cavaliere et al.\ \citep{cavaliereIntegratedLocalsearchSetpartitioning2022} & no & no & yes & -- & fixed & CVRPLIB \\
-Santini et al.\ \citep{santiniDecompositionStrategiesVehicle2023} & $\sim$ & yes & no & -- & fixed decomp.; ALNS learns operators & X $1{,}000$ \\
-L2D \citep{liLearningDelegate2021} & $\sim$ & yes & no & yes & learned offline & $500$--$3{,}000$ \\
-A-DEC \citep{karaahmetogluAdaptiveClusterFirst2026} & yes & yes & no & $\sim$ & pretrained; no cost feedback & $500{,}000$ \\
-DRI \citep{kerscherDecomposerouteimproveFrameworkSolving2025} & $\sim$ & yes & no & yes & tuned offline & $30{,}000$ \\
-DRSCI \citep{kerscherSolvingHeterogeneousVehicle}\textsuperscript{c} & $\sim$ & yes & yes & yes & random & HVRP ${>}800$ \\
-DRISPI (this thesis) & yes & yes & yes & yes & learned within run from feedback & XL $10{,}001$ \\
-\bottomrule
-\end{tabular}
-\par}
-
-\vspace{0.6em}
-\noindent{\footnotesize\raggedright
-\textsuperscript{a} Localized neighborhoods (granular arcs; selective vertex caching) are not customer-set decomposition \citep{tothGranularTabuSearch2003,accorsiFastScalableHeuristic2021}.\\
-\textsuperscript{b} Subproblems are optimized in a POPMUSIC intensification loop rather than as a standing parallel subproblem layer.\\
-\textsuperscript{c} CVRP adaptation in an unpublished project study \citep{altendeiteringDRSCICVRP2026}, also with uniform random arm selection.\\
-\textsuperscript{d} Scale as evaluated for the initial XL \gls{bks} by \citet{queirogaXLInstancesCapacitated2026}; gaps in that study are relative to the initial \gls{bks}.\\
-\textsuperscript{e} Main experimental range; long runs also improved some larger CVRPLIB \gls{bks} records \citep{queirogaPOPMUSICMatheuristic2021}.
-\par}
-\end{sidewaystable}

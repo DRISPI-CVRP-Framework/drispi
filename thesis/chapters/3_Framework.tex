@@ -267,7 +267,7 @@ Boundary ranks are defined per customer, but the only perturbation BG-AILS appli
 \begin{algorithm}[tbp]
 \caption{Boundary-guided adaptive iterated local search}\label{alg:bgails}
 \KwIn{solution $S$; labels $\kappa(\cdot)$; $\lambda_q$; $\phi$; subcluster count $k$; budget $T$}
-\KwPar{$\sigma$, $\alpha$, $\tau$, $\omega_0$ (Table~\ref{tab:bg-ails-params})}
+\KwPar{$\sigma$, $\alpha$, $\tau$, $\omega_0$ (Table~\ref{tab:hyperparameters})}
 \BlankLine
 \If{$k > 1$}{
   rebuild $d_{ij}$ from $(\lambda_q, \phi)$\;
@@ -295,27 +295,8 @@ Figure~\ref{fig:bgails-mechanism} walks through one such call on XL-n1281-k29. P
 \label{fig:bgails-mechanism}
 \end{figure}
 
-\begin{table}[H]
-\centering
-\caption{BG-AILS Parameters and Their Defaults.}
-\label{tab:bg-ails-params}
-\begin{tabular}{@{}p{3.3cm}p{1.7cm}p{7.3cm}@{}}
-\toprule
-Parameter & Default & Role \\
-\midrule
-Boundary threshold $\tau$ & 0.5 & Gates boundary ranks (Eq.~\ref{eq:bg-ails-threshold}); ranks at or below $\tau$ are zeroed. \\
-Small-cluster cap $\sigma$ & 20 customers & Clusters below this size receive a boost in Eq.~\ref{eq:bg-ails-weighted}. \\
-Small-cluster boost $\alpha$ & 0.5 & Maximum boost factor $1 + \alpha$, approached as cluster size $\to 0$. \\
-Chain-count mode & $k$ & Number of cross-reconnect chains per call ($k - 1$ also implemented). \\
-Pair selection & greedy & Deterministic arg-max vs.\ stochastic roulette-wheel route-pair draw. \\
-Initial omega $\omega_0$ (\texttt{-initialOmega}) & 10 & Overrides AILS-II's own starting perturbation degree; see below. \\
-Budget floor & 60\,s & Minimum AILS-II wall-clock limit regardless of the predicted model below. \\
-Budget margin & 1.0 & Multiplier applied to the predicted decompose-route wall time. \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-Table~\ref{tab:bg-ails-params} summarizes the parameters this stage introduces on top of stock AILS-II. Of these, only the initial-omega override reaches into AILS-II itself; every other AILS-II hyperparameter governing its own local search and diversification control (the parameters $d_{\min}$, $d_{\max}$, $\gamma$, and $\varphi$ of \citet{maximoHybridAdaptiveIterated2021}) is left at AILS-II's own defaults. Overriding $\omega$ to 10 against AILS-II's own starting value of roughly 30 lowers rather than raises the solver's internal perturbation degree: BG-AILS has already displaced customers across subcluster boundaries with its own cross-reconnect chain before AILS-II starts, so the pass that follows is asked to intensify around that disruption rather than to add more of its own. The remaining parameters -- the boundary threshold, the small-cluster cap and boost, the chain-count mode, and the pair-selection rule -- are new and govern only the Python-side perturbation step described above.
+Table~\ref{tab:hyperparameters} lists the values of the parameters this stage
+introduces on top of stock AILS-II. Of these, only the initial-omega override reaches into AILS-II itself; every other AILS-II hyperparameter governing its own local search and diversification control (the parameters $d_{\min}$, $d_{\max}$, $\gamma$, and $\varphi$ of \citet{maximoHybridAdaptiveIterated2021}) is left at AILS-II's own defaults. Overriding $\omega$ to 10 against AILS-II's own starting value of roughly 30 lowers rather than raises the solver's internal perturbation degree: BG-AILS has already displaced customers across subcluster boundaries with its own cross-reconnect chain before AILS-II starts, so the pass that follows is asked to intensify around that disruption rather than to add more of its own. The remaining parameters -- the boundary threshold, the small-cluster cap and boost, the chain-count mode, and the pair-selection rule -- are new and govern only the Python-side perturbation step described above.
 
 The key difference between BG-AILS and a plain AILS-II improvement pass is therefore not the solver itself but this focus on boundary regions, imposed both by the perturbation step and by the short wall-clock budget BG-AILS is given. That budget follows neither the fixed per-customer rate used for subcluster solving (Section~\ref{sec:fra-routing}) nor a plain function of instance size, but a fitted model of the surrounding decompose-route stage's own wall-clock time,
 \begin{align}
@@ -395,7 +376,8 @@ Figure~\ref{fig:pipeline-swimlane} shows this overlap across two consecutive ite
 \begin{figure}[H]
 \centering
 \resizebox{\linewidth}{!}{\input{figures/pipeline_swimlane}}
-\caption{Two consecutive DRISPI iterations in one 8-core container (6 dri + 1 bg + 1 sp). Block lengths are illustrative.}
+\caption{Two consecutive DRISPI iterations in one 8-core container 
+(6 for DRI, 1 for BG-AILS, and 1 for SP). Block lengths are illustrative.}
 \label{fig:pipeline-swimlane}
 \end{figure}
 

@@ -6,9 +6,9 @@ or commit messages.
 
 ## 0. What the assistant may and may not do
 
-- May: restructure, tighten, harmonize terminology, fix tense and agreement,
-  propose alternative phrasings, flag unsupported claims, check that a sentence
-  matches the table or figure it refers to.
+- May: restructure, tighten, split overlong sentences, harmonize terminology,
+  fix tense and agreement, propose alternative phrasings, flag unsupported
+  claims, check that a sentence matches the table or figure it refers to.
 - May not: invent citations, invent numerical results, soften or strengthen a
   claim beyond what the cited evidence supports, or fill a gap in the argument
   with plausible-sounding filler.
@@ -43,8 +43,8 @@ or commit messages.
   1. observed ("BG-AILS reduced the mean gap by 0.14 pp on the mid-size subset"),
   2. inferred ("the increased variance is consistent with repeated selection of
      the same boundary pair"),
-  3. speculative ("a replacement-aware selection rule might remove this effect;
-     this was not tested").
+  3. speculative ("a replacement-aware selection rule might remove this effect.
+     This was not tested.").
 - Confounds and deviations are stated in the running text where the affected
   result is presented, not deferred to a footnote or a limitations section at the
   end. A result presented without its known confound is a defect.
@@ -99,6 +99,24 @@ Notation traps:
   that make the wider gap land in the right places are in §8 and are mandatory.
 - Paragraphs are wrapped as normal prose.  There is no one-sentence-per-line
   convention.
+- **Sentence length.** One claim per sentence. Most sentences should fall
+  between 10 and 25 words, and 30 words is the ceiling. A sentence above 30
+  words is split. The only exception is a sentence where splitting would
+  separate a quantity from its unit, its condition, or its source. Do not chain
+  clauses with "and", "which", "while", or "whereas" to avoid a full stop. A
+  result, its confound, and its interpretation are three sentences, not one.
+  Vary length per §6.6, but below the ceiling.
+- **Semicolons.** Not used in prose. Write two sentences instead, or join the
+  clauses with a conjunction that names the relation ("because", "so", "but").
+  The single exception is a list whose items already contain commas. Before
+  using semicolons there, try a table or a displayed list.
+- **Colons.** Not used in running prose. Two uses are permitted. The first
+  introduces a displayed list, equation, or algorithm that follows on its own
+  lines. The second is technical notation where the colon carries meaning, such
+  as ratios (1:4) or mappings ($f\colon X \to Y$). A colon that introduces an
+  explanation, an example, or a restatement inside the same sentence is
+  replaced by a full stop, "because", or "for example". Colons the template
+  generates itself (caption labels, glossary entries) are unaffected.
 - **Serial comma.** Always, before the final conjunction in a list of three or
   more items: "vertex-based clustering, route-based clustering, and the hybrid
   variant". No exceptions, including in figure captions and table headers.
@@ -186,9 +204,10 @@ Participles are fine where they carry content: "the solver terminated after
   perturbation", "Untested extensions".
 - Three-item lists assembled for rhythm rather than because there are three
   things. Two or four is often the honest count.
-- Em dashes. Use a comma, a colon, parentheses, or a full stop.
+- Em dashes. Use a comma, parentheses, or a full stop. Do not substitute a colon
+  or semicolon (§5).
 - Sentences that resolve symmetrically in the same rhythm as their neighbors.
-  Vary sentence length deliberately.
+  Vary sentence length deliberately, within the ceiling in §5.
 
 ### 6.7 Watch list
 
@@ -334,7 +353,7 @@ After:
 
 > DRISPI reaches the published two-hour reference quality of AILS-II after 4100
 > seconds on average.  Whether the advantage persists at longer horizons was not
-> tested; the campaign was capped at eight hours.
+> tested.  The campaign was capped at eight hours.
 
 Before:
 
@@ -346,3 +365,17 @@ After:
 > Single-linkage agglomerative clustering produced degenerate partitions, with a
 > median maximum cluster share of 0.997 (\Cref{tab:clustering-degeneracy}).  We
 > therefore used k-medoids for the remaining experiments.
+
+Before:
+
+> The subsolver was called on every subcluster in each iteration of the DRI loop,
+> which meant that routes crossing subcluster boundaries were never improved; we
+> therefore added BG-AILS, whose boundary perturbation targets exactly these
+> routes: it selects two adjacent subclusters and merges them temporarily.
+
+After:
+
+> In each iteration of the DRI loop, the subsolver ran on every subcluster
+> separately.  Routes crossing a subcluster boundary were therefore never
+> improved.  BG-AILS addresses this.  Its boundary perturbation selects two
+> adjacent subclusters and merges them temporarily.

@@ -92,7 +92,7 @@ Figure~\ref{fig:dri-overview} shows the resulting control flow for one instance.
 \draw[line] (pool.west |- sp.east) -- node[lbl, above] {read} (sp.east);
 \draw[line] (imp.east)   -- node[lbl, above] {feed} (pool.west |- imp.east);
 \end{tikzpicture}
-\caption{Sequential control flow of one DRISPI run: the DRI loop, the route pool, and periodic SC/SP recombination.}
+\caption{Sequential Flowchart of DRISPI.}
 \label{fig:dri-overview}
 \end{figure}
 
@@ -112,7 +112,7 @@ At the beginning of every DRI iteration HAOS draws one configuration across five
 Two feasibility adjustments apply before the configuration is used; Algorithm~\ref{alg:haos} gives Draw, Credit, and Decay. Route-based clustering requires an incumbent solution. Without one, HAOS uses the vertex-based paradigm and redraws the method from the vertex wheel; these applied choices receive the subsequent credit. If $k$ exceeds the number of incumbent routes under route-based clustering, the applied $k$ is clipped to the route count. The immediate update retains the index of the $k$ arm originally drawn, while route tags record the configuration that was applied. Each iteration is logged with the complete operator selection and the product of the five selected probabilities, which reports the joint probability of the realized configuration under the current wheels.
 
 \begin{algorithm}[tbp]
-\caption{Hierarchical adaptive operator selection}\label{alg:haos}
+\caption{Hierarchical Adaptive Operator Selection (HAOS)}\label{alg:haos}
 \KwIn{wheels $W_1, W_2, W_3, W_4^{\mathrm{v}}, W_4^{\mathrm{r}}, W_5$; floors $p_{\min}^{(\ell)}$; decay $\gamma$; base weight $w_0$; warm-up $i_0 = 10$}
 \BlankLine
 \Fn{\Draw{$S^\star$}}{
@@ -265,7 +265,7 @@ setting ranks at or below $\tau$ to zero and rescaling the remainder linearly ba
 Boundary ranks are defined per customer, but the only perturbation BG-AILS applies acts on whole routes at once: a cross-reconnect move that cuts two routes at a random position each and exchanges their tails, so routes $r_i$ and $r_j$ cut after position $a$ and $b$ respectively become $r_i[{:}a] \frown r_j[b{:}]$ and $r_j[{:}b] \frown r_i[a{:}]$. This is the only perturbation operator BG-AILS implements. It is a large-neighborhood move by construction, since it can reassign an arbitrarily long tail of customers between two routes in a single step, which is precisely what keeps it from being trivially undone by the small single-customer and single-edge moves of a subsequent local search pass. A route's own weight for perturbation is the maximum boundary rank among its customers, and the first route of a cross-reconnect pair is drawn from these weights, either by roulette-wheel sampling or, under DRISPI's default \texttt{greedy} pair-selection setting, by taking the arg-max outright. Its partner is not drawn from the same weights again but from a per-route affinity toward each other cluster -- the inverse of the mean dissimilarity between that route's customers and a given cluster's customers, row-normalized to sum to one -- used first to pick which neighboring cluster to reach into from the first route's own affinity row, then to pick, among the routes majority-assigned to that cluster, the one with the highest affinity back toward the first route's own cluster. This two-step draw is what keeps a cross-reconnect pair spatially adjacent across one real cluster boundary, rather than pairing two routes that both happen to contain a boundary customer but face away from each other. BG-AILS repeats this draw-and-reconnect step for a chain of $k$ iterations by default, one per subcluster (a $k-1$ variant is also implemented but is not the deployed default), with each step in the chain acting on the routes as already modified by the previous one. When decomposition realizes only a single cluster, there is no boundary to guide perturbation toward, and BG-AILS skips the perturbation step entirely, falling back to a plain AILS-II improvement pass on the unperturbed combined solution.
 
 \begin{algorithm}[tbp]
-\caption{Boundary-guided adaptive iterated local search}\label{alg:bgails}
+\caption{Boundary-Guided Adaptive Iterated Local Search (BG-AILS)}\label{alg:bgails}
 \KwIn{solution $S$; labels $\kappa(\cdot)$; $\lambda_q$; $\phi$; subcluster count $k$; budget $T$}
 \KwPar{$\sigma$, $\alpha$, $\tau$, $\omega_0$ (Table~\ref{tab:hyperparameters})}
 \BlankLine
@@ -291,7 +291,7 @@ Figure~\ref{fig:bgails-mechanism} walks through one such call on XL-n1281-k29. P
 \begin{figure}[H]
 \centering
 \includegraphics{figures/bgails_mechanism.pdf}
-\caption{One BG-AILS call on XL-n1281-k29 (seed 101, $T = 60$\,s). Colorbar applies to panel~(d) only.}
+\caption{Illustrative BG-AILS Call on Instance XL-n1281-k29.\\ Colorbar Applies to Panel~(d) Only.}
 \label{fig:bgails-mechanism}
 \end{figure}
 
@@ -312,7 +312,7 @@ BG-AILS statistically significantly outperforms both baselines (paired Wilcoxon 
 \begin{figure}[H]
 \centering
 \includegraphics{figures/bgails_comparison.pdf}
-\caption{Per-instance mean cost improvement (a) and paired BG-AILS differences (b). Top three outliers omitted in~(a).}
+\caption{Per-Instance Mean Cost Improvement (a) and Paired BG-AILS Differences (b).}
 \label{fig:bgails-comparison}
 \end{figure}
 
@@ -376,8 +376,8 @@ Figure~\ref{fig:pipeline-swimlane} shows this overlap across two consecutive ite
 \begin{figure}[H]
 \centering
 \resizebox{\linewidth}{!}{\input{figures/pipeline_swimlane}}
-\caption{Two consecutive DRISPI iterations in one 8-core container 
-(6 for DRI, 1 for BG-AILS, and 1 for SP). Block lengths are illustrative.}
+\caption{Two Consecutive DRISPI Iterations in One 8-Core Container 
+(6 for DRI, 1 for BG-AILS, and 1 for SP). Block Lengths Are Illustrative.}
 \label{fig:pipeline-swimlane}
 \end{figure}
 
@@ -388,7 +388,7 @@ The SC/SP worker uses a skip policy rather than a blocking handoff. The campaign
 Algorithm~\ref{alg:pipeline} is the deployed loop.
 
 \begin{algorithm}[H]
-\caption{DRISPI main loop as deployed (asynchronous BG-AILS and SC/SP)}\label{alg:drispi}\label{alg:pipeline}
+\caption{DRISPI Main Loop as Deployed (Async. BG-AILS and SP)}\label{alg:drispi}\label{alg:pipeline}
 \KwIn{instance; time limit $\Gamma$; stall limit $\Pi$}
 \KwInit{$R \gets \emptyset$; $S^\star$ undefined; $i \gets 0$}
 \BlankLine

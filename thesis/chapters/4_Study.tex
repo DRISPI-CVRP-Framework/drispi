@@ -147,7 +147,7 @@ target. This would in fact still hold true at a 99\% interval, but precision alo
 
 \begin{table}[htbp]
 \centering
-\caption{Forecast standard error and 95\% half-width of $\bar G$ by seed count $S$.}\label{tab:seed-sizing}
+\caption{Forecast Standard Error and 95\% Half-Width of $\bar G$ by Seed Count $S$.}\label{tab:seed-sizing}
 \begin{tabular}{@{}lrr@{}}
 \toprule
 $S$ & SE (pp) & Half-width (pp) \\
@@ -188,6 +188,7 @@ it descriptively and focuses its main comparison and the answer to our primary r
 
 \section{Results}\label{sec:stu-results}
 Short introduction.
+% Need to define how exactly I am going to answer RQs here. Suggestion: We are competitive if we are not significantly worse than the SOTA Solvers. This will hold up for more 7/8 and give it the right spin I believe.
 
 \subsection{Performance Comparison against State-of-the-Art Monolithic Solvers}\label{sec:stu-comparison}
 Table~\ref{tab:solver-summary} compares DRISPI against the eight monolithic solvers \citet{queirogaXLInstancesCapacitated2026} benchmark on the 100 XL instances: AILS-II, FILO, FILO2, KGLSXXL, HGS-CVRP, SISRs, LKH-3, and OR-Tools. For every solver we recompute the percentage gap to the current official \gls{bks}, the record listed by the CVRPLib \gls{bks} Challenge (Section~\ref{sec:stu-dataset}), for both the mean-of-$N$ and best-of-$N$ cost the original paper reports ($N=60$ for the published solvers, $N=3$ for DRISPI), then average that per-instance gap over all 100 instances and, separately, over the fifty instances with fewer than 3,400 customers and the fifty with more, the split \citet{queirogaXLInstancesCapacitated2026} use for their own results table. Every gap in Table~\ref{tab:solver-summary} uses the current \gls{bks} as the denominator, including for the published solvers. \citet{queirogaXLInstancesCapacitated2026} report their own average gaps against the \gls{bks} at the time of publication, effectively AILS-II's own result for most instances, so those published averages are not comparable to the ones reported here. Appendix~\ref{app:xl-results} lists the per-instance detail behind DRISPI's two columns: instance characteristics, best cost, and gap, alongside both \gls{bks} references (Table~\ref{tab:xl-summary}).
@@ -201,7 +202,7 @@ Section~\ref{sec:con-limitations} discusses what this difference means for
 the two columns of the table.
 
 \begin{longtable}{@{}lrrrrrr@{}}
-\caption{Mean percentage gap to the current \gls{bks}, DRISPI against eight published solvers, sorted by ascending mean-of-$N$ gap over all instances.}\label{tab:solver-summary}\\
+\caption{DRISPI Mean Gap to Current \gls{bks} Comparison Against Benchmark  Solvers, Sorted by Ascending Mean-of-$N$ Gap Over All Instances.}\label{tab:solver-summary}\\
 \toprule
 & \multicolumn{3}{c}{Mean-of-$N$ Gap (\%)} & \multicolumn{3}{c}{Best-of-$N$ Gap (\%)} \\
 \cmidrule(lr){2-4} \cmidrule(lr){5-7}
@@ -230,7 +231,7 @@ DRISPI's mean-of-3 is significantly worse than AILS-II's mean-of-60 (+0.150 pp, 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/gap_ecdf.pdf}
-\caption{Empirical CDF of the mean-of-$N$ gap to the current BKS. KGLSXXL, LKH-3, and OR-Tools are omitted (Section~\ref{sec:stu-comparison}): their gaps would compress the visible range for the other six.}\label{fig:gap-ecdf}
+\caption{Empirical CDF of the Mean-of-$N$ Gap to the Current BKS.} \label{fig:gap-ecdf}
 \end{figure}
 
 Figure~\ref{fig:gap-ecdf} shows why the Table~\ref{tab:solver-summary} means understate DRISPI's typical result and its tail at once: DRISPI's mean-of-3 gap has a mean of 0.309\% against a median of 0.255\% (interquartile range 0.172\%--0.380\%, ninetieth percentile 0.527\%, maximum 1.683\%), a right-skewed distribution in which most instances sit below the mean and a short tail sits well above it. DRISPI's curve tracks above FILO2's up to a gap of about 0.3\% (61\% of instances at or below that gap, against 55\% for FILO2) and falls below it from 0.4\% (79\% against 86\%), the crossover the non-significant paired mean-of-$N$ test against FILO2 allows: DRISPI wins on the tighter half of the distribution and loses on the wider half. Against FILO, DRISPI's curve stays at or above FILO's over the range shown, consistent with the near-even 53-of-100 split in the paired test. HGS-CVRP's curve sits below all five other curves across the entire range shown: only 39\% of its instances reach a gap of one percent or less, and it does not visibly approach the other curves anywhere in the figure, consistent with the wide, significant margin the paired test above reports against it.
@@ -239,7 +240,7 @@ Table~\ref{tab:gap-tail} lists the instances behind that tail, the largest mean-
 
 \begin{table}[H]
 \centering
-\caption{Instances with the largest mean-of-3 gap to the current \gls{bks} (codes per Section~\ref{sec:stu-dataset}).}
+\caption{DRISPI's Largest Mean-of-3 Gap to Current \gls{bks} (Abbr. as per Section~\ref{sec:stu-dataset}).}
 \label{tab:gap-tail}
 \begin{tabular}{@{}lrlllrr@{}}
 \toprule
@@ -262,7 +263,7 @@ Two individual results do not appear in any aggregate. On XL-n4535-k1134, DRISPI
 
 \begin{table}[H]
 \centering
-\caption{Instances where DRISPI's best-of-3 cost matches or beats a published reference.}
+\caption{DRISPI's Best-of-3 Cost Matching or Beating a Published Reference.}
 \label{tab:matches-beats}
 \begin{tabular}{@{}lrrrl@{}}
 \toprule
@@ -296,7 +297,7 @@ Figure~\ref{fig:characteristics-panels} sets this account against the remaining 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.85\textwidth]{figures/characteristics_panels.pdf}
-\caption{Mean-of-3 gap to the current \gls{bks} by instance characteristic, across all 100 XL instances (error bars are one sample standard deviation).}
+\caption{Mean-of-3 Gap to the Current \gls{bks} by Instance Characteristic, Across All 100 XL instances (Error Bars Are One Sample Standard Deviation).}
 \label{fig:characteristics-panels}
 \end{figure}
 

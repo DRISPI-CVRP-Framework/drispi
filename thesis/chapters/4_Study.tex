@@ -1,78 +1,67 @@
 \chapter{Computational Study}\label{chapter:study}
 This chapter tests DRISPI on the 100 XL instances of Queiroga et al.\ (2026)
-against the eight monolithic solvers benchmarked there. Two questions guide it.
+against the eight monolithic solvers benchmarked there. The study aims to answer two questions:
 The first is whether an adaptive decomposition framework that learns its
-decomposition and routing choices within a run can match state-of-the-art
-monolithic solvers at this scale without instance-specific tuning. The second is
-whether the weights HAOS learns along the way say something interpretable about
-the instances they were learned on.
+decomposition and routing choices during a run can match state-of-the-art
+monolithic solvers at this scale. The second is whether the weights HAOS learns along the way provide interpretable 
+insights about the instances they were learned on.
 
-Section~\ref{sec:stu-experiment} describes the instance set, the implementation and
-hardware, the parameter values, and the replication design. Section~\ref{sec:stu-results} reports
-the comparison with the published solvers, breaks the results down by instance
-characteristics, and examines the learned HAOS weights and the convergence of
-individual runs. Section~\ref{sec:con-limitations} states what these results do not
-show.
+Section~\ref{sec:stu-experiment} describes the dataset, specifies implementation and
+hardware specificiations, the parameter values, and explains expertimental design choices. Section~\ref{sec:stu-results} shows and analyzes the results. Here we answer the primary and secondary research questions through comparison with the published solvers, breaks the results down by instance characteristics, and examines the learned HAOS weights and the convergence of
+individual runs.
 
 \section{Experimental Design}\label{sec:stu-experiment}
 All 100 instances are solved by the same DRISPI configuration. Nothing is tuned
-per instance, and no instance is routed to a fallback solver or a special-case
-setting, whatever its size or fleet. Section~\ref{sec:stu-dataset} describes the instances and the reference solutions,
-Section~\ref{sec:stu-implementation} the software and hardware the campaign
-ran on, Section~\ref{sec:stu-hyperparameters} the parameter values, and
-Section~\ref{sec:stu-repetitions} the number of seeds and the precision it buys.
+per instance by design without anyexceptions. Section~\ref{sec:stu-dataset} describes the instances and the reference solutions used as baseline, section~\ref{sec:stu-implementation} the software and hardware the campaign
+ran on, section~\ref{sec:stu-hyperparameters} the parameter values, and
+section~\ref{sec:stu-repetitions} the number of seeds and the statistical precision it buys for our experiment.
 
 \subsection{Dataset}\label{sec:stu-dataset}
-The XL set (Section~\ref{sec:lit-problem}) extends the generation scheme of the X
+The XL set (section~\ref{sec:lit-problem}) extends the generation scheme of the X
 instances of \citet{uchoaNewBenchmarkInstances2017} to up to 10,000 customers. Every instance
 places its nodes on a $[0, 1000] \times [0, 1000]$ grid with Euclidean distances
 and combines one level of each of four attributes. The depot is Random, Central
-at $(500, 500)$, or Eccentric at $(0, 0)$. Customers are Random, Clustered, or
+at $(500, 500)$, or Eccentric at $(0, 0)$ in the bottom left corner. Customers are Random, Clustered, or
 Random-Clustered around a small number of seed points. Demand follows one of
 seven distributions: unitary (U), four ranges of increasing width (1--10, 5--10,
 1--100, 50--100), a quadrant-dependent range (Q), or many small and few large
 demands (SL). The target average route length $r$ lies in one of seven bands,
 from ultra-short ($r \in [3, 5]$) to ultra-long ($r \in [50, 200]$), and
 capacity $Q$ is set so that a solution with the minimum number of routes attains
-it. The instance name encodes $n$ and that minimum route count, e.g.\
-XL-n4535-k1134. This $k$ is fixed by the benchmark and unrelated to the
-subcluster count $k$ of Section~\ref{sec:fra-haos}.
-Appendix~\ref{app:xl-results} lists the attributes of
-every instance next to DRISPI's result.
+it. The instance name references $n$ and that minimum route count, e.g.\
+XL-n4535-k1134. This $k$ equals $\lceil \sum_{i=1}^{n} q_i / Q \rceil$, making it the mathematical minimum number of routes, because fewer vehicles could not carry the total customer demand under capacity set to $Q$. This $k$ is
+fixed by the benchmark and unrelated to the subcluster count $k$ of Section~\ref{sec:fra-haos}.
+Table~\ref{tab:xl-summary} breaks down the above mentioned characteristics on a per-instance basis along with DRISPI's result and comparison to initial and current \gls{bks} values.
 
 The initial BKS values of \citet{queirogaXLInstancesCapacitated2026} come from the solver
-runs described in Section~\ref{sec:lit-large-cvrp} and were released together with the
+runs described in section~\ref{sec:lit-large-cvrp} and were released as baselines with the
 CVRPLib BKS Challenge, a community competition opened on January~12, 2026, in
 which any team can submit an improved solution for automatic verification. By
-the current record\footnote{\url{https://galgos.inf.puc-rio.br/cvrplib/index.php/en/bks_challenge/score/instances}, accessed September 7, 2026.}, the challenge has improved 99 of the 100
-initial values; only XL-n1094-k157 still holds its initial value. Every gap in
-this chapter uses the current record as the baseline.
+the current record,\footnote{\url{https://galgos.inf.puc-rio.br/cvrplib/index.php/en/bks_challenge/score/instances}, accessed September 7, 2026.} the challenge has improved 99 of the 100
+initial values, leaving only XL-n1094-k157 to still hold its initial value. We report the
+percentage gap to baselines such as the initial and the current \gls{bks}:
+\begin{equation}
+\mathrm{Gap} = 100 \times \frac{c - c_{\mathrm{BKS}}}{c_{\mathrm{BKS}}}.
+\label{eq:gap}
+\end{equation}
+The quantity $c$ is the reported solution cost. The current
+\gls{bks} represents the official best known solution. However, we primarily compare against initial \gls{bks}, because published solvers produced it in two-hour single-thread runs on specified hardware
+(Section~\ref{sec:lit-large-cvrp}), using us an experimental design we can reproduce to allow for any algorithmic comparability. The official BKS values on the other hand have been achieved without constraints regarding computational, with many of them coming from day-long runs that rely on raw compute, rendering any fair comparison infeasible.
 
 \subsection{Framework Implementation}\label{sec:stu-implementation}
 All experiments in this chapter run on a single, shared department server under
 Ubuntu 22.04.5 LTS with two Intel Xeon Platinum~8280L CPUs at 2.70\,GHz
 (28 cores each, 56 cores and 112 threads total) and 5,928\,GiB of RAM, with no
-GPU\@. DRISPI runs inside Docker containers (Docker 28.1.1) pinned to a disjoint physical-core range with \texttt{--cpuset-cpus}, because other jobs share the same server, and every worker sets \texttt{OMP\_NUM\_THREADS}, \texttt{OPENBLAS\_NUM\_THREADS}, and \texttt{MKL\_NUM\_THREADS} to one; the pinned CPU count, not a library thread-pool default, therefore sets the framework's own parallelism budget.
+GPU\@. DRISPI runs inside Docker containers (Docker 28.1.1) pinned to a disjoint physical-core range with \texttt{--cpuset-cpus}. This pinned CPU count, not a library thread-pool default, sets the framework's parallelism budget.
 
-The 100-instance, three-seed campaign behind Section~\ref{sec:stu-comparison} (300 runs, 7{,}200 seconds each) pins 48 of the server's 56 physical cores as six exclusive 8-core Docker containers, three per socket, each split six DRI workers, one BG-AILS worker, and one SP worker. SMT siblings are left idle. Runs are packed into waves ordered by instance size so that the three seeds of the largest instance, XL-n10001-k1570, never share a wave; the full campaign takes 50 waves and about 100 hours of wall-clock time.
+The campaign presented in section~\ref{sec:stu-comparison} is comprised of all 100 instances, each run on three seeds with a wallclock runtime budget and termination criterion of T=2h (300 runs, 7{,}200 seconds each). For that we pin 48 of the server's 56 physical cores as six exclusive 8-core Docker containers, three per socket, parallelizing as outlined in section~\ref{sec:fra-pipeline} with a split into six DRI workers, one BG-AILS worker, and one SP worker. SMT siblings are left idle. Runs are packed into waves ordered by instance size so that the three seeds of the largest instance, XL-n10001-k1570, never share a wave. The full campaign takes 50 waves and about 100 hours of wall-clock time.
 
-DRISPI targets Python 3.11, the version scikit-learn-extra's k-medoids implementation requires, with dependencies locked via \texttt{uv}: PyVRP 0.13.3, scikit-learn 1.8.0 (K-Means and agglomerative clustering), scikit-learn-extra 0.3.0 (k-medoids), scikit-fuzzy 0.5.0 (Fuzzy C-Means), gurobipy 13.0.1, and vrplib 2.1.0 for instance parsing. AILS-II, FILO, and FILO2 are vendored as git submodules pinned to a fixed commit each and compiled at image build time, rather than resolved from a floating branch, so a rebuild reproduces the exact binaries behind the results in Section~\ref{sec:stu-comparison}. The whole framework runs inside a Docker image built from this locked environment, so the software stack behind every reported run is fixed independently of the host it executes on.
+DRISPI uses Python 3.11, with dependencies locked via \texttt{uv}: Libraries PyVRP 0.13.3 (HGS-CVRP), scikit-learn 1.8.0 (K-Means and Agglomerative Clustering), scikit-learn-extra 0.3.0 (K-Medoids), scikit-fuzzy 0.5.0 (Fuzzy C-Means), gurobipy 13.0.1 (SC/SP), and vrplib 2.1.0 for instance parsing. AILS-II, FILO, and FILO2 are vendored as git submodules pinned to a fixed commit each and compiled at image build time, rather than resolved from a floating branch, so a rebuild reproduces the exact binaries behind the results in Section~\ref{sec:stu-comparison}. The whole framework runs inside a Docker image built from this locked environment, so the software stack behind every reported run is fixed independently of the host it executes on.
 
 \subsection{Hyperparameters}\label{sec:stu-hyperparameters}
-Table~\ref{tab:hyperparameters} lists the parameter values of the benchmark
-configuration, which all 100 instances and all three seeds share.
-Chapter~\ref{chapter:framework} introduces each parameter with its mechanism; the
-table collects the values. Most were settled during development in small pilot
-studies on a few instances and seeds, run to find a reasonable default rather
-than an optimum, and these studies are not reported here. The exception is the
-BG-AILS comparison of Section~\ref{sec:fra-bg-ails}, which ran on all 100 XL
-instances and fixed the first-route rule and the boundary mask; these two
-settings are therefore chosen on the benchmark set itself. No sensitivity
-analysis over the full set was run for the other values.
-
-\begin{table}[H]
+\begin{table}[!htb]
 \centering\small
-\caption{Hyperparameters of the benchmark configuration.}
+\caption{Hyperparameters of the Benchmark Configuration.}
 \label{tab:hyperparameters}
 \begin{tabular}{@{}lll@{}}
 \toprule
@@ -111,26 +100,50 @@ Improvement pass time limit & 360\,s & Section~\ref{sec:fra-improve} \\
 \bottomrule
 \end{tabular}
 \end{table}
+Table~\ref{tab:hyperparameters} lists the parameter values of the benchmark
+configuration, which all 100 instances and all three seeds share.
+Chapter~\ref{chapter:framework} introduces each parameter with its mechanism, the
+table collects the values used to achieve the results presented in section~\ref{sec:stu-results}.
+Most parameters were tuned during development in isolated pilot studies per category (HAOS, Decomposition and Routing, BG-AILS, Route Pool, SC/SP, and Improvement). These small studies were comprised of a few instances and seeds, usually running a limited parameter grid search, aimed at finding a reasonable default rather than an optimum, and these studies are not reported here. The only exception is the BG-AILS comparison of Section~\ref{sec:fra-bg-ails}, which ran on all 100 XL
+instances and fixed the first-route rule and the boundary mask; these two
+settings are therefore chosen on the benchmark set itself. No sensitivity
+analysis over the full set was run for any of the other values.
 
-The table leaves out two kinds of settings. The first are the option sets HAOS
-draws from: the six values of $\lambda_q$, the two paradigms, the eight
-clustering methods of Table~\ref{tab:decomp-methods}, and the four
+Not included in the table are the option sets HAOS draws from: the number of subclusters $k$, the six values of $\lambda_q$, the two paradigms, the eight clustering methods of Table~\ref{tab:decomp-methods}, and the four
 routing solvers of Section~\ref{sec:fra-routing}. They define the search space of
-HAOS rather than a value within it. The second are execution settings that
-change where and when work runs but not what the search does: the core split and
-asynchronous modes of Section~\ref{sec:fra-pipeline}, the fitted coefficients of the
-BG-AILS wall-time model (Equation~\ref{eq:bg-ails-dr-wall}), and the
-time limit and seeds that Section~\ref{sec:stu-repetitions} covers. The stall limit
-$\Pi$ is disabled, so every run stops at the time limit.
+HAOS rather than a value within it. Also excluded are settings regarding the campaign architecture and experimental design: the core split and asynchronous modes of Section~\ref{sec:fra-pipeline}, the fitted coefficients of the
+BG-AILS wall-time model (Equation~\ref{eq:bg-ails-dr-wall}), and the time limit and seeds that Section~\ref{sec:stu-repetitions} covers.
 
-\subsection{Repetitions}\label{sec:stu-repetitions}
-DRISPI runs every one of the 100 XL instances three times, $S=3$, at the fixed seeds 11, 22, and 33, disclosed here for reproducibility, each run stopped after 7{,}200 seconds (120 minutes) of wall-clock time rather than at convergence. Each run is therefore a terminating simulation in the sense of \citet{lawSimulationModelingAnalysis2000}: a fixed initial condition, the first DRI iteration's decomposition and routing pass (Section~\ref{sec:fra-decomposition}), and a fixed stopping rule rather than a steady state. The replication method of \citet[ch.~9]{lawSimulationModelingAnalysis2000} therefore applies; neither warm-up deletion nor batch means do.
+\subsection{Replication Design}\label{sec:stu-repetitions}
+The campaign runs DRISPI on every one of the 100 XL instances three times, at
+seeds 11, 22, and 33. The seed drives the weighted HAOS draws, the angular
+offset, and the random choices inside decomposition. It is also
+passed to PyVRP, FILO, and FILO2, but AILS-II has no seed flag. This makes the routing phase, BG-AILS and the post-SC/SP improvement pass independent of the seed. This makes the runs non-reproducible. Additionally, the plugged-in solvers run under wall-clock limits, so how far their search gets depends on machine load, and the worker pool
+schedules subcluster jobs in no fixed order. This affects again, the entire routing phase,
+BG-AILS, and the post-SC/SP improvement pass alike, so two runs at the same seed
+can differ in solution quality. Disclosing the seeds therefore does not suffice
+for exact reproducibility. The three runs per instance are exchangeable replications.
 
-The interval sized below is conditional on the fixed 100-instance Queiroga XL set ($n$ from 1{,}048 to 10{,}001 customers, Section~\ref{sec:stu-dataset}): the instances are a design factor \citep{queirogaXLInstancesCapacitated2026}, not a sample from a superpopulation of \gls{cvrp} instances, so seed is the only randomness the design controls. With $\bar G$ the grand mean gap and $\bar\sigma^2$ the average per-instance seed variance, $\mathrm{Var}(\bar G) = \bar\sigma^2/(I \cdot S)$, $I=100$; an unconditional target would add a between-instance term that swamps the seed term and makes $S$ nearly irrelevant, so the conditional target is stated explicitly. The interval does not extend to the published baselines Section~\ref{sec:stu-comparison} compares against, each a single reported value per instance with no variance estimate of its own.
+Because each run is stopped after 7,200 seconds (120 minutes) of wall-clock time rather than at convergence, each run resembles a terminating simulation in the sense of \citet{lawSimulationModelingAnalysis2000}: a fixed initial condition, the first DRI iteration's decomposition and routing pass (Section~\ref{sec:fra-decomposition}), and a fixed stopping rule rather than a steady state. The replication method of \citet[ch.~9]{lawSimulationModelingAnalysis2000} therefore applies.
 
-Independence across instances is asserted mechanistically rather than inferred from the pilot data: every run executes as a separate process with its own seeded random-number stream, and DRISPI shares no pool, cache, or global counter across instances (Chapter~\ref{chapter:framework}), so the $I \times S$ observations behind $\bar G$ are independent by construction.
+The precision target refers to the fixed set of 100 instances, which are a design
+factor \citep{queirogaXLInstancesCapacitated2026} rather than a sample from a larger
+population, so the seed is the only randomness the design controls. Using
+$\bar G$ the grand mean gap and $\bar\sigma^2$ the average per-instance seed
+variance, we get $\mathrm{Var}(\bar G) = \bar\sigma^2 / (I \cdot S)$ with
+$I = 100$. The $I \cdot S$ observations are independent by construction. Every
+run is a separate process with its own random-number stream, and no pool, cache,
+or counter is shared across runs (Chapter~\ref{chapter:framework}). This interval does
+not extend to the published baselines of Section~\ref{sec:stu-comparison}, which
+report one value per instance and no variance.
 
-The pilot campaign (three instances, four seeds each, five wall-clock marks per run) measured a root-mean-square per-instance seed standard deviation of 0.118 percentage points at the 7{,}200 second mark. The target margin was fixed in advance at $\pm 0.03$ percentage points, chosen to resolve the 0.02--0.06 pp effect sizes observed in earlier component A/B tests. Table~\ref{tab:seed-sizing} forecasts the standard error and normal-approximation 95\% half-width of $\bar G$ at this pilot sigma, $S$ from one to four, $I=100$. Every value of $S$ clears the target by a comfortable margin, so precision alone does not select $S=3$.
+A pilot campaign of three diverse instances with four seeds each measured a
+root-mean-square per-instance seed standard deviation of 0.118\,pp at the
+7{,}200-second mark. The target half-width was fixed in advance at 0.03\,pp, small
+enough to resolve the 0.02--0.06\,pp effects seen in earlier component tests.
+Table~\ref{tab:seed-sizing} forecasts the standard error and the 95\%
+half-width of $\bar G$ at the pilot value. Every $S$ from one to four meets the
+target. This would in fact still hold true at a 99\% interval, but precision alone does not decide $S$.
 
 \begin{table}[htbp]
 \centering
@@ -147,15 +160,31 @@ $S$ & SE (pp) & Half-width (pp) \\
 \end{tabular}
 \end{table}
 
-Three considerations beyond precision fix $S=3$. First, degrees of freedom: pooled within-instance degrees of freedom, $I(S-1)$, are zero at $S=1$ and admit no interval at all; at $S=3$ they are 200, reduced by Satterthwaite to approximately 138 given the pilot's heterogeneous variances (3.7-fold in standard deviation, 13.6-fold in variance), giving $t(0.975,138)\approx1.98$, close to the normal approximation above. Second, identifiability: at $S=2$ a discrepancy between two runs is measurable but not attributable; at $S=3$ a single anomalous replication can be isolated against the other two, a capacity the campaign exercised (\todo{SECTION: home for realized per-instance seed variance and per-seed breakdown -- no existing section covers this yet}). Third, best-of-$S$ requires $S>1$ to be a nontrivial minimum, and the convention on this instance set, following \citet{queirogaXLInstancesCapacitated2026}, reports such a column.
+Three other considerations set $S = 3$. At $S = 1$ there are no within-instance
+degrees of freedom and no interval at all. At $S = 2$ a discrepancy between two
+runs is visible, but cannot be attributed to either of them. At $S = 3$, however, one
+anomalous run stands out against the other two. We also require $S > 1$ to present a best-of-$S$ column, which is the
+convention on this instance set \citep{queirogaXLInstancesCapacitated2026}.
 
-The design already commits 300 runs, 7{,}200 seconds each, to six concurrent eight-core slices on the department server (Section~\ref{sec:stu-implementation}): 100 hours of wall-clock time, 4{,}800 core-hours. A fourth seed would add 100 more runs, about 1{,}600 core-hours, for a half-width gain from 0.013 to 0.012 pp, against a systematic batch effect of approximately 0.039 pp that two pilot campaigns differing only in execution environment showed, roughly three times the forecast $S=3$ half-width and identified in advance as the binding constraint on validity, not the replication count. \citet{johnsonTheoreticiansGuideExperimental2002} and \citet{barrDesigningReportingComputational1995} both argue for sizing a campaign against its dominant nuisance source rather than against statistical power alone; a fourth seed buys the latter on a term already dominated by the former.
+A fourth seed would add 100 runs and 1,600 core-hours to shrink the half-width
+from 0.013 to 0.012\,pp. That gain is too small next to a second source of error.
+Two pilot campaigns that differed only in execution environment produced means
+0.039\,pp apart, three times the $S = 3$ half-width. Such a batch effect shifts
+every run of a campaign alike, so more seeds do not reduce it, and the budget of
+a fourth seed would not buy a meaningfully more precise $\bar{G}$
+\citep{barrDesigningReportingComputational1995,johnsonTheoreticiansGuideExperimental2002}.
+Neyman allocation, which assigns seeds in proportion to each instance's standard
+deviation \citep{neymanTwoDifferentAspects1934,cochranSamplingTechniques1977}, would have further complicated the experimental design while only cutting the standard error of $\bar{G}$ by 8.8\% at the same total budget. Therefore, every instance receives
+three seeds.
 
-Neyman allocation, assigning more replications to higher-variance instances, was evaluated against equal allocation at the same total budget. Despite the 13.6-fold variance spread across the pilot instances, it recovers only an 8.8\% reduction in the standard error of $\bar G$, so equal allocation, three seeds on every instance, was retained.
-
-Two caveats qualify this design. The seed is a replication label, not a determinism guarantee: DRISPI's \texttt{ProcessPoolExecutor}-based worker pool schedules subcluster work non-deterministically, so two runs at the same seed are exchangeable replications rather than bitwise-reproducible runs. The best-of-$S$ statistic is an extreme-value statistic whose expectation depends on $S$, not comparable across publications using a different replication count; the interval above applies to the mean-over-seeds statistic $\bar G$ only, a distinction stated here so Section~\ref{sec:stu-comparison} can rely on it rather than restate it.
-
-Realized seed variance and the per-seed breakdown appear in \todo{SECTION: home for realized per-instance seed variance and per-seed breakdown -- no existing section covers this yet}; the paired Wilcoxon signed-rank tests with Holm correction on per-instance differences, following \citet{demsVarStatisticalComparisonsClassifiers}, are specified in Section~\ref{sec:stu-comparison}.
+The pilot value was conservative. In the campaign, the mean per-instance seed
+standard deviation is 0.035\,pp % TODO: report the RMS value, which is what enters Var(G)
+(Section~\ref{sec:stu-comparison}), about a third of the pilot value,
+which puts the realized 95\% half-width of $\bar G$ near 0.004\,pp. This
+interval applies to the mean over seeds only. Best-of-$S$ is an extreme-value
+statistic whose expectation depends on $S$, so it is not comparable across
+studies with different replication counts. Section~\ref{sec:stu-comparison} uses
+it descriptively and focuses its main comparison and the answer to our primary research questions on the mean-of-$S$ gap.
 
 \section{Results}\label{sec:stu-results}
 Short introduction.

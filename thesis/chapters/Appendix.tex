@@ -6,16 +6,16 @@
 \renewcommand{\thetable}{A.\arabic{table}}
 \renewcommand{\theHtable}{A.\arabic{table}}
 \section{Set Covering Formulation}\label{app:set-covering}
-Section~\ref{sec:fra-sp} introduces set covering (SC) as the fallback DRISPI runs in place of set partitioning (SP) when the route pool does not yet cover every customer at least a minimum number of times. With $R$ the route pool at the time of the solve, $c_r$ the cost of route $r \in R$, $C$ the customer set of the instance (Section~\ref{sec:lit-problem}), $C_r \subseteq C$ the customer set of route $r$, and $x_r \in \{0, 1\}$ selecting route $r$, SC relaxes the partition equality of SP (Equation~\ref{eq:sp-partition}) to the cover inequality of \citet{garfinkelSetPartitioningProblemSetCovering1969}, who characterize set partitioning as set covering under an equality constraint:
+Section~\ref{sec:fra-sp} introduces set covering (SC) as the fallback \gls{drispi} runs in place of set partitioning (SP) when the route pool does not yet cover every customer at least a minimum number of times. With $R$ the route pool at the time of the solve, $c_r$ the cost of route $r \in R$, $C$ the customer set of the instance (Section~\ref{sec:lit-problem}), $C_r \subseteq C$ the customer set of route $r$, and $x_r \in \{0, 1\}$ selecting route $r$, SC relaxes the partition equality of SP (Equation~\ref{eq:sp-partition}) to the cover inequality of \citet{garfinkelSetPartitioningProblemSetCovering1969}, who characterize set partitioning as set covering under an equality constraint:
 \begin{align}
 \text{min} \quad & \sum_{\mathclap{r \in R}} c_r x_r \label{eq:sc-obj}\\
 \text{s.t.} \quad & \sum_{\mathclap{r \in R:\, i \in C_r}} x_r \geq 1, && \forall i \in C \label{eq:sc-cover}\\
 & x_r \in \{0, 1\}, && \forall r \in R. \label{eq:sc-binary}
 \end{align}
-As with SP, DRISPI solves the LP relaxation of Equation~\ref{eq:sc-binary}, $x_r \in [0, 1]$, first; the resulting fractional weights update the pool's quality scores in the same way regardless of whether the solve ends up running SC or SP, and the binary re-solve is warm-started from that relaxation.
+As with SP, \gls{drispi} solves the LP relaxation of Equation~\ref{eq:sc-binary}, $x_r \in [0, 1]$, first; the resulting fractional weights update the pool's quality scores in the same way regardless of whether the solve ends up running SC or SP, and the binary re-solve is warm-started from that relaxation.
 \newpage
 \section{XL Instance Detailed Results}\label{app:xl-results}
-Table~\ref{tab:xl-summary} reports the per-instance detail underlying the Section~\ref{sec:stu-comparison} comparison: instance characteristics, DRISPI's best cost and gap to the current \gls{bks} for all 100 XL instances, alongside the initial-\gls{bks} and current-\gls{bks} reference costs.
+Table~\ref{tab:xl-summary} reports the per-instance detail underlying the Section~\ref{sec:stu-comparison} comparison: instance characteristics, \gls{drispi}'s best cost and gap to the current \gls{bks} for all 100 XL instances, alongside the initial-\gls{bks} and current-\gls{bks} reference costs.
 
 % TODO(style): deviates from the "no shrinking below body size" rule in
 % STYLE.md \S8; kept in portrait (rather than the rotating/sidewaystable
@@ -26,16 +26,16 @@ Table~\ref{tab:xl-summary} reports the per-instance detail underlying the Sectio
 \setkomafont{captionlabel}{\normalsize}
 \setlength{\tabcolsep}{3pt}
 \begin{longtable}{@{}rlcllrrrrrrr@{}}
-\caption{Instance-Level Best-of-3 Results for DRISPI on the 100 XL Instances.}\label{tab:xl-summary}\\
+\caption{Instance-Level Best-of-3 Results for \gls{drispi} on the 100 XL Instances.}\label{tab:xl-summary}\\
 \toprule
-& & & & & & & \multicolumn{2}{c}{DRISPI} & \multicolumn{2}{c}{Initial BKS} & \multicolumn{1}{c}{BKS} \\
+& & & & & & & \multicolumn{2}{c}{\gls{drispi}} & \multicolumn{2}{c}{Initial BKS} & \multicolumn{1}{c}{BKS} \\
 \cmidrule(lr){8-9} \cmidrule(lr){10-11} \cmidrule(lr){12-12}
 \# & Name & Dep & Cust & Dem & $Q$ & $r$ & \multicolumn{1}{c}{Cost} & Gap (\%) & \multicolumn{1}{c}{Cost} & Gap (\%) & \multicolumn{1}{c}{Cost} \\
 \midrule
 \endfirsthead
 \multicolumn{12}{c}{\tablename\ \thetable{} -- continued from previous page}\\
 \toprule
-& & & & & & & \multicolumn{2}{c}{DRISPI} & \multicolumn{2}{c}{Initial BKS} & \multicolumn{1}{c}{BKS} \\
+& & & & & & & \multicolumn{2}{c}{\gls{drispi}} & \multicolumn{2}{c}{Initial BKS} & \multicolumn{1}{c}{BKS} \\
 \cmidrule(lr){8-9} \cmidrule(lr){10-11} \cmidrule(lr){12-12}
 \# & Name & Dep & Cust & Dem & $Q$ & $r$ & \multicolumn{1}{c}{Cost} & Gap (\%) & \multicolumn{1}{c}{Cost} & Gap (\%) & \multicolumn{1}{c}{Cost} \\
 \midrule

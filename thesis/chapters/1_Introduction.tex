@@ -40,7 +40,7 @@ The decompose-route-improve framework of \citet{kerscherDecomposerouteimproveFra
 Existing frameworks fix that choice before or outside the search. The choice is set by a calibrated rule \citep{queirogaPOPMUSICMatheuristic2021,santiniDecompositionStrategiesVehicle2023}, by offline tuning \citep{kerscherDecomposerouteimproveFrameworkSolving2025}, by an offline-trained policy \citep{liLearningDelegate2021,yeGLOP2024}, or by uniform randomization \citep{kerscherSolvingHeterogeneousVehicle}.
 None of them uses the solution costs observed on the instance at hand to decide which decomposition and which subsolver to apply next.
 
-This thesis develops DRISPI, a decomposition framework for very large \gls{cvrp} instances. Its controller, hierarchical adaptive operator selection (HAOS), learns that choice within a single run.
+This thesis develops \gls{drispi}, a decomposition framework for very large \gls{cvrp} instances. Its controller, hierarchical adaptive operator selection (HAOS), learns that choice within a single run.
 The primary research question is
 
 \begin{quote}
@@ -49,8 +49,8 @@ The primary research question is
 
 We answer it on all 100 XL instances.
 Every instance is solved three times under one shared configuration with a two-hour wall-clock limit per run.
-We compare DRISPI's mean gap to the current \gls{bks} against the published mean-of-60 results of the eight solvers of \citet{queirogaXLInstancesCapacitated2026}. The five closest comparisons are tested with paired Wilcoxon signed-rank tests under a Holm correction.
-The comparison fixes the wall-clock limit but not the hardware. DRISPI runs on eight cores of an older processor. The published solvers each run on a single thread of a newer one.
+We compare \gls{drispi}'s mean gap to the current \gls{bks} against the published mean-of-60 results of the eight solvers of \citet{queirogaXLInstancesCapacitated2026}. The five closest comparisons are tested with paired Wilcoxon signed-rank tests under a Holm correction.
+The comparison fixes the wall-clock limit but not the hardware. \gls{drispi} runs on eight cores of an older processor. The published solvers each run on a single thread of a newer one.
 Section~\ref{sec:con-limitations} quantifies that asymmetry.
 
 The secondary research question concerns what the controller learns.
@@ -64,7 +64,7 @@ The campaign contains no control arm with a frozen configuration.
 The answer to RQ2 is therefore descriptive. It shows what HAOS learns, not how much the learning itself adds.
 
 This thesis makes four contributions.
-First, it develops DRISPI, an algorithm-agnostic framework that repeats a decompose-route-improve loop. The framework stores every route it generates in a persistent pool. It recombines that pool at scheduled intervals by set partitioning or set covering (SC/SP).
+First, it develops \gls{drispi}, an algorithm-agnostic framework that repeats a decompose-route-improve loop. The framework stores every route it generates in a persistent pool. It recombines that pool at scheduled intervals by set partitioning or set covering (SC/SP).
 Any \gls{cvrp} solver that takes an instance and returns routes is a valid subsolver. The deployed configuration draws from AILS-II, FILO, FILO2, and PyVRP \citep{woudaPyVRPHighPerformanceVRP2024}.
 Second, it introduces HAOS, a hierarchical roulette-wheel controller in the tradition of adaptive large neighborhood search \citep{ropkeAdaptiveLargeNeighborhood2006}.
 In every iteration, HAOS selects the number of subclusters, the demand weight of the dissimilarity metric, the clustering paradigm, the clustering method, and the subsolver.
@@ -84,7 +84,7 @@ Fourth, it runs these stages as a parallel pipeline on eight cores. BG-AILS and 
 
 The remainder of this thesis is structured as follows.
 Chapter~\ref{chapter:literature} states the \gls{cvrp}. It reviews the monolithic solvers that lead on the XL set and the strategies used to scale routing search. It then locates the research gap.
-Chapter~\ref{chapter:framework} presents DRISPI stage by stage and closes with the parallel pipeline and its main loop.
+Chapter~\ref{chapter:framework} presents \gls{drispi} stage by stage and closes with the parallel pipeline and its main loop.
 Chapter~\ref{chapter:study} describes the experimental design. It reports the comparison with the published solvers, the results by instance characteristic, the learned HAOS weights, and the convergence behavior.
 Chapter~\ref{chapter:conclusion} answers both research questions, discusses the limitations of the study, and outlines directions for future research.
 Appendix~\ref{app:set-covering} gives the set covering formulation. Appendix~\ref{app:xl-results} lists the per-instance results.

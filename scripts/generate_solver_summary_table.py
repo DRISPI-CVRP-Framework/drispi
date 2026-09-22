@@ -17,20 +17,27 @@ Usage:
 
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-STATS_FILE = ROOT / "data/results/xl_comparison_stats.json"
-OUTPUT = ROOT / "thesis/tables/solver_summary_table.tex"
+STATS_FILE = ROOT / "data/results/xl_comparison_stats_lagrange.json"
+OUTPUT = ROOT / "thesis/tables/solver_summary_table_lagrange.tex"
 
 
-def _fmt(value: float) -> str:
-    return f"+{value:.2f}"
+def _fmt(value: float, digits: int) -> str:
+    return f"+{value:.{digits}f}"
 
 
 def main() -> None:
-    stats = json.loads(STATS_FILE.read_text(encoding="utf-8"))
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--stats", type=Path, default=STATS_FILE)
+    parser.add_argument("--output", type=Path, default=OUTPUT)
+    parser.add_argument("--digits", type=int, default=3)
+    args = parser.parse_args()
+
+    stats = json.loads(args.stats.read_text(encoding="utf-8"))
     table = stats["summary_table"]
 
     solvers = sorted(table, key=lambda s: table[s]["mean_all"])
@@ -43,18 +50,18 @@ def main() -> None:
             label = f"{solver} ($n = {row['n_mean_all']}$)"
         cells = [
             label,
-            _fmt(row["mean_all"]),
-            _fmt(row["mean_lo"]),
-            _fmt(row["mean_hi"]),
-            _fmt(row["best_all"]),
-            _fmt(row["best_lo"]),
-            _fmt(row["best_hi"]),
+            _fmt(row["mean_all"], args.digits),
+            _fmt(row["mean_lo"], args.digits),
+            _fmt(row["mean_hi"], args.digits),
+            _fmt(row["best_all"], args.digits),
+            _fmt(row["best_lo"], args.digits),
+            _fmt(row["best_hi"], args.digits),
         ]
         lines.append(" & ".join(cells) + r" \\")
 
-    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    print(f"Wrote {len(lines)} rows to {OUTPUT}")
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(f"Wrote {len(lines)} rows to {args.output}")
 
 
 if __name__ == "__main__":

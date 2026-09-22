@@ -37,7 +37,7 @@ from scripts.thesis_figstyle import apply, fig_size  # noqa: E402
 
 import matplotlib.pyplot as plt
 
-DATA_FILE = ROOT / "data/results/xl_solver_comparison.json"
+DATA_FILE = ROOT / "data/results/xl_solver_comparison_dantzig.json"
 SUMMARY_TABLE = ROOT / "thesis/tables/xl_summary_table.tex"
 OUTPUT = ROOT / "thesis/figures/characteristics_panels.pdf"
 

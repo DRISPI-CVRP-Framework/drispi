@@ -36,6 +36,7 @@ Usage:
 
 from __future__ import annotations
 
+import argparse
 import csv
 import json
 from itertools import combinations
@@ -46,9 +47,9 @@ import numpy as np
 from scipy.stats import wilcoxon
 
 ROOT = Path(__file__).resolve().parents[1]
-COMPARISON_JSON = ROOT / "data/results/xl_solver_comparison.json"
-CSV_PATH = ROOT / "data/results/finalBenchmarkResults.csv"
-OUTPUT = ROOT / "data/results/xl_comparison_stats.json"
+COMPARISON_JSON = ROOT / "data/results/xl_solver_comparison_lagrange.json"
+CSV_PATH = ROOT / "data/results/finalBenchmarkResults_lagrange.csv"
+OUTPUT = ROOT / "data/results/xl_comparison_stats_lagrange.json"
 
 SIZE_SPLIT = 3400  # customers; matches Queiroga et al. (2026) Table 2's own split
 
@@ -74,12 +75,12 @@ def _gap_pct(cost: float, bks: float) -> float:
     return (cost - bks) / bks * 100.0
 
 
-def _load_comparison() -> dict[str, dict]:
-    return json.loads(COMPARISON_JSON.read_text(encoding="utf-8"))
+def _load_comparison(path: Path) -> dict[str, dict]:
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _load_csv_rows() -> list[dict]:
-    with CSV_PATH.open(newline="") as fh:
+def _load_csv_rows(path: Path) -> list[dict]:
+    with path.open(newline="") as fh:
         return list(csv.DictReader(fh))
 
 
@@ -111,8 +112,18 @@ def build_summary_table(data: dict[str, dict]) -> dict[str, dict]:
     return table
 
 
+def _seed_cost_columns(rows: list[dict]) -> list[str]:
+    if not rows:
+        raise RuntimeError("Benchmark CSV has no rows")
+    cols = [name for name in rows[0] if name.startswith("cost_seed")]
+    cols.sort(key=lambda name: int(name.removeprefix("cost_seed")))
+    if len(cols) != 3:
+        raise RuntimeError(f"Expected 3 per-seed cost columns, found {cols}")
+    return cols
+
+
 def build_best_of_k(rows: list[dict]) -> dict[str, object]:
-    seed_cols = ["cost_seed10", "cost_seed20", "cost_seed30"]
+    seed_cols = _seed_cost_columns(rows)
     best1, best2, best3 = [], [], []
     for row in rows:
         bks = float(row["bks_current"])
@@ -228,13 +239,20 @@ def build_highlights(data: dict[str, dict], rows: list[dict]) -> dict[str, objec
     def cost_row(inst: str) -> dict:
         r = csv_rows[inst]
         return {
+            "instance": inst,
             "cost_best3": int(round(float(r["cost_best3"]))),
             "bks_initial": int(round(float(r["bks_initial"]))),
             "bks_current": int(round(float(r["bks_current"]))),
         }
 
-    beats_initial = cost_row("XL-n4535-k1134")
-    exact_match = cost_row("XL-n1094-k157")
+    beats_initial = []
+    exact_match = []
+    for inst in sorted(csv_rows):
+        record = cost_row(inst)
+        if record["cost_best3"] < record["bks_initial"]:
+            beats_initial.append(record)
+        if record["cost_best3"] == record["bks_initial"] == record["bks_current"]:
+            exact_match.append(record)
 
     beats_ails_mean = []
     for inst, entry in data.items():
@@ -245,16 +263,22 @@ def build_highlights(data: dict[str, dict], rows: list[dict]) -> dict[str, objec
             beats_ails_mean.append(inst)
 
     return {
-        "beats_initial_bks": {"instance": "XL-n4535-k1134", **beats_initial},
-        "exact_bks_match": {"instance": "XL-n1094-k157", **exact_match},
+        "beats_initial_bks": beats_initial,
+        "exact_bks_match": exact_match,
         "n_beats_ails2_mean_with_best3": len(beats_ails_mean),
         "instances_beating_ails2_mean": sorted(beats_ails_mean),
     }
 
 
 def main() -> None:
-    data = _load_comparison()
-    rows = _load_csv_rows()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--comparison-json", type=Path, default=COMPARISON_JSON)
+    parser.add_argument("--csv", type=Path, default=CSV_PATH)
+    parser.add_argument("--output", type=Path, default=OUTPUT)
+    args = parser.parse_args()
+
+    data = _load_comparison(args.comparison_json)
+    rows = _load_csv_rows(args.csv)
 
     summary_table = build_summary_table(data)
     result = {
@@ -267,8 +291,8 @@ def main() -> None:
         "highlights": build_highlights(data, rows),
     }
 
-    OUTPUT.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
-    print(f"Wrote {OUTPUT}")
+    args.output.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+    print(f"Wrote {args.output}")
 
 
 if __name__ == "__main__":

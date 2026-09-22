@@ -23,15 +23,16 @@ Usage:
 
 from __future__ import annotations
 
+import argparse
 import csv
 import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 HEURISTIC_JSON = ROOT / "artifacts/comparison/xl_heuristic_comparison.json"
-CSV_PATH = ROOT / "data/results/finalBenchmarkResults.csv"
-OUTPUT_JSON = ROOT / "data/results/xl_solver_comparison.json"
-OUTPUT_CSV = ROOT / "data/results/xl_solver_comparison.csv"
+CSV_PATH = ROOT / "data/results/finalBenchmarkResults_lagrange.csv"
+OUTPUT_JSON = ROOT / "data/results/xl_solver_comparison_lagrange.json"
+OUTPUT_CSV = ROOT / "data/results/xl_solver_comparison_lagrange.csv"
 
 # Order mirrors Queiroga et al. (2026) Table 2, then the two "own work" rows.
 SOLVER_ORDER = [
@@ -48,14 +49,14 @@ SOLVER_ORDER = [
 ]
 
 
-def _load_csv_rows() -> dict[str, dict]:
-    with CSV_PATH.open(newline="") as fh:
+def _load_csv_rows(csv_path: Path) -> dict[str, dict]:
+    with csv_path.open(newline="") as fh:
         return {row["instance"]: row for row in csv.DictReader(fh)}
 
 
-def build() -> dict[str, dict]:
+def build(csv_path: Path) -> dict[str, dict]:
     heuristics = json.loads(HEURISTIC_JSON.read_text(encoding="utf-8"))
-    csv_rows = _load_csv_rows()
+    csv_rows = _load_csv_rows(csv_path)
 
     missing = set(heuristics) ^ set(csv_rows)
     if missing:
@@ -94,18 +95,18 @@ def build() -> dict[str, dict]:
     return combined
 
 
-def write_json(combined: dict[str, dict]) -> None:
-    OUTPUT_JSON.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT_JSON.write_text(json.dumps(combined, indent=2) + "\n", encoding="utf-8")
-    print(f"Wrote {len(combined)} instances to {OUTPUT_JSON}")
+def write_json(combined: dict[str, dict], output_json: Path) -> None:
+    output_json.parent.mkdir(parents=True, exist_ok=True)
+    output_json.write_text(json.dumps(combined, indent=2) + "\n", encoding="utf-8")
+    print(f"Wrote {len(combined)} instances to {output_json}")
 
 
-def write_csv(combined: dict[str, dict]) -> None:
+def write_csv(combined: dict[str, dict], output_csv: Path) -> None:
     fieldnames = ["instance", "n", "K", "bks"]
     for solver in SOLVER_ORDER:
         fieldnames += [f"{solver}_best", f"{solver}_mean"]
 
-    with OUTPUT_CSV.open("w", newline="", encoding="utf-8") as fh:
+    with output_csv.open("w", newline="", encoding="utf-8") as fh:
         writer = csv.DictWriter(fh, fieldnames=fieldnames)
         writer.writeheader()
         for instance, entry in combined.items():
@@ -115,13 +116,19 @@ def write_csv(combined: dict[str, dict]) -> None:
                 row[f"{solver}_best"] = metrics.get("best", "")
                 row[f"{solver}_mean"] = metrics.get("mean", "")
             writer.writerow(row)
-    print(f"Wrote {len(combined)} rows to {OUTPUT_CSV}")
+    print(f"Wrote {len(combined)} rows to {output_csv}")
 
 
 def main() -> None:
-    combined = build()
-    write_json(combined)
-    write_csv(combined)
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--csv", type=Path, default=CSV_PATH)
+    parser.add_argument("--output-json", type=Path, default=OUTPUT_JSON)
+    parser.add_argument("--output-csv", type=Path, default=OUTPUT_CSV)
+    args = parser.parse_args()
+
+    combined = build(args.csv)
+    write_json(combined, args.output_json)
+    write_csv(combined, args.output_csv)
 
 
 if __name__ == "__main__":

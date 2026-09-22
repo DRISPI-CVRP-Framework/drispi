@@ -21,6 +21,7 @@ Usage:
 
 from __future__ import annotations
 
+import argparse
 import csv
 import re
 import sys
@@ -32,8 +33,8 @@ from pypdf import PdfReader
 
 ROOT = Path(__file__).resolve().parents[1]
 DRSCI_PDF = ROOT / "artifacts/comparison/20260331_Altendeitering+Bachmann_PS.pdf"
-CSV_PATH = ROOT / "data/results/finalBenchmarkResults.csv"
-OUTPUT = ROOT / "thesis/tables/xl_summary_table.tex"
+CSV_PATH = ROOT / "data/results/finalBenchmarkResults_lagrange.csv"
+OUTPUT = ROOT / "thesis/tables/xl_summary_table_lagrange.tex"
 
 ROW_RE = re.compile(
     r"^(?P<num>\d+)\s+(?P<name>XL-n\d+-k\d+)\s+(?P<rest>.+)$"
@@ -96,9 +97,9 @@ def _parse_pdf_table() -> dict[str, dict]:
     return meta
 
 
-def _load_csv_rows() -> dict[str, dict]:
+def _load_csv_rows(csv_path: Path = CSV_PATH) -> dict[str, dict]:
     rows: dict[str, dict] = {}
-    with CSV_PATH.open(newline="") as fh:
+    with csv_path.open(newline="") as fh:
         for row in csv.DictReader(fh):
             rows[row["instance"]] = row
     return rows
@@ -172,15 +173,20 @@ def build_rows(meta: dict[str, dict], csv_rows: dict[str, dict]) -> list[str]:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--csv", type=Path, default=CSV_PATH)
+    parser.add_argument("--output", type=Path, default=OUTPUT)
+    args = parser.parse_args()
+
     meta = _parse_pdf_table()
-    csv_rows = _load_csv_rows()
+    csv_rows = _load_csv_rows(args.csv)
     print(f"Parsed {len(meta)} rows from PDF, {len(csv_rows)} rows from CSV")
 
     body_lines = build_rows(meta, csv_rows)
 
-    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT.write_text("\n".join(body_lines) + "\n", encoding="utf-8")
-    print(f"Wrote {len(body_lines)} rows to {OUTPUT}")
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text("\n".join(body_lines) + "\n", encoding="utf-8")
+    print(f"Wrote {len(body_lines)} rows to {args.output}")
 
 
 if __name__ == "__main__":

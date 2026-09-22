@@ -35,7 +35,7 @@ from scripts.thesis_figstyle import apply, fig_size  # noqa: E402
 
 import matplotlib.pyplot as plt
 
-DATA_FILE = ROOT / "data/results/xl_solver_comparison.json"
+DATA_FILE = ROOT / "data/results/xl_solver_comparison_dantzig.json"
 OUTPUT = ROOT / "thesis/figures/gap_ecdf.pdf"
 
 # Ordered by mean-of-N gap, ascending (Table 5.2), except DRISPI is kept last

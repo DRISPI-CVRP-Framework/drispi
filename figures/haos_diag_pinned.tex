@@ -1,0 +1,45 @@
+\documentclass{standalone}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepgfplotslibrary{groupplots,fillbetween}
+\begin{document}
+\begin{tikzpicture}
+\begin{groupplot}[
+  group style={group size=2 by 1, horizontal sep=1.8cm},
+  width=7.2cm, height=5.4cm,
+  xlabel={arm count $A$},
+  tick label style={font=\small},
+  label style={font=\small},
+  title style={font=\small},
+  legend style={font=\scriptsize, at={(0.02,0.98)}, anchor=north west},
+  ymajorgrids,
+]
+\nextgroupplot[title={pinned fraction}, ylabel={fraction at $w_0$}]
+\addplot[only marks, mark=*, black] coordinates {(7.0000, 0.240784) (8.0000, 0.245375) (10.0000, 0.292575)};
+\addlegendentry{k}
+\addplot[only marks, mark=square*, blue] coordinates {(6.0000, 0.184221)};
+\addlegendentry{$\lambda_q$}
+\addplot[only marks, mark=triangle*, red] coordinates {(2.0000, 0.031163)};
+\addlegendentry{paradigm}
+\addplot[only marks, mark=diamond*, green!60!black] coordinates {(5.0000, 0.323282)};
+\addlegendentry{vertex method}
+\addplot[only marks, mark=pentagon*, orange] coordinates {(3.0000, 0.208938)};
+\addlegendentry{route method}
+\addplot[only marks, mark=otimes*, violet] coordinates {(4.0000, 0.095465)};
+\addlegendentry{subsolver}
+\nextgroupplot[title={filled: persistence, open: gap}, ylabel={iterations}]
+\addplot[only marks, mark=*, black] coordinates {(7.0000, 34.026768) (8.0000, 26.131849) (10.0000, 15.959068)};
+\addplot[only marks, mark=square*, blue] coordinates {(6.0000, 28.577129)};
+\addplot[only marks, mark=triangle*, red] coordinates {(2.0000, 32.830886)};
+\addplot[only marks, mark=diamond*, green!60!black] coordinates {(5.0000, 24.464682)};
+\addplot[only marks, mark=pentagon*, orange] coordinates {(3.0000, 25.362413)};
+\addplot[only marks, mark=otimes*, violet] coordinates {(4.0000, 31.349523)};
+\addplot[only marks, mark=o, black] coordinates {(7.0000, 5.671218) (8.0000, 5.473417) (10.0000, 5.251491)};
+\addplot[only marks, mark=square, blue] coordinates {(6.0000, 4.934470)};
+\addplot[only marks, mark=triangle, red] coordinates {(2.0000, 1.894752)};
+\addplot[only marks, mark=diamond, green!60!black] coordinates {(5.0000, 7.823252)};
+\addplot[only marks, mark=pentagon, orange] coordinates {(3.0000, 6.026449)};
+\addplot[only marks, mark=otimes, violet] coordinates {(4.0000, 3.566274)};
+\end{groupplot}
+\end{tikzpicture}
+\end{document}

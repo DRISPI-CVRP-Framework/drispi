@@ -45,7 +45,7 @@ def main() -> None:
     lines: list[str] = []
     for solver in solvers:
         row = table[solver]
-        label = solver
+        label = r"\gls{drispi}" if solver == "DRISPI" else solver
         if row["n_mean_all"] < 100:
             label = f"{solver} ($n = {row['n_mean_all']}$)"
         cells = [

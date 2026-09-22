@@ -1,10 +1,8 @@
 \chapter{Conclusion}\label{chapter:conclusion}
-Short introduction. It should relect on the primary and secondary research questions.
+Short introduction. Explain on the relation between findings, limitations and further research.
 
-\section{Highlights}\label{sec:con-highlights}
-Mention the strengths (such as adaptiveness through online learning) and weaknesses (such as more CPU time required) of the framework.
-
-Also elaborate on the main contributions of the thesis.
+\section{Findings}\label{sec:con-findings}
+Answer the reseach question in here.
 
 \section{Limitations}\label{sec:con-limitations}
 
@@ -46,12 +44,23 @@ construction. Neither column is an equal-resource ranking.
 The 7,200-second limit matches the published per-run budget, not the run length
 \gls{drispi} needs. HAOS learns online. For the first ten iterations it draws uniformly
 and updates nothing (Section~3.1), and after that every draw of a weak arm still
-costs a full decomposition, routing, and BG-AILS pass. Under a fixed wall-clock
-limit, the number of completed iterations therefore bounds how far the wheels can
-move. That bound is tightest where one routing wave is expensive: large $n$ and,
-separately, long routes. Section~\ref{sec:stu-convergence} reports the realized iteration counts and
-[TODO: share of runs still improving in the final 20 minutes]. Whether a longer
-run would close the remaining gap on these instances was not tested.
+costs a full decomposition, routing, and BG-AILS pass. Under a fixed wall-clock limit, the number of completed iterations bounds how
+many draws each arm receives, and that bound is tightest on the largest
+instances: completed iterations fall from about 117 on the ten smallest to
+about 31 on the ten largest (Section~\ref{sec:stu-convergence}). A longer
+budget would not have repaired the weights.
+Section~\ref{sec:results-haos} finds that the arms these wheels choose between
+are statistically indistinguishable on this campaign and that the arms
+finishing heavy are uncorrelated with the arms that paid, so additional draws
+would sharpen an arbitrary leader rather than correct it. What the budget
+limits here is the evidence available to a controller that was not, on these
+runs, in a position to use it.  The cost still arriving at the cutoff is a separate
+question, and it tracks route length. The mean-of-3
+gain over the final quarter has Spearman $\rho = +0.52$ with $r$
+($p = 3.9 \times 10^{-8}$) and $\rho = +0.06$ with $n$ ($p = 0.57$).
+122 of the 300 runs were still improving in the final quarter.
+Whether a longer run would close the remaining gap on the long-route instances
+was not tested.
 
 % --- 4. Statistical resolution (S = 3) ---------------------------------------
 $S = 3$ was sized for the grand mean $\bar{G}$ (Section~\ref{sec:stu-repetitions}) and supports claims
@@ -62,7 +71,7 @@ single instance, the mean of three seeds at the pilot standard deviation of
 twenty times wider, and wider still on the high-variance instances. The
 per-instance results in Section~\ref{sec:stu-results} (the largest gaps in Table~\ref{tab:gap-tail}, the instances
 where \gls{drispi}'s best-of-3 matches or beats a published result in Table~\ref{tab:matches-beats}, and
-[TODO: small subgroups in Section~\ref{sec:stu-characteristics}]) are therefore descriptive. Across
+the seven demand classes of 14 or 15 instances each in Figure~\ref{fig:characteristics-panels}) are therefore descriptive. Across
 100 instances, some differences of that size will arise from the seed alone.
 
 The seed term is also not the largest source of error. Two pilot campaigns that
@@ -72,18 +81,57 @@ Shared-server load and Docker pinning are part of the measurement rather than a
 nuisance the design controlled.
 
 % --- 5. No fixed-configuration control arm ----------------------------------
-The contribution of HAOS is established descriptively, through the weight
-trajectories of Section~\ref{sec:stu-haos}, and not against a control arm that freezes the draw
-at one configuration for the whole run under the same budget. That arm was not
-run. The 300-run campaign behind Section~\ref{sec:stu-comparison} used the server allocation
-available for this thesis, and a controlled comparison needs a full campaign run
-alongside it; a subset carved out of the existing allocation would confound the
-two. \citet{altendeiteringDRSCICVRP2026} leave the same gap for DRSCI, a \gls{drispi}
-predecessor that draws paradigm, $k$, and solver uniformly at random each
-iteration without learning. Whether HAOS pays a sampling cost relative to a single
-committed configuration, or improves on it, remains open.
+A control arm that freezes the draw at one configuration for the whole run
+under the same budget was not run. The 300-run campaign behind
+Section~\ref{sec:stu-comparison} used the server allocation available for
+this thesis, and a controlled comparison needs a full campaign alongside it; a
+subset carved out of the existing allocation would confound the two.
+\citet{altendeiteringDRSCICVRP2026} leave the same gap for DRSCI, a \gls{drispi} predecessor
+that draws paradigm, $k$, and solver uniformly at random each iteration
+without learning. The weight diagnostics of Section~\ref{sec:results-haos}
+narrow what that missing arm would have resolved. The wheels end between 1.4
+and 1.9 times uniform on their leading arm, and the leading arm is
+uncorrelated with realized arm reward, so the configurations this campaign
+actually drew are close to a uniform draw with an arbitrary bias. The
+headline result of Section~\ref{sec:stu-comparison} was therefore obtained
+without working adaptation rather than because of it, which makes that result
+robust to the controller and removes online learning from what it
+demonstrates. What the missing arm would still settle is whether the sampling
+cost of drawing a fresh configuration every iteration is itself worth paying
+against one committed configuration, and that remains open.
 
 \section{Future Research}\label{sec:con-future}
-Use the HAOS weights to train an offline learning model and inject the results back into the framework. This effectively eliminates the warm-up period and will lead to a substential speed-up of the framework.
+Section~\ref{sec:results-haos} locates three reasons the HAOS weights carry no
+ranking, and each suggests a change that can be tested without altering the
+rest of the framework.
+
+The reward of Table~\ref{tab:haos-rewards} should be credited relative to a
+baseline rather than absolutely. Crediting an arm with $R - \bar{R}$, the
+running mean reward of recent draws on that wheel, leaves an average arm at
+zero net credit and moves a good arm up and a weak one down. That removes the
+credit an arm currently earns for having been drawn, which is what converts
+sampling noise into a stable leader, and it requires no new signal.
+
+The reward also needs resolution. Three levels place 84\% of selections in one
+bucket because BG-AILS nearly always improves on the previous candidate and
+nearly never sets a new best. Scoring the normalized improvement
+$(c_{\text{prev}} - c_{\text{new}}) / c_{\text{prev}}$, or an arm's rank within
+a sliding window of recent outcomes, keeps the magnitude that currently
+separates configurations and is currently discarded.
+
+The deferred channel should be normalized by the contribution it rewards.
+Paying every distinct tag among the SC/SP-selected routes the full value
+credits a configuration that supplied one route exactly as much as one that
+supplied twenty, and it supplies 44\% of all credit mass. Dividing by the
+number of routes a tag contributed, or holding the channel out until the first
+two changes are in, would stop nearly half the credit arriving as a broadcast.
+
+Only with a reward that separates the arms does offline warm-starting become
+possible. A prior fitted to instance characteristics would need weight vectors
+that are stable across seeds, and this campaign does not produce them; the
+three seeds of one instance end at a total-variation distance of 0.2 to 0.3
+and do not converge as runs lengthen. The prerequisite for that line of work
+is a controller whose weights track arm performance, not a longer run of this
+one.
 
 Also mention that the framework, other than monolithic solvers, is highly adaptable to different instances and VRP variants. Since it only requires the plug-and-play of capable clustering methods and solvers on the their respective stages.

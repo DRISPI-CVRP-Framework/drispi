@@ -1,10 +1,15 @@
 \part*{Appendix}
 \addcontentsline{toc}{chapter}{Appendix}
+\setcounter{section}{0}
 \renewcommand{\thesection}{\arabic{section}}
+\renewcommand{\theHsection}{A.\arabic{section}}
 \renewcommand{\theequation}{\arabic{equation}}
 \setcounter{table}{0}
 \renewcommand{\thetable}{A.\arabic{table}}
 \renewcommand{\theHtable}{A.\arabic{table}}
+\setcounter{figure}{0}
+\renewcommand{\thefigure}{A.\arabic{figure}}
+\renewcommand{\theHfigure}{A.\arabic{figure}}
 \section{Set Covering Formulation}\label{app:set-covering}
 Section~\ref{sec:fra-sp} introduces set covering (SC) as the fallback \gls{drispi} runs in place of set partitioning (SP) when the route pool does not yet cover every customer at least a minimum number of times. With $R$ the route pool at the time of the solve, $c_r$ the cost of route $r \in R$, $C$ the customer set of the instance (Section~\ref{sec:lit-problem}), $C_r \subseteq C$ the customer set of route $r$, and $x_r \in \{0, 1\}$ selecting route $r$, SC relaxes the partition equality of SP (Equation~\ref{eq:sp-partition}) to the cover inequality of \citet{garfinkelSetPartitioningProblemSetCovering1969}, who characterize set partitioning as set covering under an equality constraint:
 \begin{align}
@@ -44,6 +49,44 @@ Table~\ref{tab:xl-summary} reports the per-instance detail underlying the Sectio
 \endfoot
 \bottomrule
 \endlastfoot
-\input{tables/xl_summary_table}
+\input{tables/xl_summary_table_lagrange}
 \end{longtable}
 \end{scriptsize}
+
+\section{HAOS Weight Diagnostics}\label{app:haos-diagnostics}
+The figures in this appendix support Section~\ref{sec:results-haos}. They are not part of the argument in the body: the $k$-share heatmap and the top-arm share describe where the wheels finished, and the three diagnostic panels record the weight range, the time spent on the decay floor, and the gap between the observed weight and the interior fixed point of the recurrence.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/haos_k_heatmap.pdf}
+\caption{Final $k$-Wheel Share, Averaged over the Three Seeds, Supporting Section~\ref{sec:results-haos}. Rows are the 100 XL instances, ordered by the number of customer seed points used to generate them; the random instances, which have none, form the block below the horizontal line. Open circles mark the cell where $k$ equals that seed-point count. Colour runs from zero to the largest share in the figure. Grey cells are arms outside that instance's $k$ domain.}
+\label{fig:haos-k}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/haos_top_arm.pdf}
+\caption{Top-Arm Share of Each HAOS Wheel Against Completed \gls{dri} Iterations, Supporting Section~\ref{sec:results-haos}. The dashed line is a share of one half. A two-arm wheel lies on or above that line on every draw.}
+\label{fig:haos-toparm}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/haos_diag_weight_range.pdf}
+\caption{Weight Range of the Six Wheels Against Iteration, Supporting Section~\ref{sec:results-haos}. The curve is the median ratio of the largest weight to $w_0$, and the band is the interquartile range.}
+\label{fig:haos-weight-range}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/haos_diag_pinned.pdf}
+\caption{Decay-Floor Occupancy and Spell Length, Supporting Section~\ref{sec:results-haos}. The left panel is the fraction of post-warm-up snapshots sitting on the floor. The right panel is the mean spell above the floor and the mean gap before the arm is drawn again.}
+\label{fig:haos-pinned}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figures/haos_diag_equilibrium.pdf}
+\caption{Observed Median Maximum Weight Against the Interior Fixed Point $19\bar{p}\bar{R}$, Supporting Section~\ref{sec:results-haos}.}
+\label{fig:haos-equilibrium}
+\end{figure}

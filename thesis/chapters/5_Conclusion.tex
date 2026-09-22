@@ -1,137 +1,345 @@
 \chapter{Conclusion}\label{chapter:conclusion}
-Short introduction. Explain on the relation between findings, limitations and further research.
 
-\section{Findings}\label{sec:con-findings}
-Answer the reseach question in here.
+This thesis asked two questions. The primary one was whether an
+algorithm-agnostic decomposition framework that learns its decomposition and
+routing choices during a run can match state-of-the-art monolithic solvers on
+very large \gls{cvrp} instances. The secondary one was whether the weights that
+learning produces give interpretable insight into instance structure and reduce
+manual tuning across instance classes. The campaign of
+Chapter~\ref{chapter:study} answers the first affirmatively under a
+fixed wall-clock budget and the second negatively, and the two answers turn out
+to be connected: the framework reaches the leading group without the learning
+having worked. Section~\ref{sec:con-findings} states both answers and what the
+campaign shows about which parts of the framework do the work.
+Section~\ref{sec:con-limitations} separates what limits the validity of those
+measurements from what the study did not attempt, and
+Section~\ref{sec:con-future} takes up what each of those gaps would need.
 
-\section{Limitations}\label{sec:con-limitations}
+\section{Findings}
+\label{sec:con-findings}
 
-% --- 1. Hardware ----------------------------------------------------------
-Table~\ref{tab:solver-summary} compares runs that differ in hardware, parallelism, and total budget,
-and none of its gaps correct for these differences. \citet{queirogaXLInstancesCapacitated2026} ran
-every published solver on a single thread of a machine with two AMD EPYC~9654
-processors (Zen~4, 2.40\,GHz), 60~seeds of two hours per instance. \gls{drispi} ran
-three seeds of two hours per instance on eight pinned cores of two Intel Xeon
-Platinum 8280L processors (Cascade Lake, 2.70\,GHz; Section~\ref{sec:stu-implementation}). Both machines were
-shared: the published runs executed as up to 50 parallel jobs on one machine,
-\gls{drispi} as six concurrent containers, three per socket, pinned to physical cores.
+\gls{drispi} reaches a mean-of-3 gap of $0.296\%$ to the current \gls{bks} and $0.211\%$ to
+the initial \gls{bks} across the 100 XL instances, which places it third of the nine
+solvers in Table~\ref{tab:solver-summary} by mean-of-$N$ and inside the
+leading group. Against FILO2 the paired difference is $+0.003$\,pp and neither
+one-sided test rejects. Against FILO it is $-0.037$\,pp in \gls{drispi}'s favour, on
+55 of 100 instances, which the uncorrected signed-rank test separates at
+$p = 0.043$ and the Holm correction does not
+\citep{demsVarStatisticalComparisonsClassifiers}
+(Table~\ref{tab:paired-tests}); on 100 instances with a paired-difference
+standard deviation of $0.203$\,pp the corrected test resolves a shift of about
+$0.066$\,pp, so a difference of the size observed sits below what this instance
+set can separate. Against SISRs, KGLSXXL, HGS-CVRP, LKH-3, and OR-Tools the
+margin is decisive. Against AILS-II, which found 93 of the 100 initial \gls{bks}
+values \citep{queirogaXLInstancesCapacitated2026}, \gls{drispi} is $0.137$\,pp behind and ahead on 4
+instances. One best-of-3 cost, on XL-n3888-k1010, falls below the published
+initial \gls{bks}, and on 11 instances a best-of-3 cost matches or beats AILS-II's
+mean-of-60 (Table~\ref{tab:matches-beats}).
 
-\citet{accorsiGuidelinesComputationalTesting2022} recommend bringing running times from different processors
-to a common scale with the PassMark single-thread rating before comparing them.
-The EPYC~9654 rates 2,898\footnote{\url{https://www.cpubenchmark.net/cpu.php?cpu=AMD+EPYC+9654&id=5088}, accessed September 19, 2026.} and the Platinum 8280L 2,316\footnote{\url{https://www.cpubenchmark.net/cpu.php?cpu=Intel+Xeon+Platinum+8280L+@+2.70GHz&id=6729}, accessed September 19, 2026.}, a factor of 1.25. That factor is a lower bound: the 8280L rating rests on few samples and is measured at the 4.0\,GHz single-core turbo, which the chip cannot hold with 24 of its 28 cores busy. Scaled this way, \gls{drispi}'s 7,200 seconds
-per run correspond to at most 5,800 seconds on the published solvers' processor,
-per core. Table~\ref{tab:solver-summary} reports unscaled gaps: \gls{drispi} was not rerun with a longer
-limit to offset the slower hardware, and a single-thread rating says nothing
-about how well eight cores are used in parallel.
+That comparison holds under a fixed wall-clock budget and not under equal
+resources. Each \gls{drispi} run used eight pinned cores for 7,200 seconds, 16
+core-hours against the two CPU-hours of each published run, at most 12.8 after
+the PassMark scaling of Section~\ref{sec:con-validity}. Parallelism is
+the premise of decomposition rather than an accident of the setup, and the
+monolithic baselines are single-threaded by construction, so a comparison at
+equal wall-clock is the one the research question asks for. It is still not a
+statement about equal compute, and Section~\ref{sec:con-validity} gives
+the full accounting. The defensible claim is that a decomposition framework
+reaches the level of the leading monolithic solvers at this scale within a
+practical time budget, using one configuration for all 100 instances and no
+per-instance tuning.
 
-% --- 2. Budget: mean vs best ------------------------------------------------
+The secondary question is answered negatively, and the diagnostics say more than
+that. The HAOS wheels do leave the uniform distribution: their leading arm ends
+between 1.4 and 1.9 times $1/A$ on every level. What they do not do is rank the
+arms. Within a run, the correlation between an arm's realized reward and its
+final probability is between $0.03$ and $0.08$
+(Section~\ref{sec:stu-haos}), so the arms that finish heavy are not the arms
+that paid. Three causes account for it, each measured: 84\% of selections bank
+the identical reward, because the three-level scale of
+Table~\ref{tab:haos-rewards} discards the improvement magnitude that separates
+configurations; the smallest reward is positive, so weight accumulates with the
+draw count and the roulette draw feeds that back; and the deferred channel
+supplies 44\% of all credit mass as a broadcast to many arms at once. The
+learned weights therefore carry no insight into instance structure on this
+campaign, and no warm-start prior can be fitted to them.
+
+Two measurements identify what does carry the framework. The controlled
+comparison of Section~\ref{sec:fra-bg-ails} isolates the improvement stage on
+identical input: BG-AILS beats a stock AILS-II pass by $0.056$\,pp of cost
+improvement (Hodges--Lehmann, 95\% confidence interval $[0.049,\ 0.063]$, ahead
+on 85 of 100 instances) and a blind cross-reconnect control by $0.058$\,pp
+($[0.052,\ 0.065]$, ahead on 89 of 100), while that control is itself
+indistinguishable from the stock pass ($-0.004$\,pp, $[-0.011,\ 0.002]$).
+Perturbing the concatenated solution buys nothing; guiding the perturbation to
+the decomposition's own seams is what pays. Under the full campaign budget,
+Section~\ref{sec:stu-sources} credits BG-AILS with 88.2\% of the cost
+reduction from each run's first solution to its final incumbent, from 42.5\% of
+the incumbent updates and 43.4\% of recorded stage time. The two figures answer
+different questions, the first the margin over an alternative stage for the same
+slot and the second the share of total reduction, and neither implies the other.
+Taken together they place the seam repair, rather than the adaptive layer or the
+subcluster solving, at the centre of what the framework achieves.
+
+The remaining gap is not principally a matter of instance size. Three
+continuous quantities account for 57\% of its variation across the set, and
+route length is the largest of them at $0.147$\,pp per standard deviation against
+$0.090$\,pp for the implied average demand per customer and $0.069$\,pp for the
+customer count. Route length alone drives the run-to-run spread; customer count
+and demand per customer do not move it at all. Depot position and customer
+distribution are not significant before or after controlling for those three.
+Setting \gls{drispi}'s per-instance gaps against AILS-II's separates instance
+difficulty from what decomposing costs: long routes are hard for the monolithic
+solver as well, and nearly as strongly, while the customer count moves AILS-II's
+gap by about a third of what it moves \gls{drispi}'s
+(Section~\ref{sec:stu-characteristics}). The scale dependence the primary
+question asks about is therefore weak in absolute terms and less comfortably so
+relative to the strongest baseline.
+
+Four things follow that the thesis did not have before it. The first is the
+performance result itself, obtained without instance-specific tuning on a
+published, fixed, adversarially varied instance set. The second is the BG-AILS
+mechanism, established causally rather than by construction, with the
+perturbation confound excluded by its own control arm. The third is the account
+of why an adaptive-operator-selection layer of this design fails on this problem
+class, with the three causes separated and quantified; a controller that had
+appeared to work without being examined this way would have been worth less.
+The fourth is the measurement apparatus itself: the paired testing framework of
+Section~\ref{sec:stu-comparison} with its resolution limit stated, and the
+separation of instance hardness from decomposition cost in
+Section~\ref{sec:stu-characteristics}, which is reusable on any decomposition
+framework with a strong monolithic reference.
+
+What the framework costs is CPU time and an unfinished search. The eight cores
+do not deliver eight times the search of one, for the reasons
+Section~\ref{sec:con-validity} sets out, and at the 7,200-second cutoff
+122 of the 300 runs were still improving their incumbent
+(Section~\ref{sec:stu-convergence}). \gls{drispi} is not reported at convergence.
+It is reported at the point where a budget matched to the published solvers' own
+per-run budget stopped it.
+
+\section{Limitations}
+\label{sec:con-limitations}
+
+The limitations fall into two kinds. Section~\ref{sec:con-validity}
+covers what constrains how far the numbers of
+Chapter~\ref{chapter:study} can be pushed.
+Section~\ref{sec:con-scope} covers what the study did not attempt, and
+each of those entries has a counterpart in
+Section~\ref{sec:con-future}.
+
+\subsection{Validity of the Comparison}
+\label{sec:con-validity}
+
+Table~\ref{tab:solver-summary} compares runs that differ in hardware,
+parallelism, and total budget, and none of its gaps correct for these
+differences. \citet{queirogaXLInstancesCapacitated2026} ran every published solver on a single thread
+of a machine with two AMD EPYC~9654 processors (Zen~4, 2.40\,GHz), 60 seeds of
+two hours per instance. \gls{drispi} ran three seeds of two hours per instance on
+eight pinned cores of two Intel Xeon Platinum 8280L processors (Cascade Lake,
+2.70\,GHz; Section~\ref{sec:stu-implementation}). Both machines were shared: the
+published runs executed as up to 50 parallel jobs on one machine, \gls{drispi} as six
+concurrent containers, three per socket, pinned to physical cores.
+
+\citet{accorsiGuidelinesComputationalTesting2022} recommend bringing running times from different
+processors to a common scale with the PassMark single-thread rating before
+comparing them. The EPYC~9654 rates 2,898\footnote{\url{https://www.cpubenchmark.net/cpu.php?cpu=AMD+EPYC+9654&id=5088}, accessed September 22, 2026.} and the Platinum 8280L 2,316\footnote{\url{https://www.cpubenchmark.net/cpu.php?cpu=Intel+Xeon+Platinum+8280L+@+2.70GHz&id=6729}, accessed September 22, 2026.}, a
+factor of 1.25. That factor is a lower bound: the 8280L rating rests on few
+samples and is measured at the 4.0\,GHz single-core turbo, which the chip cannot
+hold with 24 of its 28 cores busy. Scaled this way, \gls{drispi}'s 7,200 seconds per
+run correspond to at most 5,800 seconds on the published solvers' processor, per
+core. Table~\ref{tab:solver-summary} reports unscaled gaps: \gls{drispi} was not
+rerun with a longer limit to offset the slower hardware, and a single-thread
+rating says nothing about how well eight cores are used in parallel.
+
 The budget asymmetry points in opposite directions for the two columns of
-Table~\ref{tab:solver-summary}. Per run, \gls{drispi} used 16 core-hours (at most 12.8 after PassMark scaling)
-against two CPU-hours for each published run, so the mean-of-$N$ column compares runs in which \gls{drispi} had eight
-times the cores, on older hardware. Those eight cores do not deliver eight times
-the search. Subcluster routing runs in waves that leave \texttt{dri} cores idle
-whenever the last wave holds fewer than six subclusters, the main loop blocks
-while it waits for BG-AILS (Figure~\ref{fig:pipeline-swimlane}), and three containers share the memory
-bandwidth and last-level cache of each socket.
-% TODO: quantify if you have it (e.g. mean dri core utilization per iteration).
-Per instance, the relation reverses. A published best-of-60 draws on 120 CPU-hours
-and 120 hours of wall-clock time, \gls{drispi}'s best-of-3 on 48 core-hours (at most 38
-after PassMark scaling) and six hours. The minimum of 60 runs from a distribution lies systematically below the
-minimum of three, so the best-of-$N$ column favors the published solvers by
-construction. Neither column is an equal-resource ranking.
+Table~\ref{tab:solver-summary}. Per run, \gls{drispi} used 16 core-hours (at most
+12.8 after PassMark scaling) against two CPU-hours for each published run, so
+the mean-of-$N$ column compares runs in which \gls{drispi} had eight times the cores,
+on older hardware. Those eight cores do not deliver eight times the search.
+Subcluster routing runs in waves that leave \gls{dri} cores idle whenever the last
+wave holds fewer than six subclusters, the main loop blocks while it waits for
+BG-AILS (Figure~\ref{fig:pipeline-swimlane}), and three containers share the memory
+bandwidth and last-level cache of each socket. Per instance, the relation
+reverses. A published best-of-60 draws on 120 CPU-hours and 120 hours of
+wall-clock time, \gls{drispi}'s best-of-3 on 48 core-hours (at most 38 after PassMark
+scaling) and six hours. The minimum of 60 runs from a distribution lies
+systematically below the minimum of three, so the best-of-$N$ column favours the
+published solvers by construction. Neither column is an equal-resource ranking.
 
-% --- 3. Run length and HAOS convergence ------------------------------------
-The 7,200-second limit matches the published per-run budget, not the run length
-\gls{drispi} needs. HAOS learns online. For the first ten iterations it draws uniformly
-and updates nothing (Section~3.1), and after that every draw of a weak arm still
-costs a full decomposition, routing, and BG-AILS pass. Under a fixed wall-clock limit, the number of completed iterations bounds how
-many draws each arm receives, and that bound is tightest on the largest
-instances: completed iterations fall from about 117 on the ten smallest to
-about 31 on the ten largest (Section~\ref{sec:stu-convergence}). A longer
-budget would not have repaired the weights.
-Section~\ref{sec:results-haos} finds that the arms these wheels choose between
-are statistically indistinguishable on this campaign and that the arms
-finishing heavy are uncorrelated with the arms that paid, so additional draws
-would sharpen an arbitrary leader rather than correct it. What the budget
-limits here is the evidence available to a controller that was not, on these
-runs, in a position to use it.  The cost still arriving at the cutoff is a separate
-question, and it tracks route length. The mean-of-3
-gain over the final quarter has Spearman $\rho = +0.52$ with $r$
-($p = 3.9 \times 10^{-8}$) and $\rho = +0.06$ with $n$ ($p = 0.57$).
-122 of the 300 runs were still improving in the final quarter.
-Whether a longer run would close the remaining gap on the long-route instances
-was not tested.
-
-% --- 4. Statistical resolution (S = 3) ---------------------------------------
-$S = 3$ was sized for the grand mean $\bar{G}$ (Section~\ref{sec:stu-repetitions}) and supports claims
-at that level only. The forecast 95\% half-width of $\bar{G}$ is 0.013\,pp. For a
-single instance, the mean of three seeds at the pilot standard deviation of
-0.118\,pp has a standard error of 0.068\,pp and, with two degrees of freedom
-($t_{0.975,2} = 4.30$), a 95\% half-width of about 0.29\,pp. That is more than
+$S = 3$ was sized for the grand mean $\bar{G}$
+(Section~\ref{sec:stu-repetitions}) and supports claims at that level only.
+The forecast 95\% half-width of $\bar{G}$ is $0.013$\,pp. For a single instance,
+the mean of three seeds at the pilot standard deviation of $0.118$\,pp has a
+standard error of $0.068$\,pp and, with two degrees of freedom
+($t_{0.975,2} = 4.30$), a 95\% half-width of about $0.29$\,pp. That is more than
 twenty times wider, and wider still on the high-variance instances. The
-per-instance results in Section~\ref{sec:stu-results} (the largest gaps in Table~\ref{tab:gap-tail}, the instances
-where \gls{drispi}'s best-of-3 matches or beats a published result in Table~\ref{tab:matches-beats}, and
-the seven demand classes of 14 or 15 instances each in Figure~\ref{fig:characteristics-panels}) are therefore descriptive. Across
-100 instances, some differences of that size will arise from the seed alone.
+per-instance results in Section~\ref{sec:stu-results} (the largest gaps in
+Table~\ref{tab:gap-tail}, the instances where \gls{drispi}'s best-of-3 matches or
+beats a published result in Table~\ref{tab:matches-beats}, and the seven
+demand classes of 14 or 15 instances each in
+Figure~\ref{fig:characteristics-panels}) are therefore descriptive. Across 100 instances,
+some differences of that size will arise from the seed alone.
+
+The instance set imposes its own resolution limit on the paired tests. With a
+paired-difference standard deviation of $0.203$\,pp against FILO and 100
+instances, the Holm-corrected test detects a shift of about $0.066$\,pp at 80\%
+power, and roughly 310 instances would be needed for the observed $0.037$\,pp.
+The verdicts of Table~\ref{tab:paired-tests} against FILO and FILO2 are
+therefore statements about what this benchmark can separate as much as about the
+solvers. The XL set is fixed at 100 instances, so more seeds do not help: the
+variance that binds is across instances, not across runs.
 
 The seed term is also not the largest source of error. Two pilot campaigns that
-differed only in execution environment showed a batch effect of about 0.039\,pp,
-three times the $S = 3$ half-width, and more seeds would not have reduced it.
-Shared-server load and Docker pinning are part of the measurement rather than a
-nuisance the design controlled.
+differed only in execution environment showed a batch effect of about $0.039$\,pp,
+three times the $S = 3$ half-width, and more seeds would not have reduced
+it. Shared-server load and Docker pinning are part of the measurement rather
+than a nuisance the design controlled.
 
-% --- 5. No fixed-configuration control arm ----------------------------------
-A control arm that freezes the draw at one configuration for the whole run
-under the same budget was not run. The 300-run campaign behind
+\subsection{Scope of the Study}
+\label{sec:con-scope}
+
+The 7,200-second limit matches the published per-run budget, not the run length
+\gls{drispi} needs. At that cutoff 122 of the 300 runs were still improving their
+incumbent and 221 had improved it within the final hour
+(Section~\ref{sec:stu-convergence}). The residual tracks route length, with
+a Spearman correlation of $+0.52$ ($p = 3.9 \times 10^{-8}$) against $+0.06$ for
+the customer count ($p = 0.57$), so the instances carrying the largest gaps are
+also the instances furthest from finishing. How much of the long-route penalty
+reported in Section~\ref{sec:stu-characteristics} is a defect of the
+decomposition and how much is a budget artifact was not separated, and no
+campaign at a longer limit was run.
+
+The iteration budget bounds how many draws each HAOS arm receives, and that
+bound is tightest on the largest instances: completed iterations fall from about
+117 on the ten smallest to about 31 on the ten largest
+(Section~\ref{sec:stu-convergence}). A longer budget would not have
+repaired the weights. Section~\ref{sec:stu-haos} finds the arms
+statistically indistinguishable on this campaign and the arms finishing heavy
+uncorrelated with the arms that paid, so additional draws would sharpen an
+arbitrary leader rather than correct it. What the budget limits is the evidence
+available to a controller that was not, on these runs, in a position to use it.
+
+A control arm that freezes the draw at one configuration for the whole run under
+the same budget was not run. The 300-run campaign behind
 Section~\ref{sec:stu-comparison} used the server allocation available for
 this thesis, and a controlled comparison needs a full campaign alongside it; a
 subset carved out of the existing allocation would confound the two.
 \citet{altendeiteringDRSCICVRP2026} leave the same gap for DRSCI, a \gls{drispi} predecessor
-that draws paradigm, $k$, and solver uniformly at random each iteration
-without learning. The weight diagnostics of Section~\ref{sec:results-haos}
-narrow what that missing arm would have resolved. The wheels end between 1.4
-and 1.9 times uniform on their leading arm, and the leading arm is
-uncorrelated with realized arm reward, so the configurations this campaign
-actually drew are close to a uniform draw with an arbitrary bias. The
-headline result of Section~\ref{sec:stu-comparison} was therefore obtained
-without working adaptation rather than because of it, which makes that result
-robust to the controller and removes online learning from what it
-demonstrates. What the missing arm would still settle is whether the sampling
-cost of drawing a fresh configuration every iteration is itself worth paying
-against one committed configuration, and that remains open.
+that draws paradigm, $k$, and solver uniformly at random each iteration without
+learning. The weight diagnostics of Section~\ref{sec:stu-haos} narrow what
+that missing arm would have resolved. The wheels end between 1.4 and 1.9 times
+uniform on their leading arm and the leading arm is uncorrelated with realized
+reward, so the configurations this campaign drew are close to a uniform draw
+with an arbitrary bias. The result of
+Section~\ref{sec:stu-comparison} was obtained without working adaptation
+rather than because of it, which makes that result robust to the controller and
+removes online learning from what it demonstrates. What the missing arm would
+still settle is whether drawing a fresh configuration every iteration costs
+anything against one committed configuration, and that remains open.
 
-\section{Future Research}\label{sec:con-future}
-Section~\ref{sec:results-haos} locates three reasons the HAOS weights carry no
-ranking, and each suggests a change that can be tested without altering the
-rest of the framework.
+Two further boundaries apply to the mechanism results. The BG-AILS comparison
+of Section~\ref{sec:fra-bg-ails} runs on one \gls{dri} iteration from a checkpoint under
+one pinned decomposition configuration, so it establishes that boundary guidance
+pays for that stage without establishing what the routes are worth once the pool
+recombines them. The attribution of
+Section~\ref{sec:stu-sources} covers the full campaign and partly closes
+that gap, but it cannot separate the SC/SP solve from the standard-AILS pass
+that adopts its result, because the incumbent update is logged only after the
+pass. Finally, every claim in this thesis is conditioned on the fixed XL set of
+\citet{queirogaXLInstancesCapacitated2026}. No instance outside it, and no \gls{cvrp} variant, was tested.
+
+\section{Future Research}
+\label{sec:con-future}
+
+\subsection{Repairing the Controller}
+\label{sec:con-controller}
+
+Section~\ref{sec:stu-haos} locates three reasons the HAOS weights carry no
+ranking, and each suggests a change that can be tested without altering the rest
+of the framework.
 
 The reward of Table~\ref{tab:haos-rewards} should be credited relative to a
-baseline rather than absolutely. Crediting an arm with $R - \bar{R}$, the
-running mean reward of recent draws on that wheel, leaves an average arm at
-zero net credit and moves a good arm up and a weak one down. That removes the
-credit an arm currently earns for having been drawn, which is what converts
-sampling noise into a stable leader, and it requires no new signal.
+baseline rather than absolutely \citep{fialhoAnalyzingBanditbasedAdaptive2010}. Crediting an arm with $R - \bar{R}$, the
+running mean reward of recent draws on that wheel, leaves an average arm at zero
+net credit and moves a good arm up and a weak one down. That removes the credit
+an arm currently earns for having been drawn, which is what converts sampling
+noise into a stable leader, and it requires no new signal.
 
 The reward also needs resolution. Three levels place 84\% of selections in one
-bucket because BG-AILS nearly always improves on the previous candidate and
+bucket, because BG-AILS nearly always improves on the previous candidate and
 nearly never sets a new best. Scoring the normalized improvement
-$(c_{\text{prev}} - c_{\text{new}}) / c_{\text{prev}}$, or an arm's rank within
-a sliding window of recent outcomes, keeps the magnitude that currently
-separates configurations and is currently discarded.
+$(c_{\text{prev}} - c_{\text{new}})/c_{\text{prev}}$, or an arm's rank within a
+sliding window of recent outcomes, keeps the magnitude that currently separates
+configurations and is currently discarded.
 
 The deferred channel should be normalized by the contribution it rewards.
-Paying every distinct tag among the SC/SP-selected routes the full value
-credits a configuration that supplied one route exactly as much as one that
-supplied twenty, and it supplies 44\% of all credit mass. Dividing by the
-number of routes a tag contributed, or holding the channel out until the first
-two changes are in, would stop nearly half the credit arriving as a broadcast.
+Paying every distinct tag among the SC/SP-selected routes the full value credits
+a configuration that supplied one route exactly as much as one that supplied
+twenty, and it supplies 44\% of all credit mass. Dividing by the number of
+routes a tag contributed, or holding the channel out until the first two changes
+are in, would stop nearly half the credit arriving as a broadcast.
+
+Credit assignment across the five levels remains open after all three. Every
+arm of a drawn configuration currently receives the full reward, so each wheel's
+signal carries the other four wheels' noise. With a baseline-subtracted,
+resolved reward this becomes a variance problem rather than an absence of
+signal, and the standard remedies apply: holding levels fixed in turn, or
+estimating a per-level advantage.
 
 Only with a reward that separates the arms does offline warm-starting become
 possible. A prior fitted to instance characteristics would need weight vectors
 that are stable across seeds, and this campaign does not produce them; the
-three seeds of one instance end at a total-variation distance of 0.2 to 0.3
-and do not converge as runs lengthen. The prerequisite for that line of work
-is a controller whose weights track arm performance, not a longer run of this
-one.
+three seeds of one instance end at a total-variation distance of $0.2$ to $0.3$ and do
+not converge as runs lengthen. The prerequisite for that line of work is a
+controller whose weights track arm performance, not a longer run of this one.
 
-Also mention that the framework, other than monolithic solvers, is highly adaptable to different instances and VRP variants. Since it only requires the plug-and-play of capable clustering methods and solvers on the their respective stages.
+\subsection{Untested Comparisons}
+\label{sec:con-comparisons}
+
+Three campaigns would settle what Section~\ref{sec:con-scope} leaves
+open, and none of them requires a change to the framework. A control arm that
+commits to one configuration for the whole run, at the same budget and on the
+same 100 instances, would measure what the adaptive draw costs or saves; with
+the controller repaired as above, the same arm measures what it is worth. A
+campaign at a longer wall-clock limit, four hours or more, would separate the
+long-route penalty into the part decomposition causes and the part the budget
+causes, which Section~\ref{sec:stu-convergence} can currently only bound.
+An equal-compute comparison, running \gls{drispi} on one core against the published
+single-thread baselines or the baselines on eight, would replace the
+wall-clock-matched ranking of Table~\ref{tab:solver-summary} with a
+resource-matched one. The last is the most informative and the most expensive.
+
+\subsection{The Long-Route Regime}
+\label{sec:con-longroute}
+
+Section~\ref{sec:stu-characteristics} identifies route length as the largest
+driver of both the gap and its run-to-run spread, and attributes it to a fixed
+BG-AILS budget meeting a quantity of boundary repair work that grows with how
+many seams cut through long routes. That suggests a budget for the stage that
+scales with the realized boundary work of the current decomposition rather than
+with the wall-clock time of the surrounding decompose-route stage
+(Equation~\ref{eq:bg-ails-budget}), and a chain length that does the same. A
+second direction is to make the decomposition itself aware of the incumbent's
+route structure on these instances, which the route-based paradigm does only
+partially, since it partitions routes without regard to their length.
+
+\subsection{Transfer to Other Problem Classes}
+\label{sec:con-transfer}
+
+\gls{drispi} is agnostic about what solves a subcluster and about what partitions the
+customers. Every clustering method in Table~\ref{tab:decomp-methods} and
+every routing solver of Section~\ref{sec:fra-routing} sits behind a fixed interface,
+and the set-partitioning recombination of Section~\ref{sec:fra-sp}
+operates on routes rather than on anything \gls{cvrp}-specific. Extending the
+framework to a variant therefore needs a subsolver that handles the variant and
+a feasibility check on the recombination model, rather than a redesign of the
+pipeline. The predecessor of this framework was built for a routing problem
+with time windows \citep{kerscherDecomposerouteimproveFrameworkSolving2025} and adapted to the \gls{cvrp}, which is
+evidence in the same direction. A monolithic solver offers no comparable route:
+its scaling comes from engineering inside one search process, and that
+engineering is specific to the constraints it was written for. Whether the
+performance reported here survives that transfer was not tested, and the
+boundary-repair mechanism of Section~\ref{sec:fra-bg-ails} is the part most likely to
+need rework, since what counts as a seam depends on which constraints the
+decomposition cut through.

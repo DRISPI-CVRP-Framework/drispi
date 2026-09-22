@@ -19,9 +19,9 @@ section~\ref{sec:stu-repetitions} the number of seeds and the statistical precis
 The XL set (section~\ref{sec:lit-problem}) extends the generation scheme of the X
 instances of \citet{uchoaNewBenchmarkInstances2017} to up to 10,000 customers. Every instance
 places its nodes on a $[0, 1000] \times [0, 1000]$ grid with Euclidean distances
-and combines one level of each of four attributes. The depot is Random, Central
-at $(500, 500)$, or Eccentric at $(0, 0)$ in the bottom left corner. Customers are Random, Clustered, or
-Random-Clustered around a small number of seed points. Demand follows one of
+and combines one level of each of four attributes. The depot is Random (R), Central
+(C) at $(500, 500)$, or Eccentric (E) at $(0, 0)$ in the bottom left corner. Customers are Random (R), Clustered (C), or
+Random-Clustered (RC) around a small number of seed points. Demand follows one of
 seven distributions: unitary (U), four ranges of increasing width (1--10, 5--10,
 1--100, 50--100), a quadrant-dependent range (Q), or many small and few large
 demands (SL). The target average route length $r$ lies in one of seven bands,
@@ -189,46 +189,12 @@ it descriptively and focuses its main comparison and the answer to our primary r
 \section{Results}
 \label{sec:stu-results}
 
-Section~\ref{sec:stu-comparison} answers the primary research question by
-setting \gls{drispi}'s 300 runs against the published solvers on the same 100
-instances. Section~\ref{sec:stu-characteristics} asks what the remaining
-gap depends on and separates instance size from route length.
-Section~\ref{sec:stu-haos} turns to the secondary research question and
-reads the weight trajectories HAOS learns.
-Section~\ref{sec:stu-convergence} asks whether 7,200 seconds was enough,
-and Section~\ref{sec:stu-sources} attributes the improvement \gls{drispi}
-produces to the stages that produced it. Unless the initial \gls{bks} is named
-explicitly, every gap is Equation~\ref{eq:gap} evaluated against the current
-\gls{bks}.
+This Section presents the results of the campaign and analyzes the outcomes. In Section~\ref{sec:stu-comparison}, we compare \gls{drispi}'s 300 runs against the published solver benchmarks on the same 100 instances. Section~\ref{sec:stu-characteristics} shows which instance characteristics effect the solution quality. Section~\ref{sec:stu-haos} focuses on the secondary research question and analyzes the impact and resulting weight trajectories of \gls{haos}.
+Section~\ref{sec:stu-convergence} explores the convergence behavior of \gls{drispi}. Finally, Section~\ref{sec:stu-sources} shows from which stages improvements made by \gls{drispi} originate.
 
-\subsection{Performance Comparison against State-of-the-Art Monolithic
-  Solvers}
-\label{sec:stu-comparison}
+\subsection{Performance Comparison against State-of-the-Art Monolithic Solvers}\label{sec:stu-comparison}
 
-Table~\ref{tab:solver-summary} compares \gls{drispi} against the eight monolithic
-solvers \citet{queirogaXLInstancesCapacitated2026} benchmark on the 100 XL instances: AILS-II, FILO,
-FILO2, KGLSXXL, HGS-CVRP, SISRs, LKH-3, and OR-Tools. For every solver we
-recompute the percentage gap to the current official \gls{bks}, the record listed by
-the CVRPLib \gls{bks} Challenge (Section~\ref{sec:stu-dataset}), for both the mean-of-$N$
-and best-of-$N$ cost the original paper reports ($N = 60$ for the published
-solvers, $N = 3$ for \gls{drispi}), then average that per-instance gap over all 100
-instances and, separately, over the fifty instances with fewer than 3,400
-customers and the fifty with more, the split \citet{queirogaXLInstancesCapacitated2026} use for their
-own results table. Every gap in Table~\ref{tab:solver-summary} uses the
-current \gls{bks} as the denominator, including for the published solvers.
-\citet{queirogaXLInstancesCapacitated2026} report their own average gaps against the \gls{bks} at the time
-of publication, effectively AILS-II's own result for most instances, so those
-published averages are not comparable to the ones reported here.
-Appendix~\ref{app:xl-results} lists the per-instance detail behind
-\gls{drispi}'s two columns (Table~\ref{tab:xl-summary}).
-
-Table~\ref{tab:solver-summary} sets \gls{drispi}'s runs against the published
-solvers under different hardware and budgets. \gls{drispi} runs 7,200 seconds of
-wall-clock time per instance and seed on eight pinned cores
-(Section~\ref{sec:stu-implementation}); \citet{queirogaXLInstancesCapacitated2026} ran every published
-solver on a single thread of two AMD EPYC 9654 processors, 60 seeds of two
-hours per instance. Section~\ref{sec:con-limitations} discusses what that
-difference means for the two columns of the table.
+This chapter compares \gls{drispi} against the eight monolithic solvers \citet{queirogaXLInstancesCapacitated2026} benchmark on the 100 XL instances: AILS-II, FILO, FILO2, KGLSXXL, HGS-CVRP, SISRs, LKH-3, and OR-Tools. For that we take both the mean-of-$N$ and best-of-$N$ cost the original paper reports ($N = 60$ for the published solvers, $N = 3$ for \gls{drispi}), and calculate their gap to the current \gls{bks}. We then average that per-instance gap over all 100 instances for our main comparison. Separately, we compare the mean-of-$N$ and best-of-$N$ gaps of each solver on the fifty instances with fewer than 3,400 customers and the fifty with more, using the same split \citet{queirogaXLInstancesCapacitated2026} established for their own results table. \citet{queirogaXLInstancesCapacitated2026} report their own average gaps against the \gls{bks} at the time of publication, effectively AILS-II's own result for most instances, so those published averages are not comparable to the ones reported here. A detailed instance-level result breakdown of \gls{drispi}'s performance compared to the initial and current \gls{bks} columns can be found in Appendix~\ref{app:xl-results} (Table~\ref{tab:xl-summary}).
 
 \begin{longtable}{@{}lrrrrrr@{}}
 \caption{\gls{drispi} Mean Gap to Current \gls{bks} Comparison Against Benchmark Solvers, Sorted by Ascending Mean-of-$N$ Gap Over All Instances.}\label{tab:solver-summary}\\
@@ -251,86 +217,79 @@ Solver & All & $n<3{,}400$ & $n>3{,}400$ & All & $n<3{,}400$ & $n>3{,}400$ \\
 \input{tables/solver_summary_table_lagrange}
 \end{longtable}
 
-\subsubsection*{Why the mean and not the best of three}
-
-Mean-of-$N$ is the primary comparison in
-Table~\ref{tab:solver-summary}, because \gls{drispi}'s mean-of-3 and each
-published solver's mean-of-60 estimate the same population quantity, the
-expected cost of a single run, and differ only in how many draws the average
-rests on. Best-of-$N$ does not. It is an extreme-value statistic whose
-expectation falls as $N$ grows, so \gls{drispi}'s minimum over three draws stands
-against the minimum over sixty for every published solver, a sampling budget
+We use the mean-of-$N$ for the primary comparison in Table~\ref{tab:solver-summary}, because \gls{drispi}'s mean-of-3 and each
+published solver's mean-of-60 estimate the same expected cost of a single run, and differ only in how many draws the average
+rests on. Best-of-$N$ on the other hand is an extreme-value statistic whose
+expectation falls as $N$ grows. \gls{drispi}'s minimum over three draws stands
+here against the minimum over sixty for every published solver, a sampling budget
 twenty times larger, and the comparison rewards the larger budget before it
 rewards the better algorithm.
 
 The size of that mechanical advantage can be read off \gls{drispi}'s own runs.
 Sampling one of the three seed costs at a time gives an expected best-of-1 gap
-equal to the mean-of-3 gap, $0.296\%$; the average of the smaller cost in each
-of the three retained seed pairs gives a best-of-2 gap of $0.273\%$; the actual
-three-seed minimum gives the best-of-3 gap of $0.264\%$ already reported in
+equal to the mean-of-3 gap, $0.296\%$. The average of the smaller cost in each
+of the three retained seed pairs gives a best-of-2 gap at $0.273\%$. The actual
+three-seed minimum then gives the best-of-3 gap at $0.264\%$ as reported in
 Table~\ref{tab:solver-summary}. The first extra sample is worth $0.023$
 percentage points (pp) and the second $0.009$ pp, and the sequence is still
 falling at $N = 3$. AILS-II, FILO2, FILO, SISRs, KGLSXXL, and HGS-CVRP gain
 $0.07$, $0.09$, $0.10$, $0.16$, $0.21$, and $0.25$ pp respectively between
-their own mean-of-60 and best-of-60 columns, larger reductions drawn from many
+their own mean-of-60 and best-of-60 columns, which are even larger reductions drawn from many
 more repetitions. \gls{drispi}'s mean per-instance seed standard deviation is
 $0.037$ pp, so additional seeds narrow its best column by less than they narrow
-a higher-variance baseline's. This is what produces the rank inversion in
+a higher-variance baseline's. This is what produces the ranks in
 Table~\ref{tab:solver-summary}: \gls{drispi} ranks third by mean-of-$N$ and fourth
 by best-of-$N$ without any change in the underlying solution quality, because
-the two columns reward different things. Best-of-$N$ is reported to match the
+the two columns reward different things. Best-of-$N$ is reported here to match the
 published solvers' own headline metric, not as the primary comparison.
 
-For the mean of three runs to carry that weight, the three runs have to be
-exchangeable replications rather than one good run and two filler runs. They
-are. Seeds 11, 22, and 33 produce mean gaps of $0.291\%$, $0.298\%$, and
-$0.300\%$, an ordering a Friedman test over the 100 matched triples does not
-separate from chance ($\chi^2 = 3.61$, $\mathrm{df} = 2$, $p = 0.164$); no
-pairwise Wilcoxon signed-rank test between two seeds reaches significance
-either, the smallest $p$ being $0.158$ for seeds 11 against 22. The ordering
-also runs against the throughput one would expect to explain it: seed 33
-completed the most \gls{dri} iterations of the three (8,208 against 7,730 for seed 22
-and 6,865 for seed 11) and still finished last. The per-instance seed standard deviation has
-a mean of $0.037$ pp and a median of $0.026$ pp, its root mean square, the
+For the mean-of-three runs to carry that weight, the three runs have to be exchangeable replications. The campaign seeds 11, 22, and 33 produce mean gaps of $0.291\%$, $0.298\%$, and $0.300\%$, an ordering a Friedman test \citep{demsVarStatisticalComparisonsClassifiers} over the 100 matched triples does not
+separate from chance ($\chi^2 = 3.61$, $\mathrm{df} = 2$, $p = 0.164$). No
+pairwise Wilcoxon signed-rank test between any two seeds reaches significance
+either, the smallest $p$ being $0.158$ for seeds 11 against 22. The performance order
+also runs against the iteration throughput: seed 33 completed the most \gls{dri} iterations of the three (8,208 against 7,730 for seed 22 and 6,865 for seed 11) and still finished last. The per-instance seed standard deviation has
+a mean of $0.037$ pp and a median of $0.026$ pp. Its root mean square, the
 quantity that enters $\mathrm{Var}(\bar{G})$, is $0.052$ pp, and the realized
 95\% half-width of the grand mean is $0.006$ pp
-(Section~\ref{sec:stu-repetitions}). That spread is not uniform across the
-set. It runs from $0.0005$ pp on XL-n4535-k1134 to $0.222$ pp on XL-n6034-k61,
-and it tracks route length rather than instance size, a pattern
-Section~\ref{sec:stu-characteristics} takes up with the gap itself.
+(Section~\ref{sec:stu-repetitions}). The three runs are therefore exchangeable at set level: both tests block on
+instances and rule out a seed acting as a systematic factor across the 100,
+so the mean over them is a property of the configuration rather than of a
+particular seed. Neither establishes that the three runs are interchangeable
+on any individual instance, and three observations at two degrees of freedom
+could not settle that either way. Instance-level exchangeability follows from
+the design of Section~\ref{sec:stu-repetitions}, where every run is a separate
+process with its own random-number stream and no pool, cache, or counter is
+shared. The spread is also not uniform across the set. It runs from $0.0005$ pp
+on XL-n4535-k1134 to $0.222$ pp on XL-n6034-k61, and it tracks route length
+rather than instance size, a pattern Section~\ref{sec:stu-characteristics}
+takes up with the gap itself.
 
-\subsubsection*{Which solvers \gls{drispi} beats}
-
-The means in Table~\ref{tab:solver-summary} do not establish whether an
+The means presented in Table~\ref{tab:solver-summary} do also not establish whether an
 observed difference is real rather than an artifact of the 100 sampled
 instances. We tested \gls{drispi}'s mean-of-3 column against the corresponding
 mean-of-60 column of five of the eight published solvers, AILS-II, FILO2, FILO,
 SISRs, and HGS-CVRP, with the paired Wilcoxon signed-rank test
 \citep{demsVarStatisticalComparisonsClassifiers}, treating the 100 instances as matched pairs. KGLSXXL,
-LKH-3, and OR-Tools are omitted: their gaps in
-Table~\ref{tab:solver-summary} are large enough that the paired comparison
-would not be informative. Best-of-$N$ compares three draws against sixty and
-is not the equal-sample-size comparison the paired test requires, so it is not
-tested.
+LKH-3, and OR-Tools are omitted, because their gaps in Table~\ref{tab:solver-summary} are large enough that the paired comparison would not be informative.
 
 Each baseline is tested twice, in opposite directions, because the two claims
 the framework has to support are not the same claim. The first family asks
-whether \gls{drispi} is better, with $H_0$ stating that the distribution of paired
-differences is not shifted below zero. The second asks whether \gls{drispi} is
+whether \gls{drispi} outperforms the other solvers, with $H_0$ stating that the distribution of paired
+differences is not shifted below zero. The second asks whether \gls{drispi} is performing
 worse, with $H_0$ stating that it is not shifted above zero. Rejecting the
-first is evidence of an advantage; failing to reject the second is the weaker
-statement that no disadvantage is detectable, which is what parity with a
-state-of-the-art monolithic solver amounts to on a fixed instance set. Each
+first is evidence of an advantage, failing to reject the second is the weaker
+statement that no disadvantage is detectable. The second of the two is what being competitive with a
+state-of-the-art monolithic solver means on a fixed instance set. Each
 family is corrected separately for its five tests with the Holm step-down
 procedure \citep{demsVarStatisticalComparisonsClassifiers}, and Table~\ref{tab:paired-tests} reports both
-adjusted $p$-values side by side. The paired differences are the per-instance
+adjusted $p$-values side by side. The paired differences are the per-instance mean
 percentage gaps to the current \gls{bks}, and each test uses the normal
 approximation to the signed-rank statistic without a continuity correction.
 
-\begin{table}[H]
+\begin{table}[htbp]
   \centering
   \caption{Paired Comparison of \gls{drispi}'s Mean-of-3 Gap Against Each Published
-    Solver's Mean-of-60 Gap, Over the 100 XL Instances. $\Delta$ is the Mean
+    Solver's Mean-of-60 Gap, Over the 100 XL Instances. \\ $\Delta$ is the Mean
     Paired Difference in Percentage Points; a Negative Value Favours \gls{drispi}.
     $p$-Values Are One-Sided Wilcoxon Signed-Rank, Holm-Corrected Within Each
     of the Two Families of Five Tests.}
@@ -347,12 +306,12 @@ approximation to the signed-rank statistic without a continuity correction.
 \end{table}
 
 Table~\ref{tab:paired-tests} splits the five tested solvers into three
-groups. \gls{drispi} is significantly better than SISRs and HGS-CVRP. The margin
-is $0.286$ pp against SISRs and $1.152$ pp against HGS-CVRP, and \gls{drispi} is
+groups. \gls{drispi} is significantly better than SISR and HGS-CVRP. The margin
+is $0.286$\,pp against SISRs and $1.152$\,pp against HGS-CVRP, and \gls{drispi} is
 ahead on 98 and 99 of the 100 instances. Against FILO the mean paired difference
-is $-0.037$ pp and the Hodges--Lehmann shift $-0.026$ pp, with an uncorrected
+is marginal at $-0.037$\,pp and the \mbox{Hodges--Lehmann} shift $-0.026$\,pp, with an uncorrected
 95\% confidence interval of $[-0.060,\ -0.001]$, and the uncorrected signed-rank
-test rejects at $p = 0.043$; the Holm correction over five baselines leaves it
+test rejects at $p = 0.043$. The Holm correction over five baselines leaves it
 at $0.064$. On 100 instances with a paired-difference standard deviation of
 $0.203$ pp, the corrected test resolves a shift of about $0.066$ pp at 80\%
 power, so a difference of the size observed here sits below what this instance
@@ -364,10 +323,9 @@ either direction. Against AILS-II the second family rejects decisively.
 \gls{drispi}'s mean-of-3 is $0.137$ pp behind AILS-II's mean-of-60 and ahead on
 only 4 of 100 instances. AILS-II found 93 of the 100 initial \gls{bks} values
 \citep{queirogaXLInstancesCapacitated2026} and remains the strongest solver on this set by a clear
-margin, so being second to it, level with FILO2, and not separated from FILO
-by the corrected test places \gls{drispi} inside the leading group without
-instance-specific tuning, which is the claim Chapter~\ref{chapter:framework}
-sets out to support.
+margin. \gls{drispi}, being level with FILO2, and not separated from FILO
+by the corrected test, places inside the leading group without
+instance-specific tuning, which is the claim Chapter~\ref{chapter:framework} sets out to support.
 
 \begin{figure}[H]
 \centering
@@ -379,8 +337,8 @@ sets out to support.
 Figure~\ref{fig:gap-ecdf} shows why the Table~\ref{tab:solver-summary} means
 understate \gls{drispi}'s typical result and its tail at once. \gls{drispi}'s mean-of-3
 gap has a mean of $0.296\%$ against a median of $0.239\%$ (interquartile range
-$0.162\%$ to $0.374\%$, ninetieth percentile $0.493\%$, maximum $1.556\%$), a
-right-skewed distribution in which most instances sit below the mean and a
+$0.162\%$ to $0.374\%$, ninetieth percentile $0.493\%$, maximum $1.556\%$), following a very
+right-skewed distribution in which most instances sit below the mean, and a
 short tail sits well above it. \gls{drispi}'s curve tracks above FILO2's up to a gap
 of about $0.3\%$ (59\% of instances at or below that gap, against 55\% for
 FILO2) and falls below it from $0.4\%$ (79\% against 86\%), the crossover the
@@ -389,44 +347,52 @@ half of the distribution and loses on the wider half. Against FILO, \gls{drispi}
 curve lies above FILO's through the body of the distribution (59\% of instances
 at a gap of $0.3\%$ or below, against 41\% for FILO, and 79\% against 69\% at
 $0.4\%$), the same direction as the mean paired difference, which the Holm
-correction leaves short of rejection; FILO's curve moves
-ahead only past a gap of about $0.66\%$. HGS-CVRP's curve sits below all five
-other curves across the entire range shown: only 39\% of its instances reach a
-gap of one percent or less, and it does not visibly approach the other curves
-anywhere in the figure, consistent with the wide, significant margin the paired
-test reports against it.
+correction leaves just short of rejection. FILO moves ahead only past a gap of about $0.66\%$.
 
-\subsubsection*{Individual results}
-
-Two results do not appear in any aggregate. On XL-n3888-k1010, \gls{drispi}'s
-best-of-3 cost of 1,880,215 is below the initial \gls{bks} of 1,880,368
+One individual result does not appear in any aggregate. On XL-n3888-k1010, \gls{drispi}'s
+best-of-3 cost of 1,880,215 beats the initial \gls{bks} of 1,880,368
 \citet{queirogaXLInstancesCapacitated2026} reported at publication. No best-of-3 cost in this
 campaign matches the current \gls{bks}. Across all 100 instances, \gls{drispi}'s
 best-of-3 cost matches or beats AILS-II's mean-of-60 on 11 instances, listed in
 Table~\ref{tab:matches-beats}. For XL-n3888-k1010 the reference shown
 there is the initial \gls{bks}, which that run also beats.
 
+\begin{table}[H]
+  \centering
+  \caption{\gls{drispi}'s Best-of-3 Cost Matching or Beating a Published Reference.}
+  \label{tab:matches-beats}
+  \resizebox{\textwidth}{!}{%
+  \begin{tabular}{@{}lrrrl@{}}
+  \toprule
+  Instance & $r$ & \gls{drispi} Best-of-3 & Reference Cost & Reference \\
+  \midrule
+  XL-n1094-k157 & 7.8 & 112{,}441 & 112{,}452.6 & AILS-II Mean-of-60 \\
+  XL-n1281-k29 & 45.5 & 31{,}168 & 31{,}201.3 & AILS-II Mean-of-60 \\
+  XL-n1328-k19 & 72.6 & 38{,}288 & 38{,}317.4 & AILS-II Mean-of-60 \\
+  XL-n1514-k106 & 14.2 & 92{,}468 & 92{,}489.7 & AILS-II Mean-of-60 \\
+  XL-n1654-k11 & 155.4 & 36{,}420 & 36{,}429.1 & AILS-II Mean-of-60 \\
+  XL-n1794-k163 & 11.2 & 141{,}732 & 141{,}777.6 & AILS-II Mean-of-60 \\
+  XL-n1981-k13 & 153.5 & 32{,}638 & 32{,}639.1 & AILS-II Mean-of-60 \\
+  XL-n2307-k34 & 69.6 & 48{,}015 & 48{,}020.2 & AILS-II Mean-of-60 \\
+  XL-n2727-k546 & 5.3 & 431{,}171 & 431{,}173.0 & AILS-II Mean-of-60 \\
+  XL-n3804-k29 & 134.0 & 52{,}924 & 52{,}935.8 & AILS-II Mean-of-60 \\
+  XL-n3888-k1010 & 4.2 & 1{,}880{,}215 & 1{,}880{,}368.0 & Initial \gls{bks} \\
+  \bottomrule
+  \end{tabular}%
+  }
+  \end{table}
+
 Two further results come from earlier campaigns run under the same parameter
 configuration as Table~\ref{tab:hyperparameters} and are reported here because
 they bound what a single run of this configuration has been observed to reach.
 On XL-n1094-k157, the one instance whose initial value the challenge has not
-improved and whose initial and current \gls{bks} therefore coincide
-(Section~\ref{sec:stu-dataset}), a run reached 112,431, the current \gls{bks} itself; the
-campaign reported here gets to within ten units of it, a best-of-3 gap of
-$0.009\%$. On XL-n4535-k1134 a run finished below the published initial \gls{bks} of
-1,203,566, where this campaign's best-of-3 of 1,203,629 sits $0.005\%$ above
-it. Neither run enters any number in this chapter. Given the per-instance
+improved so far, a run tied the current \gls{bks} itself. This published
+campaign here only managed to get within ten units of it, a best-of-3 gap of
+$0.009\%$. On XL-n4535-k1134 a run finished below the published initial \gls{bks}, whereas this campaign's best-of-3 sits $0.005\%$ above it. But neither of the two runs enters any number in this chapter. Given the per-instance
 seed spread of Section~\ref{sec:stu-repetitions}, outcomes of this kind are
-a property of the run distribution rather than of a particular campaign, and
-three seeds are too few to resolve them reliably.
+a property of the run distribution rather than of a particular campaign, and three seeds are too few to find them reliably.
 
-% CHECK: the two runs above came from the earlier campaign. If that campaign
-% used a different build rather than only different seeds and a different
-% server, "the same parameter configuration" is still accurate but the sentence
-% should say so explicitly, e.g. "under the same parameter configuration on an
-% earlier build". Confirm before submission.
-
-Table~\ref{tab:gap-tail} lists the instances behind the tail of
+In contrast,Table~\ref{tab:gap-tail} lists the instances behind the tail of
 Figure~\ref{fig:gap-ecdf}, the largest mean-of-3 gaps in
 Table~\ref{tab:xl-summary}, in descending order down to about $+0.6$
 percent. Five of those seven fall in the dataset's ultra-long route band,
@@ -439,6 +405,7 @@ Section~\ref{sec:stu-characteristics} takes both up directly.
 \centering
 \caption{\gls{drispi}'s Largest Mean-of-3 Gap to Current \gls{bks} (Abbr.\ as per Section~\ref{sec:stu-dataset}).}
 \label{tab:gap-tail}
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{@{}lrlllrr@{}}
 \toprule
 Instance & $n$ & Depot & Customers & Demand & $r$ & Mean-of-3 Gap (\%) \\
@@ -451,30 +418,8 @@ XL-n8207-k108 & 8{,}207 & C & C (2) & 1-10 & 75.9 & +0.74 \\
 XL-n5902-k122 & 5{,}902 & E & RC (3) & Q & 48.8 & +0.73 \\
 XL-n8028-k294 & 8{,}028 & C & R & Q & 27.3 & +0.61 \\
 \bottomrule
-\end{tabular}
-\end{table}
-
-\begin{table}[H]
-\centering
-\caption{\gls{drispi}'s Best-of-3 Cost Matching or Beating a Published Reference.}
-\label{tab:matches-beats}
-\begin{tabular}{@{}lrrrl@{}}
-\toprule
-Instance & $r$ & \gls{drispi} Best-of-3 & Reference Cost & Reference \\
-\midrule
-XL-n1094-k157 & 7.8 & 112{,}441 & 112{,}452.6 & AILS-II mean-of-60 \\
-XL-n1281-k29 & 45.5 & 31{,}168 & 31{,}201.3 & AILS-II mean-of-60 \\
-XL-n1328-k19 & 72.6 & 38{,}288 & 38{,}317.4 & AILS-II mean-of-60 \\
-XL-n1514-k106 & 14.2 & 92{,}468 & 92{,}489.7 & AILS-II mean-of-60 \\
-XL-n1654-k11 & 155.4 & 36{,}420 & 36{,}429.1 & AILS-II mean-of-60 \\
-XL-n1794-k163 & 11.2 & 141{,}732 & 141{,}777.6 & AILS-II mean-of-60 \\
-XL-n1981-k13 & 153.5 & 32{,}638 & 32{,}639.1 & AILS-II mean-of-60 \\
-XL-n2307-k34 & 69.6 & 48{,}015 & 48{,}020.2 & AILS-II mean-of-60 \\
-XL-n2727-k546 & 5.3 & 431{,}171 & 431{,}173.0 & AILS-II mean-of-60 \\
-XL-n3804-k29 & 134.0 & 52{,}924 & 52{,}935.8 & AILS-II mean-of-60 \\
-XL-n3888-k1010 & 4.2 & 1{,}880{,}215 & 1{,}880{,}368.0 & Initial \gls{bks} \\
-\bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 \subsection{Performance by Instance Characteristics}
@@ -500,9 +445,8 @@ slope of $3.12 \times 10^{-5}$ percentage points per customer ($t = 3.48$,
 $p = 0.00076$, 95\% confidence interval
 $[1.34 \times 10^{-5},\ 4.90 \times 10^{-5}]$). A regression that treats $n$
 as the only scale variable can pick up the long-route instances through it, so
-the same fit is repeated on the 86 instances with $r < 50$, the dataset's own
-ultra-long route threshold (Section~\ref{sec:stu-dataset}) rather than a cut chosen
-after inspecting the gaps. The slope falls to $1.65 \times 10^{-5}$
+the same fit is repeated on the 86 instances with $r < 50$, including only the instances falling below the dataset's own
+ultra-long route threshold (Section~\ref{sec:stu-dataset}). The slope falls to $1.65 \times 10^{-5}$
 percentage points per customer ($t = 2.62$, $p = 0.011$, 95\% confidence
 interval $[3.96 \times 10^{-6},\ 2.90 \times 10^{-5}]$). It stays positive and
 significant, so the association with $n$ is not carried only by the 14
@@ -512,7 +456,7 @@ Customer count and route length can be compared directly once each is measured
 in sample standard deviations from its own mean. One standard deviation is
 2,456 customers for $n$ and $40.4$ stops for $r$. On that common scale the
 slope on $n$ is $0.077$ pp per standard deviation ($R^2 = 0.110$) and the slope
-on $r$ is $0.133$ pp per standard deviation ($R^2 = 0.332$): route length
+on $r$ is $0.133$ pp per standard deviation ($R^2 = 0.332$). This shows that Route length
 accounts for about three times as much of the variation in the gap, and its
 slope per standard deviation is $1.7$ times the slope on $n$. A joint
 regression on both standardized predictors leaves a partial slope of $0.070$ pp
@@ -521,10 +465,8 @@ partial slope exceeds the customer-count partial slope by $0.060$ pp per
 standard deviation ($t = 2.31$, $p = 0.023$, 95\% confidence interval
 $[0.008,\ 0.111]$).
 
-\subsubsection*{A third axis: demand per customer}
-
 Capacity $Q$ and route length are set jointly by the generation scheme, so
-their ratio recovers a quantity neither variable carries on its own. With
+their ratio produces a quantity neither variable carries on its own. With
 $k \approx \sum_i q_i / Q$ the minimum fleet and $r \approx n/k$, the average
 demand per customer satisfies $\bar{q} = \sum_i q_i / n \approx Q/r$. On this
 set $\bar{q}$ ranges from $0.9$ on the unitary-demand instances to $75.7$ on
@@ -540,14 +482,18 @@ deviation for $r$ ($p = 5.1 \times 10^{-15}$), $0.090$ pp for $\log \bar{q}$
 Route length remains the largest of the three, and customer count the smallest,
 in every specification we fitted.
 
+Figure~\ref{fig:gap-scale} fits each predictor on its own. The slopes for
+$r$ and $\log \bar{q}$ are smaller there than in the joint model because the
+two are mildly negatively correlated ($-0.188$) while both raise the gap, so
+each masks part of the other until both are in the model; the customer-count
+slope moves the other way, from $0.077$ to $0.069$.
+
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{figures/gap_scale_comparison.pdf}
 \caption{Mean-of-3 Gap to the Current \gls{bks} Against Customer Count, Average Route Length, and Log Average Demand per Customer. Each predictor is measured in sample standard deviations from its own mean. All three panels share the $y$-axis. Lines are ordinary least-squares fits on all 100 instances.}
 \label{fig:gap-scale}
 \end{figure}
-
-\subsubsection*{Route length also drives the run-to-run spread}
 
 The same asymmetry appears in a quantity the gap regressions do not measure.
 Regressing the per-instance seed standard deviation on each standardized
@@ -556,7 +502,7 @@ predictor in turn gives $0.022$ pp per standard deviation for $r$
 $R^2 = 0.003$), and a slope indistinguishable from zero for $\log \bar{q}$
 ($p = 1.00$). In the joint model only $r$ survives, at $0.022$ pp per standard
 deviation ($p = 4.6 \times 10^{-11}$). Instance size therefore moves the level of the
-gap without moving its stability, whereas route length moves both:
+gap without moving its stability, whereas route length moves both.
 Figure~\ref{fig:seed-spread} shows the two panels side by side. Mean seed
 standard deviation is $0.093$ pp on the 14 instances with $r \geq 50$ against
 $0.027$ pp on the other 86, a factor of $3.4$, and the same band carries a mean
@@ -572,14 +518,14 @@ conditional on $r$.
 \label{fig:seed-spread}
 \end{figure}
 
-The concentration of the largest gaps on long routes is consistent with what
+The concentration of the largest gaps on long routes is intuitive when considering what
 decomposition does to a long route. Every clustering method in
 Table~\ref{tab:decomp-methods} draws its partition from customer
 coordinates or route centroids and the dissimilarity metric of
 Equation~\ref{eq:decomp-dissimilarity}, without reference to which vehicle will
-eventually need which customers; a long route spans a customer set spread
+eventually need which customers. A long route spans a customer set spread
 further apart on average than a short route serving a comparable number of
-stops, and that same spatial spread makes it more likely that some clustering
+stops. And that same spatial spread makes it more likely that some clustering
 cut line passes through the route rather than around it. Once a long route
 straddles a cluster boundary this way, the routing stage
 (Section~\ref{sec:fra-routing}) still solves each side of the cut to a good local
@@ -587,32 +533,30 @@ optimum in isolation, but the seam between them is exactly the kind of defect
 BG-AILS exists to repair (Section~\ref{sec:fra-bg-ails}). BG-AILS repairs every
 seam in an instance under the same fixed chain length of $k$ cross-reconnects
 and the same wall-clock budget of Equation~\ref{eq:bg-ails-budget} regardless of
-how many of those seams cut through a long route rather than a short one, so an
+how many of those seams cut through a long route, so an
 instance whose long routes cross more boundaries has more repair work competing
-for a budget that does not grow to match it. The variance result fits the same
-account: a repair budget that is sometimes sufficient and sometimes not
-produces run-to-run spread, which is what the long-route band shows.
+for a budget that does not grow to match it. The variance result fits this phenomenon: a repair budget that is sometimes sufficient and sometimes not produces run-to-run spread, which is what the long-route band shows. 
 
-\subsubsection*{The characteristics that do not matter}
+These results point at a specific parameter rather than at the stage as a
+whole. Equation~\ref{eq:bg-ails-budget} adapts the BG-AILS budget according to the
+wall-clock time of the surrounding decompose-route stage. It tracks through the
+per-subcluster budgets of Section~\ref{sec:fra-routing} subcluster
+customer counts, so it scales with the cost of producing the decomposition
+rather than with the amount of boundary or length of boundary-adjacent routes that the decomposition created. Seizing that from the boundary membership the framework already computes is the change Section~\ref{sec:con-future} proposes to improve on this central weakness of \gls{drispi}.
 
-Figure~\ref{fig:characteristics-panels} sets the remaining instance characteristics
-against the gap: depot position, customer distribution, and demand
-distribution. Of the three, only demand distribution separates the groups.
-Kruskal-Wallis tests give $p = 0.153$ for depot position (three levels),
-$p = 0.180$ for customer distribution (three levels), and $p = 0.00085$ for
-demand distribution (seven levels); under Holm correction across the three
+Figure~\ref{fig:characteristics-panels} analyzes the remaining instance characteristics against the gap: depot position, customer distribution, and demand distribution. Of the three, only demand distribution separates the groups. Kruskal-Wallis tests give $p = 0.153$ for depot position (three levels), $p = 0.180$ for customer distribution (three levels), and $p = 0.00085$ for demand distribution (seven levels). Under Holm correction across the three
 tests the first two stay well above any conventional threshold (adjusted
 $p = 0.305$ for both) and the third remains significant (adjusted
 $p = 0.0025$). Depot position and customer distribution are also
 non-significant after controlling for $n$ and $r$ (partial $F$-tests,
 $p = 0.76$ and $p = 0.55$). Whether the depot sits at the centre, in the
 corner, or at a random point, and whether customers are scattered, clustered,
-or both, does not measurably change what \gls{drispi} achieves.
+or both, does therefore not measurably change what \gls{drispi} achieves.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{figures/characteristics_panels.pdf}
-\caption{Mean-of-3 Gap to the Current \gls{bks} by Instance Characteristic, Across All 100 XL Instances. Boxes Span the Interquartile Range, Whiskers Extend to 1.5 IQR, and Points Beyond Are Drawn Individually. In panel (b), Rand.\ clust.\ is random-clustered. Demand classes in panel (c) are ordered by median gap.}
+\caption{Mean-of-3 Gap to the Current \gls{bks} by Instance Characteristic. \\ Boxes Span the Interquartile Range, Whiskers Extend to 1.5 IQR, and Points Beyond Are Drawn Individually. Depot and Customer Labels Are the Abbreviations of Section~\ref{sec:stu-dataset}. Demand Classes in Panel (c) Are Ordered By Median Gap.}
 \label{fig:characteristics-panels}
 \end{figure}
 
@@ -629,44 +573,39 @@ coordinates alone cuts along a demand gradient and hands subclusters very
 unequal loads. Once standardized $\log \bar{q}$ enters the model alongside $n$
 and $r$, the demand-distribution grouping no longer adds anything
 ($F = 1.51$, $p = 0.18$), and neither does depot position ($p = 0.22$) or
-customer distribution ($p = 0.98$). Three continuous quantities account for
-what the categorical breakdown shows.
+customer distribution ($p = 0.98$).
 
-Each of the seven demand classes holds only 14 or 15 instances, so the
+Additionally, each of the seven demand classes holds only 14 or 15 instances, so the
 individual group means in Figure~\ref{fig:characteristics-panels} carry the per-instance
 imprecision discussed in Section~\ref{sec:con-limitations} and are reported
 descriptively. The tests above are run on the full set.
 
-\subsubsection*{Instance hardness against the cost of decomposing}
-
-A gap to the \gls{bks} mixes two things: how hard the instance is for any solver, and
-what decomposing it costs on top of that. The per-instance mean-of-60 gaps of
+In conclusion, \gls{drispi}'s gap to the \gls{bks} mixes two things: how hard the instance is for any solver, and
+what additional costs decomposition adds on top of that. The per-instance mean-of-60 gaps of
 AILS-II separate them. Fitting the same three standardized predictors to
 AILS-II's own gap gives $0.091$ pp per standard deviation for $r$
 ($p = 6.8 \times 10^{-18}$), $0.046$ pp for $\log \bar{q}$, and $0.024$ pp for
-$n$ ($p = 0.0064$). Long routes are therefore hard for the monolithic solver
+$n$ ($p = 0.0064$). Longer routes are therefore hard for the monolithic solver
 too, and nearly as strongly as they are for \gls{drispi}, while customer count moves
 AILS-II's gap by about a third of what it moves \gls{drispi}'s.
 
-Fitting the same model to the paired difference isolates what decomposition
-costs. All three slopes are positive and significant, and they are close to
+Fitting the same model to the paired difference then isolates what additional cost decomposition imposes. All three slopes are positive and significant, and they are close to
 one another: $0.055$ pp per standard deviation for $r$
 ($p = 4.1 \times 10^{-8}$), $0.046$ pp for $n$ ($p = 2.3 \times 10^{-6}$), and
 $0.044$ pp for $\log \bar{q}$ ($p = 5.9 \times 10^{-6}$). Route length
-dominates the raw gap because it is an instance-hardness axis that happens to
+dominates the raw gap because it is a factor expressing instance difficulty that happens to
 hit \gls{drispi} slightly harder than it hits AILS-II. Customer count dominates
 neither, but what little it does to the raw gap is almost entirely a
-decomposition cost rather than general hardness. Over the full observed range
+decomposition cost rather than general difficulty. Over the full observed range
 of the set, $3.6$ standard deviations of $n$ and $4.6$ of $r$, the
 corresponding penalties relative to AILS-II are about $0.17$ pp and $0.25$ pp.
 The weak scale dependence claimed for the gap therefore holds in absolute
-terms and holds less comfortably in relative ones, and
-Section~\ref{sec:con-limitations} states the consequence for the primary research
-question.
+terms and holds less comfortably in relative ones. The size split of Table~\ref{tab:solver-summary} shows the same without a model: DRISPI trails AILS-II by $0.097$ pp on the fifty instances below 3,400
+customers and by $0.177$ pp on the fifty above. Reaching the leading group is
+therefore better supported at the lower end of the XL range than at the upper.
 
 \subsection{HAOS Weights}
 \label{sec:stu-haos}
-\label{sec:results-haos}
 
 HAOS chooses the number of subclusters $k$, the compactness weight $\lambda_q$,
 the VB/RB paradigm, the clustering method, and the subsolver, one draw per DRI
@@ -745,7 +684,7 @@ Figure~\ref{fig:haos-scatter} plots the two against each other.
 
 Part of that is a property of the option set rather than of HAOS\@.  A
 Kruskal-Wallis test per run on the per-selection rewards grouped by arm, Holm
-corrected within the run, rejects on at most 6.0\% of runs on any wheel and on
+corrected \citep{demsVarStatisticalComparisonsClassifiers} within the run, rejects on at most 6.0\% of runs on any wheel and on
 0.0\% for $\lambda_q$ and the route-method wheel.  The mean within-run spread
 between the best and the worst arm is 0.45 to 1.05 reward points against a
 median selection reward of 5.  On the instances and budget of this campaign the
@@ -966,7 +905,7 @@ descending visibly at the cutoff where the short-route curve has flattened.
 
 The two findings are consistent once the binding constraint is stated
 correctly. Fewer iterations on large instances leave HAOS with fewer draws per
-arm, but Section~\ref{sec:results-haos} finds the arms statistically
+arm, but Section~\ref{sec:stu-haos} finds the arms statistically
 indistinguishable on all six wheels, so a configuration drawn under a shorter
 iteration budget is not on average a worse configuration. The iteration count
 constrains what the wheels can learn; it does not by itself leave cost on the

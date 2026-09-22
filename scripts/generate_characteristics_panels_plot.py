@@ -21,11 +21,11 @@ import numpy as np
 OUTPUT = ROOT / "thesis/figures/characteristics_panels.pdf"
 
 PANELS = (
-    ("depot", ["R", "C", "E"], {"R": "Random", "C": "Central", "E": "Eccentric"}, "(a) Depot position"),
+    ("depot", ["R", "C", "E"], None, "(a) Depot position"),
     (
         "cust_grp",
         ["R", "C", "RC"],
-        {"R": "Random", "C": "Clustered", "RC": "Rand.\nclust."},
+        None,
         "(b) Customer distribution",
     ),
     (

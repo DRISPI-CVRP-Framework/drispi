@@ -607,34 +607,32 @@ therefore better supported at the lower end of the XL range than at the upper.
 \subsection{HAOS Weights}
 \label{sec:stu-haos}
 
-HAOS chooses the number of subclusters $k$, the compactness weight $\lambda_q$,
-the VB/RB paradigm, the clustering method, and the subsolver, one draw per DRI
+HAOS chooses the number of subclusters $k$, the demand weight $\lambda_q$,
+the decomposition paradigm, the clustering method, and the subsolver, one draw per DRI
 iteration, and updates its weights from the rewards of
-Table~\ref{tab:haos-rewards} (Section~\ref{sec:fra-haos}).  The clustering method is
-two wheels, one per paradigm, so the five decisions are six wheels.  Whether
+Table~\ref{tab:haos-rewards} (Section~\ref{sec:fra-haos}).  The clustering method is split in
+two wheels, one per paradigm, so the five decisions are drawn from six decision wheels.  Whether
 those weights carry interpretable information about an instance is the secondary
-research question, and answering it takes two steps rather than one.  A weight
+research question of this thesis, and answering it takes two steps.  A weight
 vector that has left the uniform distribution has learned something only if what
-it learned is the ranking of the arms.  A wheel can also leave uniform by
-reinforcing whichever arm its own early draws happened to favour, which produces
+it learned is the ranking of the arms.  A wheel can also leave uniform distribution by
+reinforcing whichever arm its own early draws happened to favor, which produces
 the same shape and means nothing.  The two are distinguishable, but not from the
-weight vector alone: they are separated by asking whether the arms that ended
-heavy are the arms that actually paid.  This section establishes the movement
+weight vector alone. To separate them, we test whether the arms that ended
+heavy are the arms that actually paid off.  This section establishes the movement
 first and then tests its direction.
 
-The analysis reads the per-iteration weight snapshots the runs log for all six
+\gls{drispi} provides per-iteration weight snapshots its runs log for all six
 wheels.  Recomputing Equation~\ref{eq:haos-probability} from the logged raw
 weights reproduces the logged probabilities to a maximum absolute deviation of
-$1.11 \times 10^{-16}$ across 630,004 arm snapshots, so the weight trajectories
+roughly $10^{-16}$ across 630,000 arm snapshots, so the weight trajectories
 below are read rather than reconstructed.  The ten warm-up iterations are
-excluded throughout.  Runs complete between 22 and 118 iterations with a median
+excluded throughout.  Without them, runs complete between 22 and 118 iterations with a median
 of 78, and 149 of the 300 reach that median, so the later part of every
 trajectory describes the longer half of the campaign.
 
-\subsubsection*{The wheels do move}
-
 Figure~\ref{fig:haos-entropy} shows normalized entropy staying high on five of
-the six wheels, and read alone it suggests the weights never leave uniform.
+the six wheels. Normalized entropy goes from zero, at absolute singularity, to one, absolute uniformity. Figure~\ref{fig:haos-entropy} alone suggests the weights never leave a uniform distribution.
 
 \begin{figure}[H]
 \centering
@@ -643,97 +641,124 @@ the six wheels, and read alone it suggests the weights never leave uniform.
 \label{fig:haos-entropy}
 \end{figure}
 
-The weights themselves say otherwise.  At iteration 78 the median ratio of the
-largest weight on a wheel to the starting weight $w_0$ is 4.89 for $k$, 4.65 for
-$\lambda_q$, 9.37 for the paradigm wheel, 2.85 for the vertex-method wheel, 3.36
-for the route-method wheel, and 6.87 for the subsolver.  Arms sit exactly on the
-decay floor in 2.5\% of post-warm-up snapshots on the paradigm wheel and 31.2\%
-on the vertex-method wheel, and that fraction does not rise with arm count: it
-is 0.21 on the three-arm route wheel against 0.10 on the four-arm subsolver.
-Nearly every arm leaves the floor at some point in a run, and once credited it
-stays above the floor for a mean of 31 to 40 snapshots against a re-selection
-gap of 1.9 to 7.8 iterations, so an arm is credited again long before it
-relaxes.  Those persistence figures are lower bounds, because between 68\% and
-99\% of the spells are still open when the run ends.
+But the weights do move, and the reward recurrence says how far they should. Credit
+adds the reward earned on the iterations an arm is drawn. Decay removes a
+fraction $1 - \gamma$ of its whole weight every iteration. With credit applied
+before decay (Equations~\ref{eq:haos-update} and~\ref{eq:haos-decay}), an arm
+drawn with a steady probability $p$ and paid $R$ per selection settles at
 
-The probabilities follow the weights.  The median top-arm probability at the
+\begin{equation}
+  w^{*} = \frac{\gamma\, p\, R}{1 - \gamma} = 19\, p\, R ,
+  \label{eq:haos-fixedpoint}
+\end{equation}
+
+at the deployed decay factor $\gamma = 0.95$. Below it the
+arm is pinned to the floor. At a uniform draw on a wheel with $A$ arms, $p = 1/A$, so the weight leaves the floor only when $R > w_0 (1 - \gamma)/(\gamma p) =
+0.5263\,A$. The arm count is relevant because an arm is paid only on the iterations
+it is drawn, and a wheel with more arms needs a larger reward per selection to
+sustain its weight.
+
+The wheels sit well above the decay floor. At iteration 78 the median ratio of the
+largest weight on a wheel to $w_0$ is 4.89 for $k$, 4.65 for $\lambda_q$, 9.37
+for the paradigm wheel, 2.85 for the vertex-method wheel, 3.36 for the
+route-method wheel, and 6.87 for the subsolver. Arms only rarely sit exactly on
+the decay floor, and that fraction does not rise with arm count. Nearly every
+arm leaves the floor at some point in a run, and once credited it stays above
+the floor for a mean of 31 to 40 snapshots against a re-selection gap of 1.9 to
+7.8 iterations, so an arm is credited again long before it relaxes back.
+
+And the probabilities follow the weights. The median top-arm probability at the
 last iteration is 0.257 on the $k$ wheel against a uniform $1/7$ of 0.143, 0.323
 on $\lambda_q$ against 0.167, 0.694 on the paradigm wheel against 0.500, 0.295
 on the vertex-method wheel against 0.200, 0.481 on the route-method wheel
 against 0.333, and 0.432 on the subsolver against 0.250.  Every wheel ends
-between 1.4 and 1.9 times uniform on its leading arm.  The probability floors of
-Equation~\ref{eq:haos-probability} are not what holds the distributions flat:
-a floor artifact would show large weight ratios alongside probabilities still at
-uniform, and the probabilities have moved.
+between 1.4 and 1.9 times uniform on its leading arm.
 
-\subsubsection*{The direction is arbitrary}
-
-What the wheels have not done is rank the arms.  Within a run, the Spearman
-correlation between an arm's mean realized reward and that arm's final
+Since we have established that the arms move, we need to investigate their direction now. Because what the wheels have not done is rank the arms.  Within a run, the Spearman correlation between an arm's mean realized reward and that arm's final
 probability is 0.081 on the $k$ wheel, 0.045 on $\lambda_q$, 0.043 on the
 vertex-method wheel, 0.030 on the route-method wheel, and 0.042 on the
-subsolver.  The arms that finish heavy are not the arms that paid.
-Figure~\ref{fig:haos-scatter} plots the two against each other.
+subsolver.  The arms that finish heavy are not the arms that produces high-quality solutions. Figure~\ref{fig:haos-scatter} plots the two against each other.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{figures/haos_scatter.pdf}
-\caption{Mean Immediate Reward of Each Arm Against Its Final Wheel Probability. Each point is one arm in one run with at least five draws. The dashed line is $1/A$, drawn at each run's own number of arms on the $k$ wheel. The annotation is the mean within-run Spearman correlation; the paradigm wheel has too few arms for it.}
-\label{fig:haos-scatter}
+  \centering
+  \includegraphics[width=\textwidth]{figures/haos_scatter.pdf}
+  \caption{Mean Immediate Reward of Each Arm Against Its Final Wheel Probability. Each point is one arm in one run with at least five draws. The dashed line is $1/A$, drawn at each run's own number of arms on the $k$ wheel. The annotation is the mean within-run Spearman correlation; the paradigm wheel has too few arms for it.}
+  \label{fig:haos-scatter}
 \end{figure}
 
-Part of that is a property of the option set rather than of HAOS\@.  A
-Kruskal-Wallis test per run on the per-selection rewards grouped by arm, Holm
-corrected \citep{demsVarStatisticalComparisonsClassifiers} within the run, rejects on at most 6.0\% of runs on any wheel and on
-0.0\% for $\lambda_q$ and the route-method wheel.  The mean within-run spread
-between the best and the worst arm is 0.45 to 1.05 reward points against a
-median selection reward of 5.  On the instances and budget of this campaign the
-arms are close enough that no wheel has a strong ranking available to learn.
-That explains a flat weight vector.  It does not explain a weight vector that
-has moved to 1.4 to 1.9 times uniform on an arm chosen at random, and the second
-observation is the one that matters for the research question.
+Part of that is a property of the reward set rather than of \gls{haos}. The mean within-run spread between the best and the worst arm is only 0.45 to 1.05 reward points against a median selection reward of 5.  On the instances and budget of this campaign the arms are close enough that no wheel has a strong ranking available to learn.
 
-\subsubsection*{Why the reward carries no ranking}
+That assumption can be checked on a measure the reward scale does not bound.
+Scoring every draw by the cost of the solution it produced relative to the
+incumbent it started from, $100\,(C_t - c^{\mathrm{BG}}_t)/C_t$ and adjusted
+for position in the run, the pooled best-to-worst arm spread clears the
+$0.037$ pp seed-noise floor on five of the six wheels. That pooled ranking
+does not survive a change of seed. On the $k$ wheel the best arm is 2, then 6,
+then 10 across seeds 11, 22 and 33; on $\lambda_q$ it is 0.2, then 0.8, then
+0.6; on the vertex-method wheel fuzzy c-means is the best arm on one seed and
+the worst on another; on the subsolver AILS-II is the worst arm on seed 11 at
+$-0.305$ pp and the best on seed 33 at $+0.028$ pp. Those pooled winners
+average three sequences that disagree. The route-method wheel is consistent,
+with agglomerative average best on every seed, but only marginally so, by $0.020$ to $0.039$ pp
+against a floor of $0.037$. Only a single wheel carries a ranking that is both consistent
+and large enough to matter. Route-based clustering beats vertex-based on every
+seed, by $0.071$, $0.110$ and $0.065$ pp, and by more as the run progresses,
+which is what the mechanism predicts, since route-based clustering partitions
+the incumbent's own routes, which are worse earlier in the run.
 
-Figure~\ref{fig:haos-reward} gives the immediate reward $R$ banked by one
+The instances of one seed are not independent observations of an arm. Within a
+seed the early draw sequence is nearly identical across instances, so the arm
+drawn at a given iteration is the same on almost every instance of that seed,
+and paired tests over instances overstate the precision of the pooled
+comparison. Agreement across the seeds is the informative check, and it
+is what the paragraph above uses.
+
+That one wheel is where this section's account can be tested, and it fails in
+the way the account predicts. The paradigm wheel is the wheel that
+concentrates, its leading arm reaching a median probability of $0.694$; it has
+the fewest arms, the lowest lift-off threshold, and a real advantage to find.
+But it does not find it. At the last iteration the leading arm is the vertex-based paradigm on 154
+runs and the route-based paradigm on 146. And the median final probability on the route-based paradigm, the better
+arm, is $0.489$. What sets the leader is the seed and not the instance: seed 11
+finishes on route in 99 of its 100 runs, seed 22 on vertex in 89, and seed 33
+on vertex in 64, while the three seeds of one instance agree on the leader only in 8
+instances out of 100. A wheel learning about an instance would agree with
+itself across seeds. This one commits at roughly seven to three to whichever
+arm its own early draws happened to favor.
+
+That explains a mostly flat weight vector. It does not explain however why a weight vector that
+has moved to 1.4 to 1.9 times uniform on an arm chosen at random. Figure~\ref{fig:haos-reward} gives the immediate reward $R$ banked by one
 selection, summed over the decompose-route candidate and the BG-AILS candidate.
 Of 19,803 post-warm-up selections, 16,591 bank exactly $R = 5$: the
 decompose-route candidate scores the no-improvement value of 1 and BG-AILS
-scores the improvement-over-previous value of 4.  A BG-AILS reward is present on
-96.8\% of selections.  The median $R$ is 5 and the mean 4.94, and 84\% of all
-selections receive the identical reward.
+scores the improvement-over-previous-iteration value of 4.  A BG-AILS reward is present on
+96.8\% of selections.  The median $R$ is 5 and the mean 4.94, and with 84\% of all
+selections, almost all receive the identical reward.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{figures/haos_reward.pdf}
-\caption{Immediate and Deferred HAOS Rewards, Excluding the Ten Warm-Up Iterations. (a) Immediate reward over 19,803 selections; 16,591 of them, 84\%, sit at $R = 5$. (b) Deferred reward over the SC/SP applications that carried one. The two panels have different denominators.}
+\caption{Immediate and Deferred HAOS Rewards, Excluding the Ten Warm-Up Iterations. (a) Immediate Reward Through DRI (b) Deferred Reward Through SC/SP. The two panels have different denominators.}
 \label{fig:haos-reward}
 \end{figure}
 
-The three-level scale of Table~\ref{tab:haos-rewards} therefore has no
-resolution where the outcomes are.  BG-AILS almost always improves on the
-previous candidate, which is what the stage is for, and almost never produces a
+BG-AILS almost always improves on the
+previous candidate, and almost never produces a
 new incumbent best, so nearly every selection lands in the middle bucket.  The
-quantity that separates a good configuration from a mediocre one on this
-benchmark is the size of the improvement, and the scale discards it.  The
-lift-off condition of the weight recurrence is met comfortably as a result: with
-$R = 5$ against a threshold of $0.5263 \cdot A$, between 90\% and 98\% of
-selections clear the bar on every wheel except the ten-arm $k$ domain, where the
-threshold is 5.26 and only 5.4\% clear it.  Weights rise on nearly every arm
-nearly every time it is drawn.
+factor that separates a good configuration from a mediocre one on this
+benchmark is the size of the improvement, and the reward scale ignores it completely. An improvement of 1\% is rewarded the same as an improvement of 0.01\%.
+With $R = 5$, the lift-off condition of Equation~\ref{eq:haos-fixedpoint} is
+met comfortably: between 90\% and 98\% of selections clear $0.5263\,A$ on every
+wheel except the ten-arm $k$ domain, where the threshold is $0.5263\,\times10 = 5.26$ and only 5.4\% clear it. Weights therefore rise on nearly every arm nearly every time it is drawn.
 
-This is what turns a missing ranking into a confident-looking weight vector.
-The smallest reward in Table~\ref{tab:haos-rewards} is 1.0 rather than zero, so
-an arm accumulates weight for having been drawn, independently of what followed.
-Weight sets selection probability through Equation~\ref{eq:haos-probability},
+Because of that a missing ranking is turned into a confident-looking, but random weight vector.
+Furthermore, the smallest reward for any feasible solution in Table~\ref{tab:haos-rewards} is 1.0 rather than zero, so
+an arm accumulates weight just for having been drawn, independently of what followed.
+But weight sets selection probability through Equation~\ref{eq:haos-probability},
 selection probability sets the draw rate, and the draw rate sets the rate of
-accumulation.  An arm that is drawn a few extra times early compounds that lead.
-The result is reinforcement of the sampling noise rather than of the outcomes,
-and it accounts for every observation in this section at once: the entropy
-curves dip, the leading arm ends above uniform, the three seeds of one instance
-disagree at a total-variation distance of 0.2 to 0.3
+accumulation. An arm that is drawn a few extra times early therefore compounds that lead without any regard of its own performance. The result is reinforcement of sampling noise rather than of the outcomes, explaining every observation in this section at once: the entropy curves dip, the leading arm ends above uniform, the three seeds of one instance disagree at a total-variation distance of 0.2 to 0.3
 (Figure~\ref{fig:haos-seeds}), and that disagreement does not fall as runs get
-longer, because a reinforced random walk diverges rather than converging.
+longer, because a reinforced random walk diverges rather than converges.
 
 \begin{figure}[H]
 \centering
@@ -742,46 +767,22 @@ longer, because a reinforced random walk diverges rather than converging.
 \label{fig:haos-seeds}
 \end{figure}
 
-A second channel points the same way: the reward has a long right tail, with 879
-selections at $R = 8$ and 292 at $R = 11$, so an arm that happens to catch two
-such events early carries the bump for the rest of the run.  Separating the two
-channels would need a control run and was not attempted.
-
-Three wheels are still gaining weight range between iterations 40 and 78, with
-bootstrap intervals above zero: $k$ at 0.036 per iteration
-($[0.027,\ 0.045]$), the route-method wheel at 0.015 ($[0.005,\ 0.025]$), and
-the subsolver at 0.065 ($[0.049,\ 0.078]$).  The intervals for $\lambda_q$, the
-paradigm wheel, and the vertex-method wheel contain zero.  Under the reading
-above, a still-rising range is not a system approaching the right answer with
-more evidence; it is an arbitrary leader becoming more entrenched.  A longer
-budget would sharpen these weights without making them more informative.
-
-\subsubsection*{Where the weight comes from}
-
-The weight level itself is not explained by the immediate channel alone.  The
-interior fixed point of the recurrence in Equations~\ref{eq:haos-update}
+But the weight level itself is not explained by the immediate reward alone. As shown, the interior fixed point of the recurrence in Equations~\ref{eq:haos-update}
 and~\ref{eq:haos-decay}, for a stationary selection probability $p$ and a
 per-selection reward $R$ under credit-then-decay, is
 $w^{*} = \gamma p R / (1-\gamma) = 19\,pR$.  Evaluated at the run-average
 probability and the mean immediate reward, that prediction sits below the
-observed median maximum weight by a factor of 1.70 to 3.01 on every wheel.  Two
-quantities are missing from it, and both are measured.
+observed median maximum weight by a factor of 1.70 to 3.01 on every wheel. But two aspects are not considered here.
 
 The first is that $p$ is not stationary.  Under the reinforcement above, the
-leading arm's probability rises over the run, so a run-average $p$ understates
-the probability at which the largest weight was actually accumulated.  The
-second is the deferred channel, which contributes 0.443 of all credit mass on
-every wheel and does not appear in the immediate reward at all.  Correcting for
-both, total credit per selection is $4.94 / (1 - 0.443) = 8.87$, and evaluating
-$19\,pR$ at the median final top-arm probability gives 43.3 for $k$ against an
-observed 48.9, 54.4 for $\lambda_q$ against 46.5, 72.8 for the subsolver against
-68.7, and 117.0 for the paradigm wheel against 93.7.  The recurrence describes
-the weight level once it is given the probability the weight was accumulated at
+leading arm's probability rises over the run, so a run-average $p$ actually understates the probability at which the largest weight was actually accumulated.  The
+second is the deferred channel, which contributes 44.3\% of all credit mass on
+every wheel across the entire run and does not appear in the immediate reward at all.  Correcting for both, total credit per selection is $4.94 / (1 - 0.443) = 8.87$, and evaluating $19\,pR$ at the median final top-arm probability gives 43.3 for $k$ against an observed 48.9, 54.4 for $\lambda_q$ against 46.5, 72.8 for the subsolver against 68.7, and 117.0 for the paradigm wheel against 93.7.  The divergence between the assumed and observed probability level originates from the weight level once it is given the probability the weight was accumulated at
 and the full credit stream.  The two conditional method wheels need a further
 correction for how often their paradigm was drawn and are not reconciled here.
 
-That deferred channel is a mechanism in its own right, and it works against
-ranking.  The deferred reward is credited once to every distinct configuration
+That deferred channel as a mechanism actively works against
+ranking.  The deferred reward is credited once to every distinct \gls{haos}
 tag among the routes SC/SP selected, at the full value regardless of how many
 routes that tag contributed (Section~\ref{sec:fra-sp}).  On an
 iteration that carries a positive deferred reward, 1.8 to 5.3 arms of the same
@@ -790,56 +791,24 @@ about 62 weight units are injected against about 5.  Nearly half the credit in
 the system arrives as a broadcast timed to the SC/SP schedule rather than as a
 judgement about the arm that received it.
 
-\subsubsection*{What this means for the secondary research question}
-
 The secondary research question asked whether the learned weight distributions
 give interpretable insight into instance structure and reduce manual tuning
 across instance classes.  On this campaign they do not, and the diagnostics
-above locate three causes rather than one.  The reward scale places 84\% of
+above locate three causes rather than one.  First, the reward scale places 84\% of
 selections in a single bucket and discards the improvement magnitude that would
-separate the arms.  The smallest reward is positive, so weight accumulates with
-the draw count and the roulette draw feeds that back, which converts sampling
-noise into a stable-looking leader.  The deferred channel supplies 44\% of the
-credit as a broadcast to many arms at once.  Table~\ref{tab:haos-causes}
-collects the measurement behind each.
+separate the arms.  Second, the smallest reward is positive, so weight accumulates with the draw count and the roulette draw feeds that back, which converts sampling
+noise into a stable-looking leader.  Third, the deferred channel supplies 44\% of the
+credit as a broadcast to many arms at once.
 
 None of the three is a property of the hierarchy.  The wheel mechanics behave
 exactly as specified, the weights move freely, and the probabilities track them.
 What the campaign shows is that the credit these wheels are fed does not carry a
-ranking, and Section~\ref{sec:con-future} takes up what would have to
+ranking, and Section~\ref{sec:con-future} suggests what would have to
 change.  The consequence for the primary research question is stated in
 Section~\ref{sec:con-limitations}: a controller whose weights are uncorrelated with
 arm performance is, in effect, close to the uniform draw its predecessor used,
 so the result of Section~\ref{sec:stu-comparison} was obtained without
 working adaptation rather than because of it.
-
-\begin{table}[htbp]
-  \centering
-  \caption{Why the HAOS Weights Do Not Rank the Arms.  All Figures Are Over the
-    300 Runs of the Campaign, Excluding the Ten Warm-Up Iterations.}
-  \label{tab:haos-causes}
-  \begin{tabularx}{\textwidth}{@{}p{3.5cm}>{\raggedright\arraybackslash}X r@{}}
-    \toprule
-    Cause & Measurement & Value \\
-    \midrule
-    \multirow{2}{3.5cm}{Reward without resolution}
-      & selections banking the modal reward $R = 5$        & 84\% \\
-      & within-run best-to-worst arm spread (median $R=5$) & 0.45--1.05 \\
-    \addlinespace
-    \multirow{2}{3.5cm}{Credit for being drawn}
-      & smallest reward in Table~\ref{tab:haos-rewards}    & 1.0 \\
-      & Spearman, arm reward against final probability     & 0.030--0.081 \\
-    \addlinespace
-    \multirow{2}{3.5cm}{Broadcast deferred credit}
-      & deferred share of total credit mass                & 0.443 \\
-      & arms lifted per deferred iteration (vs.\ ordinary) & 1.8--5.3 (0.6--1.3) \\
-    \addlinespace
-    \multirow{2}{3.5cm}{Consequences}
-      & Kruskal-Wallis rejection rate, Holm within run     & $\leq 0.060$ \\
-      & median top-arm probability, as a multiple of $1/A$ & 1.4--1.9 \\
-    \bottomrule
-  \end{tabularx}
-\end{table}
 
 \subsection{Convergence Behavior}
 \label{sec:stu-convergence}
@@ -848,59 +817,40 @@ An improvement is any candidate that strictly lowers the incumbent cost,
 including the first solution of a run. The run logs record 2,335 such updates
 across the 300 runs. Figure~\ref{fig:improvement-quarters}(a) counts them by the
 wall-clock quarter in which they were logged, measured from the first timestamp
-of each run log. A run may still be finishing the iteration already in
-progress when the 7,200-second limit is reached, and the seven updates logged
-during that overrun are included in the fourth quarter. Of the 2,335 updates,
-1,586 fall in the first 30 minutes, 361 in the second, 232 in the third, and
-156 in the fourth. Every run's first solution is one of these updates, and all
-300 of them fall in the first quarter, so 1,286 first-quarter updates lower an
-incumbent that already exists. Every update in the later quarters does the
-same.
+of each run log. Every run's first solution is one of these updates, so naturally, 300 of them fall in the first quarter, and only 1,286 first-quarter updates lower an incumbent that already exists.
 
-Counting updates overstates how much of the run is spent converging, because
+Simply counting updates overstates how much of the run is spent converging, because
 the updates late in a run are individually larger than the ones early in it.
-Figure~\ref{fig:improvement-quarters}(b) therefore tracks the quantity the rest of this
-chapter reports. The mean-of-3 gap to the current \gls{bks} stands at $0.391\%$ at
-the 30-minute mark, $0.335\%$ at 60 minutes, $0.311\%$ at 90 minutes, and
-$0.297\%$ at 120 minutes, against the $0.296\%$ of
-Table~\ref{tab:solver-summary} once the overrun updates are counted. The
-gains per quarter are $0.056$, $0.025$, and $0.014$ pp. They are falling, and
-they are not falling to zero: the last of the three is still about a quarter of
+Figure~\ref{fig:improvement-quarters}(b) therefore tracks the quantity the rest of this chapter reports. The mean-of-3 gap to the current \gls{bks} stands at $0.391\%$ at the 30-minute mark, $0.335\%$ at 60 minutes, $0.311\%$ at 90 minutes, against the $0.296\%$ of Table~\ref{tab:solver-summary} once the 120 minute mark is reached. The
+gains per quarter are $0.056$, $0.025$, and $0.014$ pp. While they are falling, they are not falling to zero: the last of the three is still about a quarter of
 the first, and more than twice the realized 95\% half-width of the grand mean.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{figures/improvement_quarters.pdf}
-\caption{Convergence Over the 7,200-Second Budget. (a) Incumbent Updates by Wall-Clock Quarter, Summed over All 300 Runs; Updates Logged After 7,200 Seconds Are Included in the Fourth Quarter. (b) Mean-of-3 Gap to the Current \gls{bks} at Each Wall-Clock Mark, for All 100 Instances and Split by Route Band. The final mark includes the overrun updates.}
+\caption{Convergence Over the 7,200-Second Budget. (a) Incumbent Updates by Wall-Clock Quarter, Summed over All 300 Runs. (b) Mean-of-3 Gap to the Current \gls{bks} at Each Wall-Clock Mark, for All 100 Instances and Split by Route Length.}
 \label{fig:improvement-quarters}
 \end{figure}
 
 The run-level counts say the same thing more directly. Of the 300 runs, 122
 improved their incumbent after the 90-minute mark and 221 after the 60-minute
 mark. On 7 of the 100 instances all three seeds were still improving in the
-final quarter, and on only 22 was no seed still improving. Seven runs logged
-an update after the 7,200-second limit, in the iteration that was already in
-progress. At the point where the budget of Section~\ref{sec:stu-implementation}
-cuts the search off, \gls{drispi} is not at a converged solution on most instances;
-it is at wherever the clock found it. A longer budget would have produced
-further gains, and the relevant question is how much. A geometric decay fitted
-to the observed quarter-on-quarter ratios of $0.45$ and $0.54$ implies a
-remaining tail of about $0.013$ pp beyond 120 minutes, which would put the set
-mean near $0.283\%$. That extrapolation rests on two ratios and is offered as
-an order of magnitude, not as a result; the campaign to test it was not run.
+final quarter, and on only 22 was no seed still improving. At the point where the fixed budget of Section~\ref{sec:stu-implementation}
+cuts the search off, \gls{drispi} is not at a converged solution on most instances.
+A longer budget would have produced further gains, and the relevant question is how much. A geometric decay fitted to the observed quarter-on-quarter ratios of $0.45$ and $0.54$ implies a remaining tail of about $0.013$ pp beyond 120 minutes, which would put the set mean near $0.283\%$. That extrapolation rests on two ratios and is offered as an order of magnitude, not as a result. A long-run campaign to test it was not run.
 
-Where that residual sits is the more useful finding, and it is not where the
-iteration counts suggest it should be. Completed \gls{dri} iterations fall sharply
-with instance size, from a mean of 117 on the ten smallest instances to 31 on
+This extrapolation says roughly how much improvement is left. Which instances
+are still collecting it is the more useful question, and the answer is not the
+one the completed iteration counts suggest. Completed \gls{dri} iterations fall sharply with instance size, from a mean of 117 on the ten smallest instances to 31 on
 the ten largest (Spearman $\rho = -0.97$), and the natural reading is that the
 largest instances are the ones furthest from convergence at the cutoff. The
 improvement data does not support it. The mean-of-3 gain over the final
 quarter correlates with route length at $\rho = +0.52$
 ($p = 3.9 \times 10^{-8}$) and with customer count at $\rho = +0.06$
 ($p = 0.57$). It averages $0.041$ pp on the 14 long-route instances against
-$0.010$ pp on the other 86, while the split by size is flat: $0.015$ pp above
+$0.010$ pp on the other 86, while the split by size is almost flat: $0.015$ pp above
 3,400 customers against $0.013$ pp below. Figure~\ref{fig:improvement-quarters}(b)
-shows the two route bands separately, and the long-route curve is still
+shows the two route lengths separately, and the long-route curve is still
 descending visibly at the cutoff where the short-route curve has flattened.
 
 The two findings are consistent once the binding constraint is stated
@@ -908,13 +858,11 @@ correctly. Fewer iterations on large instances leave HAOS with fewer draws per
 arm, but Section~\ref{sec:stu-haos} finds the arms statistically
 indistinguishable on all six wheels, so a configuration drawn under a shorter
 iteration budget is not on average a worse configuration. The iteration count
-constrains what the wheels can learn; it does not by itself leave cost on the
-table. Long routes leave
-cost on the table for the different reason given in
+constrains what the wheels can learn. It does not by itself leave cost on the
+table. Long routes leave cost on the table for the different reason given in
 Section~\ref{sec:stu-characteristics}: they generate more boundary repair
 work than the fixed BG-AILS budget covers within one iteration, so the repair
-continues across iterations and needs wall-clock time rather than evidence.
-The instances with the largest gaps are therefore also the instances still
+continues across iterations and needs more wall-clock time. The instances with the largest gaps are therefore also the instances still
 improving fastest when the run is stopped, which means part of the long-route
 penalty reported above is a budget artifact rather than a defect of the
 decomposition itself. How much of it is which was not tested here.
@@ -923,70 +871,64 @@ decomposition itself. How much of it is which was not tested here.
 \label{sec:stu-sources}
 
 Sections~\ref{sec:stu-comparison} to~\ref{sec:stu-convergence} treat
-\gls{drispi} as one procedure. It is five stages, and the route pool tags every
-route with the stage that produced it (Section~\ref{sec:fra-improve}), so the
-improvement each stage contributes can be attributed rather than assumed. The
+\gls{drispi} as one procedure. It includes five stages, and the route pool tags every
+route with the stage that produced it, so the improvement each stage contributes can be attributed rather than assumed. The
 question matters for two reasons. The framework's contribution over its
-predecessor DRSCI \citep{altendeiteringDRSCICVRP2026} rests on BG-AILS and HAOS, and the
-BG-AILS ablation of Section~\ref{sec:fra-bg-ails} measured that stage in isolation
-on a fixed checkpoint rather than inside a full 7,200-second run. A stage that
-carries little of the total improvement under the campaign budget is also the
+predecessor DRSCI \citep{altendeiteringDRSCICVRP2026} rests on BG-AILS and HAOS, and the BG-AILS ablation of Section~\ref{sec:fra-bg-ails} measured that stage in isolation
+on a fixed checkpoint rather than inside a full 7,200-second run. And a stage that
+carries only few of the total improvements under the campaign budget is also the
 first candidate for reallocating core time.
 
-The incumbent log records 2,335 updates. Cost reduction is measured from each
-run's first solution to its final incumbent, so the 300 opening solutions count
-as updates and are excluded from the reduction. Stage time is the sum of the
-per-stage timers. Those timers run concurrently on the core split of
-Section~\ref{sec:stu-implementation}, so the time shares below partition the
-recorded stage time and do not partition the 7,200 seconds.
+The campaign log records 2,335 incumbent improvements. The 300 decompose--route solutions of the first iteration are each run's opening solution, and both the update counts and the cost reduction below exclude them. Cost reduction is measured from that opening solution to the final incumbent, so the 298 BG-AILS repairs logged on the same iteration are included. The remaining 2,035 updates are the denominator below. Stage time is the sum of the
+per-stage timers over the whole run, including the first iteration. Those timers run concurrently on the core split of Section~\ref{sec:stu-implementation}, so the time shares below divide the recorded stage time and do not the 7,200 second budget.
 
 One attribution is not recoverable as two separate stages. The SC/SP job
 (Section~\ref{sec:fra-sp}) solves the pool and then runs the standard AILS pass
 of Section~\ref{sec:fra-improve} on the result, and the incumbent update is
-logged only after that pass, under the phase name \texttt{standard\_ails}.
-All 715 updates logged under that name match an adopted SC/SP application, one
-for one, so the cost reduction in that row is the reduction of the package.
-The two timers are logged separately, and Table~\ref{tab:improvement-sources}
+logged only after that pass. Every improvement logged under the name \texttt{standard\_ails} therefore owes partial credit to its preceeding SC/SP job. The two timers are logged separately, and Table~\ref{tab:improvement-sources}
 reports them that way.
 
 \begin{table}[H]
 \centering
-\caption{Share of Incumbent Updates, of Cost Reduction from the First Solution to the Final Incumbent, and of Recorded Stage Time, Summed over All 300 Runs. The standard AILS row is the adopting record of the SC/SP job; that job contributes no incumbent update of its own.}
+\caption{Share of Incumbent Updates, Cost Reduction, and Recorded Stage Time. Summed over All 300 Runs. Updates and cost reduction exclude that opening solution. Stage time includes it.}
 \label{tab:improvement-sources}
 \begin{tabular}{lrrr}
 \toprule
 Stage & Updates & Cost reduction & Stage time \\
 \midrule
-Decompose--route & 26.9\% & 3.0\% & 35.1\% \\
-BG-AILS & 42.5\% & 88.2\% & 43.4\% \\
-SC/SP solver & --- & --- & 9.7\% \\
-Standard AILS pass & 30.6\% & 8.8\% & 11.9\% \\
+Decompose--route & 16.1\% & 3.0\% & 35.1\% \\
+BG-AILS & 48.8\% & 88.2\% & 43.4\% \\
+SC/SP & --- & --- & 9.7\% \\
+Standard AILS & 35.1\% & 8.8\% & 11.9\% \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-BG-AILS accounts for $88.2\%$ of the cost reduction after the first solution,
-from $42.5\%$ of the updates and $43.4\%$ of recorded stage time. The
-decompose--route stage accounts for $3.0\%$ of that reduction from $26.9\%$ of
-the updates, 300 of which are the opening solution, and it consumes $35.1\%$ of
+BG-AILS accounts for $88.2\%$ of the cost reduction after the opening decompose--route solution, dropping to $40.8\%$ after the first iteration.
+The decompose--route stage accounts for $3.0\%$ of the reduction from $16.1\%$ of
+the updates, and it consumes $35.1\%$ of
 recorded stage time. The SC/SP-plus-standard-AILS package accounts for the
-remaining $8.8\%$ of the reduction, from $30.6\%$ of the updates.
+remaining $8.8\%$ of the reduction, from $35.1\%$ of the updates. Since all stages of \gls{drispi} are highly intertwined and cooperative, a higher cost reduction for one step doe not imply that the other steps are less valuable.
 
 \begin{table}[H]
 \centering
-\caption{The Same Shares Split by Route Band and by the $n = 3{,}400$ Cut. The four rows cover 258, 42, 150, and 150 runs. Package reduction is the cost-reduction share logged on the standard AILS pass that adopts the SC/SP result.}
+\caption{The Same Shares Split by Route Length and by the $n = 3{,}400$ Cut.}
 \label{tab:improvement-splits}
 \small
-\begin{tabular}{@{}lrrrrr@{}}
+\setlength{\tabcolsep}{4pt}%
+\ifdefined\improvesplitcol\else\newlength{\improvesplitcol}\fi
+\settowidth{\improvesplitcol}{$n < 3{,}400$}%
+\setlength{\improvesplitcol}{\dimexpr(\linewidth-\improvesplitcol-12\tabcolsep)/6\relax}%
+\begin{tabular}{@{}l *{6}{w{c}{\improvesplitcol}}@{}}
 \toprule
-& \multicolumn{3}{c}{BG-AILS (\%)} & SC/SP & Package \\
-\cmidrule(lr){2-4}
-Subset & Reduction & Updates & Time & time (\%) & red.\ (\%) \\
+& \multicolumn{3}{c}{BG-AILS (\%)} & \multicolumn{3}{c}{SC/SP + AILS (\%)} \\
+\cmidrule(lr){2-4} \cmidrule(lr){5-7}
+Subset & Reduction & Updates & Time & Reduction & Updates & Time \\
 \midrule
-$r < 50$ & 87.7 & 44.1 & 43.0 & 11.0 & 9.2 \\
-$r \geq 50$ & 92.1 & 35.1 & 46.4 & 1.0 & 5.8 \\
-$n < 3{,}400$ & 91.5 & 44.6 & 45.2 & 12.1 & 7.4 \\
-$n > 3{,}400$ & 86.3 & 40.2 & 41.6 & 7.1 & 9.6 \\
+$r < 50$ & 87.7 & 50.9 & 43.0 & 9.2 & 34.0 & 22.5 \\
+$r \geq 50$ & 92.1 & 39.1 & 46.4 & 5.8 & 40.2 & 15.2 \\
+$n < 3{,}400$ & 91.5 & 50.9 & 45.2 & 7.4 & 32.3 & 24.2 \\
+$n > 3{,}400$ & 86.3 & 46.5 & 41.6 & 9.6 & 38.3 & 18.7 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -995,15 +937,10 @@ Table~\ref{tab:improvement-splits} is where the two predictions from
 Section~\ref{sec:stu-characteristics} can be checked. BG-AILS does carry a
 larger share of the cost reduction on the long-route instances, $92.1\%$ against
 $87.7\%$, and a larger share of recorded stage time, $46.4\%$ against $43.0\%$.
-Its share of the updates is lower on that band, $35.1\%$ against $44.1\%$,
-because the standard AILS pass logs more of the updates there. The prediction
+Its share of the updates is lower on that length, $39.1\%$ against $50.9\%$,
+because SC/SP + AILS logs $40.2\%$ of the updates there against $34.0\%$ on the short-route band. The prediction
 about the SC/SP contribution and the 10,000-column pool cap
 (Section~\ref{sec:fra-sp}) does not hold in the form the size split suggests.
 The cap is reached on 72 of the 100 instances: 33 of the 50 with $n < 3{,}400$
 and 39 of the 50 with $n > 3{,}400$, and on none of the 14 long-route instances,
-whose largest observed pools have a median of about 4,200 columns. The SC/SP
-timer's share falls from $12.1\%$ to $7.1\%$ across the size cut, and it collapses
-from $11.0\%$ to $1.0\%$ on the long-route band, which is the band whose pools
-stay below the cap. The package's share of the cost reduction moves the other
-way across the size cut, from $7.4\%$ below 3,400 customers to $9.6\%$ above.
-The long-route drop in SC/SP time is real. It is not a saturation effect.
+whose largest observed pools have a median of about 4,200 columns. The SC/SP + AILS time share falls from $24.2\%$ below 3,400 customers to $18.7\%$ above, and from $22.5\%$ on the short-route band to $15.2\%$ on the long-route band. The SC/SP timer inside that sum falls from $12.1\%$ to $7.1\%$ across the size cut, and from $11.0\%$ to $1.0\%$ on the long routes, which is the band whose pools stay below the cap. The SC/SP + AILS share of the cost reduction is $7.4\%$ below 3,400 customers and $9.6\%$ above, and $9.2\%$ on the short-route band against $5.8\%$ on the long-route band. The long-route drop in SC/SP time is real, because long-route instances generate fewer total routs, and smaller route pools take less time to solve.

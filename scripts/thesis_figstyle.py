@@ -27,6 +27,22 @@ OKABE_ITO = [
     "#D55E00",
     "#CC79A7",
 ]
+# Same hue as the Okabe–Ito blue (#0072B2), mixed toward white. Shared by the
+# immediate-reward bars (Figure 4.7) and the short-route line (Figure 4.9b),
+# so that line stays apart from the black series and from the 4.9a bars.
+BLUE_LIGHT = "#5BA3D9"
+# One color per HAOS wheel, in wheel order: k, lambda_q, paradigm,
+# vertex method, route method, subsolver. k is red so it does not repeat
+# the vermillion used for the subsolver. lambda_q uses the Okabe–Ito yellow.
+# The vertex method uses the Okabe–Ito reddish purple.
+HAOS_WHEEL_COLORS = (
+    "#E41A1C",
+    "#F0E442",
+    "#009E73",
+    "#CC79A7",
+    "#0072B2",
+    "#D55E00",
+)
 
 _NIMBUS_DIR = Path("/usr/share/fonts/opentype/urw-base35")
 _NIMBUS_FILES = (

@@ -17,7 +17,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts.section_4_2_numbers import load  # noqa: E402
-from scripts.thesis_figstyle import OKABE_ITO, apply, fig_size  # noqa: E402
+from scripts.thesis_figstyle import HAOS_WHEEL_COLORS, apply, fig_size  # noqa: E402
 
 LOG_ROOT = ROOT / "data/results/lagrange_benchmark"
 OUT_JSON = ROOT / "data/results/haos_campaign_lagrange.json"
@@ -154,7 +154,15 @@ def entropy_summary(series: dict[str, list[dict[int, float]]]) -> dict:
 def plot_entropy(series: dict[str, list[dict[int, float]]], median_len: int) -> None:
     fig, axes = plt.subplots(2, 3, figsize=fig_size(1.0, 320), sharex=True, sharey=True)
     x = np.arange(1, median_len + 1)
-    for ax, (key, label), color in zip(axes.ravel(), LEVELS, OKABE_ITO[1:]):
+    titles = (
+        r"$k$",
+        r"$\lambda_q$",
+        "Paradigm",
+        "Vertex Method",
+        "Route Method",
+        "Subsolver",
+    )
+    for ax, (key, _label), title, color in zip(axes.ravel(), LEVELS, titles, HAOS_WHEEL_COLORS):
         med, lo, hi = [], [], []
         for iteration in range(median_len):
             vals = [run[iteration] for run in series[key] if iteration in run]
@@ -164,7 +172,7 @@ def plot_entropy(series: dict[str, list[dict[int, float]]], median_len: int) -> 
         ax.fill_between(x, lo, hi, color=color, alpha=0.25, linewidth=0)
         ax.plot(x, med, color=color, linewidth=1.3)
         ax.axvline(10.5, color="0.45", linewidth=0.7, linestyle="--")
-        ax.set_title(label)
+        ax.set_title(title)
         ax.set_ylim(0, 1.05)
         ax.grid(True, linestyle=":", color="gray", alpha=0.6)
     for ax in axes[1]:

@@ -16,7 +16,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from scripts.thesis_figstyle import OKABE_ITO, apply, fig_size  # noqa: E402
+from scripts.thesis_figstyle import BLUE_LIGHT, HAOS_WHEEL_COLORS, OKABE_ITO, apply, fig_size  # noqa: E402
 
 CREDITS = ROOT / "data" / "results" / "haos_immediate_credits.csv"
 STATE = ROOT / "data" / "results" / "haos_wheel_state.csv"
@@ -27,8 +27,8 @@ WHEELS = (
     ("k", r"$k$"),
     ("lambda", r"$\lambda_q$"),
     ("paradigm", "Paradigm"),
-    ("vertex_method", "Vertex method"),
-    ("route_method", "Route method"),
+    ("vertex_method", "Vertex Method"),
+    ("route_method", "Route Method"),
     ("solver", "Subsolver"),
 )
 # Mean within-run Spearman from notes/haos_diagnostics.txt. Paradigm has
@@ -130,9 +130,7 @@ def plot_scatter(points: pd.DataFrame) -> None:
     print(f"scatter reward range {lo:.3f} to {hi:.3f}; axis {xlim[0]:.3f} to {xlim[1]:.3f}")
 
     fig, axes = plt.subplots(2, 3, figsize=fig_size(1.0, 340), sharex=True)
-    # Yellow is the fourth Okabe–Ito swatch; it disappears as a scatter on white.
-    colors = [OKABE_ITO[i] for i in (1, 2, 3, 7, 5, 6)]
-    for ax, (wheel, title), color in zip(axes.ravel(), WHEELS, colors):
+    for ax, (wheel, title), color in zip(axes.ravel(), WHEELS, HAOS_WHEEL_COLORS):
         panel = points.loc[points["wheel"].eq(wheel)]
         ax.scatter(
             panel["mean_reward"],
@@ -195,7 +193,7 @@ def plot_reward() -> None:
     apply()
     fig, axes = plt.subplots(1, 2, figsize=fig_size(1.0, 200))
     left, right = axes
-    left.bar(counts.index.astype(float), counts.to_numpy(), width=0.65, color=OKABE_ITO[5], zorder=2)
+    left.bar(counts.index.astype(float), counts.to_numpy(), width=0.65, color=BLUE_LIGHT, zorder=2)
     left.annotate(
         "16,591 (84%)",
         xy=(5, n5),

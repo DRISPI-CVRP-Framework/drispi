@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Attribute incumbent updates, cost reduction, and stage wall time.
 
-Cost reduction is measured from each run's first logged solution to its final
-incumbent. The first solution is an incumbent update but not part of that
-reduction. Stage wall time is the sum of phase_done elapsed fields; asynchronous
-stages overlap, so the shares are of recorded stage time, not of the 7,200 s budget.
+Incumbent-update counts and cost reduction exclude the first iteration's
+decompose-route solution (logged iteration 0). That solution is the baseline.
+The BG-AILS repair on the same iteration is included. Stage wall time is the
+sum of every phase_done elapsed field, including the first iteration.
+Asynchronous stages overlap, so the shares are of recorded stage time, not of
+the 7,200 s budget.
 """
 
 from __future__ import annotations
@@ -78,6 +80,13 @@ def main() -> None:
                         unknown_phases.add(("improve", phase))
                     stage = _stage(phase)
                     cost = float(event["cost"])
+                    # The iteration-0 decompose-route event is the opening
+                    # solution. It sets the baseline and is not an update or a
+                    # reduction. A BG-AILS repair on that same iteration is.
+                    if int(event["iteration"]) == 0 and stage == "decompose_route":
+                        if best is None or cost < best:
+                            best = cost
+                        continue
                     updates[stage] += 1
                     if best is None:
                         best = cost
@@ -142,6 +151,7 @@ def main() -> None:
         "n_gt_3400": [row for row in per_run if meta.loc[row["instance"], "large"]],
     }
     payload = {
+        "excluded": "iteration 0 decompose_route",
         "unknown_phases": sorted(f"{kind}:{name}" for kind, name in unknown_phases),
         "groups": {name: accumulate(rows) for name, rows in groups.items()},
         "n_runs": {name: len(rows) for name, rows in groups.items()},

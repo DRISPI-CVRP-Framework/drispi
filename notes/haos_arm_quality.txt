@@ -1,0 +1,397 @@
+HAOS arm quality
+Campaign: data/results/lagrange_benchmark
+Runs: 300. Instances: 100.
+
+Definition
+  One row is one draw whose BG-AILS candidate came back.
+  C_t for iteration t >= 1 is dr_apply.incumbent_cost, the live best after
+  the previous draw's BG-AILS result has been drained and before this draw's
+  decompose-route candidate. At iteration 0 the opening decompose-route cost
+  is C_0. That opening candidate is not a row. Iteration 0's BG-AILS call is.
+  Quality = 100 * (C_t - bg_cost) / C_t, signed, in percentage points.
+  A new incumbent is the logged adoption of this draw's decompose-route
+  candidate (iterations >= 1 only) or of its BG-AILS candidate.
+  Repair gain = (dr_cost - bg_cost) / dr_cost. It is not an arm score.
+  Cap-skipped launches with no BG-AILS candidate: 630. They are out.
+  Rows: 22173. Warm-up rows (iterations 0-9): 3000.
+  The k test uses arms 2, 3, 4, 6, 8, 10. Dropped: 12, which is missing on
+  X-n1654-k11, and every extension arm.
+  Extension and other dropped k values present in the rows: [11, 12, 14, 15, 16, 17, 18, 19, 20, 21, 23, 24, 25, 26, 27, 28, 32, 36, 40].
+  Position control: within each instance, outcome ~ arm + centered iteration.
+  The reported arm value is the fitted mean at that instance's mean iteration,
+  then averaged across the 100 instances. Draws are weighted equally.
+  The three seeds of an instance are pooled before the fit.
+  Friedman treats instances as blocks and arms as treatments.
+  The paradigm wheel has two arms, so that row is a Wilcoxon signed-rank
+  test of the paired instance difference instead of Friedman.
+  Bootstrap: 2000 resamples of instances, seed 20260923. The best and
+  worst arms are re-selected inside each resample. Intervals are percentiles.
+  The noise floor is the Section 4.1.4 per-instance seed standard deviation, 0.037 pp.
+
+What a row looks like
+  Mean quality: -0.2473 pp. Median: -0.1951 pp.
+  Quality percentiles 10 / 90: -0.5686 / -0.0302.
+  Draws whose BG-AILS cost beats C_t: 1087 (0.049).
+  New incumbent: 1274 draws (0.057). Decompose-route only 281, BG-AILS only 952, both 41, neither 20899.
+  Iteration 0 is included in those counts. Its decompose-route adoption is not.
+
+Repair gain, not an arm score
+  (dr_cost - bg_cost) / dr_cost, expressed below as a percent of the decompose-route cost.
+  All rows: mean 1.6142, median 0.8198, 10th -0.0110, 90th 3.5474.
+  Share with bg_cost < dr_cost: 0.886.
+  Iterations >= 1: mean 1.6085, median 0.8178.
+  Iteration 0 only: mean 2.0270, median 0.9297.
+
+Primary. Quality in pp, adjusted for the iteration index.
+  wheel            best                   worst                    spread                   95% CI     stat         p      holm    n
+  k                2                      8                        0.0698 [0.0498, 0.1107]  129.280  3.38e-26  1.02e-25  100
+  lambda           0.6                    0.4                      0.0923 [0.0713, 0.1193]  184.400  6.15e-38  3.07e-37  100
+  paradigm         route                  vertex                   0.1155 [0.0734, 0.1646]  874.000  1.37e-08  1.37e-08  100
+  vertex           fcm                    kmedoids                 0.1235 [0.0952, 0.1580]  163.696  2.36e-34  9.42e-34  100
+  route            agglomerative_avg      kmeans                   0.0269 [0.0191, 0.0358]   48.020  3.74e-11  7.48e-11  100
+  solver           ails2                  pyvrp                    0.1361 [0.1154, 0.1584]  259.668  5.30e-56  3.18e-55  100
+  Spread unit: pp of incumbent cost. Holm is across the six wheels.
+  k                point above 0.037; CI entirely above 0.037
+  lambda           point above 0.037; CI entirely above 0.037
+  paradigm         point above 0.037; CI entirely above 0.037
+  vertex           point above 0.037; CI entirely above 0.037
+  route            point below 0.037; CI entirely below 0.037
+  solver           point above 0.037; CI entirely above 0.037
+  Adjusted arm means, averaged across instances. Brackets are bootstrap 95% intervals.
+  k
+    within-instance slope per iteration: median -0.0032, IQR [-0.0071, -0.0021]
+    2                       -0.1815  [-0.2130, -0.1522]
+    3                       -0.2225  [-0.2788, -0.1769]
+    4                       -0.2483  [-0.3016, -0.2050]
+    6                       -0.2250  [-0.2662, -0.1854]
+    8                       -0.2514  [-0.2968, -0.2108]
+    10                      -0.1975  [-0.2438, -0.1567]
+  lambda
+    within-instance slope per iteration: median -0.0033, IQR [-0.0073, -0.0021]
+    0                       -0.2468  [-0.2845, -0.2092]
+    0.2                     -0.2660  [-0.3176, -0.2207]
+    0.4                     -0.2790  [-0.3288, -0.2321]
+    0.6                     -0.1867  [-0.2169, -0.1568]
+    0.8                     -0.2373  [-0.2873, -0.1904]
+    1                       -0.2720  [-0.3210, -0.2249]
+  paradigm
+    within-instance slope per iteration: median -0.0033, IQR [-0.0078, -0.0021]
+    vertex                  -0.3008  [-0.3683, -0.2402]
+    route                   -0.1854  [-0.2072, -0.1626]
+  vertex
+    within-instance slope per iteration: median -0.0043, IQR [-0.0116, -0.0028]
+    kmeans                  -0.2568  [-0.3152, -0.2043]
+    agglomerative_avg       -0.3351  [-0.4111, -0.2674]
+    agglomerative_complete  -0.3284  [-0.3996, -0.2661]
+    kmedoids                -0.3511  [-0.4296, -0.2803]
+    fcm                     -0.2277  [-0.2878, -0.1735]
+  route
+    within-instance slope per iteration: median -0.0019, IQR [-0.0032, -0.0011]
+    kmeans                  -0.2050  [-0.2319, -0.1793]
+    agglomerative_avg       -0.1781  [-0.2007, -0.1561]
+    agglomerative_complete  -0.1860  [-0.2121, -0.1606]
+  solver
+    within-instance slope per iteration: median -0.0033, IQR [-0.0074, -0.0021]
+    pyvrp                   -0.2998  [-0.3522, -0.2522]
+    filo                    -0.2719  [-0.3217, -0.2268]
+    filo2                   -0.2203  [-0.2608, -0.1834]
+    ails2                   -0.1638  [-0.2036, -0.1284]
+
+Same quality fit, one seed at a time. Instances that share a seed are pooled.
+  This is the cost response to that seed's draw sequence, not a second test.
+  Route is the better paradigm on every seed, and agglomerative_avg is the
+  best route method on every seed. The pooled best arm of k, lambda, the
+  vertex method, and the subsolver is not the best arm on every seed.
+  k                seed11 best 2                       -0.2022  worst 6                       -0.2735  spread 0.0714
+  k                seed22 best 6                       -0.0940  worst 4                       -0.4243  spread 0.3303
+  k                seed33 best 10                      -0.0723  worst 8                       -0.3213  spread 0.2490
+  lambda           seed11 best 0.2                     -0.1934  worst 0.4                     -0.2747  spread 0.0813
+  lambda           seed22 best 0.8                     -0.2438  worst 0.2                     -0.3857  spread 0.1420
+  lambda           seed33 best 0.6                     -0.1324  worst 1                       -0.3119  spread 0.1795
+  paradigm         seed11 best route                   -0.2008  worst vertex                  -0.2719  spread 0.0712
+  paradigm         seed22 best route                   -0.2062  worst vertex                  -0.3164  spread 0.1102
+  paradigm         seed33 best route                   -0.1933  worst vertex                  -0.2579  spread 0.0646
+  vertex           seed11 best kmedoids                -0.1562  worst kmeans                  -0.3400  spread 0.1838
+  vertex           seed22 best fcm                     -0.1505  worst kmeans                  -0.3873  spread 0.2369
+  vertex           seed33 best kmeans                  -0.1297  worst fcm                     -0.3690  spread 0.2392
+  route            seed11 best agglomerative_avg       -0.1925  worst kmeans                  -0.2314  spread 0.0389
+  route            seed22 best agglomerative_avg       -0.1888  worst kmeans                  -0.2087  spread 0.0199
+  route            seed33 best agglomerative_avg       -0.1981  worst kmeans                  -0.2287  spread 0.0306
+  solver           seed11 best filo2                   -0.1922  worst ails2                   -0.3046  spread 0.1124
+  solver           seed22 best filo2                   -0.2249  worst pyvrp                   -0.3840  spread 0.1591
+  solver           seed33 best ails2                    0.0280  worst pyvrp                   -0.3030  spread 0.3310
+
+Primary. New-incumbent rate, adjusted for the iteration index.
+  wheel            best                   worst                    spread                   95% CI     stat         p      holm    n
+  k                2                      4                        0.0794 [0.0593, 0.1016]   83.354  1.67e-16  6.66e-16  100
+  lambda           0.6                    0.2                      0.0506 [0.0387, 0.0712]   76.657  4.19e-15  1.26e-14  100
+  paradigm         route                  vertex                   0.0118 [0.0025, 0.0211] 1779.000    0.0103    0.0206  100
+  vertex           fcm                    agglomerative_complete   0.1160 [0.0988, 0.1341]  212.256  8.69e-45  5.21e-44  100
+  route            agglomerative_avg      kmeans                   0.0226 [0.0114, 0.0374]    7.440    0.0242    0.0242  100
+  solver           ails2                  pyvrp                    0.0600 [0.0474, 0.0736]  100.620  1.14e-21  5.72e-21  100
+  Spread unit: share of draws (adjusted means can fall outside [0, 1]). Holm is across the six wheels.
+  Adjusted arm means, averaged across instances. Brackets are bootstrap 95% intervals.
+  k
+    within-instance slope per iteration: median -0.0032, IQR [-0.0076, -0.0020]
+    2                        0.1143  [0.0959, 0.1333]
+    3                        0.0777  [0.0630, 0.0937]
+    4                        0.0350  [0.0233, 0.0471]
+    6                        0.0676  [0.0545, 0.0821]
+    8                        0.0518  [0.0421, 0.0613]
+    10                       0.0927  [0.0791, 0.1071]
+  lambda
+    within-instance slope per iteration: median -0.0030, IQR [-0.0062, -0.0020]
+    0                        0.0541  [0.0464, 0.0623]
+    0.2                      0.0417  [0.0306, 0.0530]
+    0.4                      0.0919  [0.0767, 0.1082]
+    0.6                      0.0923  [0.0823, 0.1034]
+    0.8                      0.0639  [0.0569, 0.0716]
+    1                        0.0510  [0.0412, 0.0629]
+  paradigm
+    within-instance slope per iteration: median -0.0030, IQR [-0.0063, -0.0021]
+    vertex                   0.0610  [0.0537, 0.0687]
+    route                    0.0728  [0.0644, 0.0815]
+  vertex
+    within-instance slope per iteration: median -0.0034, IQR [-0.0078, -0.0019]
+    kmeans                   0.0814  [0.0691, 0.0939]
+    agglomerative_avg        0.0335  [0.0252, 0.0422]
+    agglomerative_complete   0.0101  [0.0026, 0.0176]
+    kmedoids                 0.0264  [0.0163, 0.0358]
+    fcm                      0.1261  [0.1132, 0.1392]
+  route
+    within-instance slope per iteration: median -0.0026, IQR [-0.0045, -0.0017]
+    kmeans                   0.0590  [0.0492, 0.0698]
+    agglomerative_avg        0.0816  [0.0707, 0.0928]
+    agglomerative_complete   0.0773  [0.0617, 0.0949]
+  solver
+    within-instance slope per iteration: median -0.0031, IQR [-0.0064, -0.0021]
+    pyvrp                    0.0388  [0.0298, 0.0493]
+    filo                     0.0516  [0.0456, 0.0577]
+    filo2                    0.0802  [0.0715, 0.0904]
+    ails2                    0.0988  [0.0837, 0.1144]
+
+Unadjusted quality. Same rows, no iteration covariate. Late draws pull this.
+  wheel            best                   worst                    spread                   95% CI     stat         p      holm    n
+  k                2                      4                        0.0949 [0.0712, 0.1375]  137.983  4.80e-28  1.44e-27  100
+  lambda           0.6                    1                        0.1241 [0.0980, 0.1584]  275.994  1.44e-57  8.66e-57  100
+  paradigm         route                  vertex                   0.1037 [0.0647, 0.1478]  844.000  7.48e-09  7.48e-09  100
+  vertex           fcm                    kmedoids                 0.1396 [0.1122, 0.1740]  236.424  5.46e-50  2.73e-49  100
+  route            agglomerative_avg      kmeans                   0.0354 [0.0248, 0.0473]   43.980  2.82e-10  5.64e-10  100
+  solver           ails2                  pyvrp                    0.1355 [0.1155, 0.1558]  225.156  1.54e-48  6.17e-48  100
+  Spread unit: pp of incumbent cost. Holm is across the six wheels.
+  k                point above 0.037; CI entirely above 0.037
+  lambda           point above 0.037; CI entirely above 0.037
+  paradigm         point above 0.037; CI entirely above 0.037
+  vertex           point above 0.037; CI entirely above 0.037
+  route            point below 0.037; CI crossing 0.037
+  solver           point above 0.037; CI entirely above 0.037
+  Unadjusted arm means, averaged across instances. Brackets are bootstrap 95% intervals.
+  k
+    2                       -0.1710  [-0.2008, -0.1417]
+    3                       -0.2090  [-0.2610, -0.1614]
+    4                       -0.2658  [-0.3219, -0.2156]
+    6                       -0.2310  [-0.2706, -0.1948]
+    8                       -0.2586  [-0.3048, -0.2154]
+    10                      -0.1745  [-0.2117, -0.1409]
+  lambda
+    0                       -0.2462  [-0.2853, -0.2098]
+    0.2                     -0.2632  [-0.3100, -0.2182]
+    0.4                     -0.2916  [-0.3473, -0.2432]
+    0.6                     -0.1675  [-0.1961, -0.1413]
+    0.8                     -0.2287  [-0.2770, -0.1837]
+    1                       -0.2917  [-0.3428, -0.2419]
+  paradigm
+    vertex                  -0.2935  [-0.3591, -0.2348]
+    route                   -0.1898  [-0.2148, -0.1669]
+  vertex
+    kmeans                  -0.2376  [-0.2912, -0.1913]
+    agglomerative_avg       -0.3331  [-0.4073, -0.2707]
+    agglomerative_complete  -0.3414  [-0.4130, -0.2820]
+    kmedoids                -0.3605  [-0.4374, -0.2959]
+    fcm                     -0.2209  [-0.2783, -0.1719]
+  route
+    kmeans                  -0.2076  [-0.2347, -0.1817]
+    agglomerative_avg       -0.1722  [-0.1946, -0.1506]
+    agglomerative_complete  -0.1872  [-0.2119, -0.1615]
+  solver
+    pyvrp                   -0.3048  [-0.3581, -0.2578]
+    filo                    -0.2534  [-0.2933, -0.2149]
+    filo2                   -0.2232  [-0.2626, -0.1867]
+    ails2                   -0.1693  [-0.2106, -0.1324]
+
+Robustness. Thirds of each run by raw iteration index, raw means, no covariate.
+  An instance enters a wheel only when every tested arm was drawn in that third.
+  Dropping those instances is exactly the selection the covariate avoids;
+  this block is a check, not the result.
+  Third 1, quality. Instances in the k test: 97.
+    k                n= 97  10 minus 4  spread 0.2124  [0.1570, 0.2736]  p 1.04e-32  holm 3.11e-32  point above 0.037; CI entirely above 0.037
+    lambda           n=100  0.6 minus 1  spread 0.2443  [0.1842, 0.3148]  p 7.76e-51  holm 3.11e-50  point above 0.037; CI entirely above 0.037
+    paradigm         n=100  vertex minus route  spread 0.0176  [0.0010, 0.0469]  p 0.0148  holm 0.0148  point below 0.037; CI crossing 0.037
+    vertex           n=100  fcm minus kmedoids  spread 0.4227  [0.3409, 0.5173]  p 7.03e-58  holm 4.22e-57  point above 0.037; CI entirely above 0.037
+    route            n=100  agglomerative_avg minus kmeans  spread 0.0676  [0.0540, 0.0838]  p 3.64e-20  holm 7.28e-20  point above 0.037; CI entirely above 0.037
+    solver           n=100  ails2 minus pyvrp  spread 0.2942  [0.2296, 0.3651]  p 1.47e-51  holm 7.36e-51  point above 0.037; CI entirely above 0.037
+  Third 2, quality. Instances in the k test: 88.
+    k                n= 88  2 minus 10  spread 0.1354  [0.0829, 0.2026]  p 1.62e-23  holm 9.71e-23  point above 0.037; CI entirely above 0.037
+    lambda           n= 99  0.2 minus 0.4  spread 0.0743  [0.0410, 0.1379]  p 1.15e-10  holm 2.30e-10  point above 0.037; CI entirely above 0.037
+    paradigm         n=100  route minus vertex  spread 0.1955  [0.1361, 0.2631]  p 1.02e-17  holm 4.08e-17  point above 0.037; CI entirely above 0.037
+    vertex           n= 99  kmedoids minus fcm  spread 0.0700  [0.0485, 0.1291]  p 6.24e-12  holm 1.87e-11  point above 0.037; CI entirely above 0.037
+    route            n= 96  agglomerative_avg minus kmeans  spread 0.0145  [0.0042, 0.0297]  p 0.1396  holm 0.1396  point below 0.037; CI entirely below 0.037
+    solver           n=100  ails2 minus pyvrp  spread 0.0817  [0.0590, 0.1085]  p 2.11e-22  holm 1.06e-21  point above 0.037; CI entirely above 0.037
+  Third 3, quality. Instances in the k test: 88.
+    k                n= 88  2 minus 10  spread 0.0966  [0.0647, 0.1486]  p 8.34e-22  holm 5.00e-21  point above 0.037; CI entirely above 0.037
+    lambda           n= 96  0.2 minus 0.8  spread 0.0404  [0.0263, 0.0838]  p 0.0003  holm 0.0006  point above 0.037; CI crossing 0.037
+    paradigm         n=100  route minus vertex  spread 0.1791  [0.1252, 0.2383]  p 3.78e-16  holm 1.51e-15  point above 0.037; CI entirely above 0.037
+    vertex           n= 91  kmedoids minus fcm  spread 0.0723  [0.0377, 0.1411]  p 1.61e-07  holm 4.82e-07  point above 0.037; CI entirely above 0.037
+    route            n= 97  agglomerative_avg minus kmeans  spread 0.0085  [0.0028, 0.0220]  p 0.3567  holm 0.3567  point below 0.037; CI entirely below 0.037
+    solver           n= 99  ails2 minus pyvrp  spread 0.0750  [0.0482, 0.1084]  p 1.85e-20  holm 9.23e-20  point above 0.037; CI entirely above 0.037
+  Third 1, new-incumbent rate.
+    k                n= 97  spread 0.2750  [0.2272, 0.3265]  p 6.98e-25  holm 3.49e-24
+    lambda           n=100  spread 0.1683  [0.1195, 0.2274]  p 4.82e-18  holm 1.45e-17
+    paradigm         n=100  spread 0.0102  [0.0005, 0.0341]  p 0.7205  holm 0.7205
+    vertex           n=100  spread 0.3160  [0.2763, 0.3580]  p 1.18e-52  holm 7.07e-52
+    route            n=100  spread 0.1289  [0.1046, 0.1586]  p 5.81e-10  holm 1.16e-09
+    solver           n=100  spread 0.1063  [0.0867, 0.1257]  p 5.06e-20  holm 2.02e-19
+  Third 2, new-incumbent rate.
+    k                n= 88  spread 0.0102  [0.0084, 0.0420]  p 0.0988  holm 0.1727
+    lambda           n= 99  spread 0.0246  [0.0161, 0.0452]  p 3.27e-05  holm 0.0001
+    paradigm         n=100  spread 0.0369  [0.0247, 0.0494]  p 3.39e-08  holm 1.69e-07
+    vertex           n= 99  spread 0.0141  [0.0051, 0.0293]  p 0.0863  holm 0.1727
+    route            n= 96  spread 0.0411  [0.0192, 0.0761]  p 0.0064  holm 0.0191
+    solver           n=100  spread 0.0775  [0.0567, 0.1001]  p 5.26e-23  holm 3.16e-22
+  Third 3, new-incumbent rate.
+    k                n= 88  spread 0.0114  [0.0073, 0.0350]  p 0.0022  holm 0.0090
+    lambda           n= 96  spread 0.0094  [0.0066, 0.0206]  p 0.0139  holm 0.0379
+    paradigm         n=100  spread 0.0187  [0.0109, 0.0276]  p 2.95e-05  holm 0.0001
+    vertex           n= 91  spread 0.0071  [0.0000, 0.0196]  p 0.2548  holm 0.2548
+    route            n= 97  spread 0.0253  [0.0118, 0.0416]  p 0.0126  holm 0.0379
+    solver           n= 99  spread 0.0453  [0.0270, 0.0676]  p 5.73e-10  holm 3.44e-09
+
+Warm-up, iterations 0-9. Same adjustment, same two outcomes.
+  Logged selection probabilities at iteration 0 are uniform on every run.
+  The realized draw is not an independent sample per instance. Within a seed
+  the arm at a given iteration is the same on nearly every instance; the
+  three seeds differ. Modal within-seed shares for the subsolver:
+    iteration 0: seed11 1.00 of 100, seed22 1.00 of 100, seed33 1.00 of 100
+    iteration 9: seed11 1.00 of 100, seed22 1.00 of 100, seed33 1.00 of 100
+    iteration 30: seed11 1.00 of 85, seed22 0.82 of 91, seed33 0.99 of 95
+    iteration 70: seed11 0.56 of 43, seed22 1.00 of 57, seed33 1.00 of 63
+  The vertex-method wheel is also thin. Both facts qualify the warm-up test.
+  k                cells  600  min  1  median 4.0  max  7  under 5: 411 (0.685)
+  lambda           cells  600  min  1  median 5.0  max  9  under 5: 300 (0.500)
+  paradigm         cells  200  min 15  median 15.0  max 15  under 5: 0 (0.000)
+  vertex           cells  500  min  2  median 3.0  max  4  under 5: 500 (1.000)
+  route            cells  300  min  4  median 5.0  max  6  under 5: 100 (0.333)
+  solver           cells  400  min  2  median 7.0  max 14  under 5: 200 (0.500)
+
+Warm-up quality, adjusted for the iteration index.
+  wheel            best                   worst                    spread                   95% CI     stat         p      holm    n
+  k                4                      8                        0.4536 [0.3305, 0.5881]  217.274  5.70e-45  1.71e-44  100
+  lambda           1                      0.4                      0.7243 [0.5632, 0.9029]  366.057  6.10e-77  3.66e-76  100
+  paradigm         vertex                 route                    0.1053 [0.0653, 0.1450]  418.000  4.34e-13  8.68e-13  100
+  vertex           kmeans                 kmedoids                 0.9193 [0.7262, 1.1504]  306.640  4.00e-65  2.00e-64  100
+  route            agglomerative_avg      kmeans                   0.0591 [0.0431, 0.0782]   42.140  7.07e-10  7.07e-10  100
+  solver           ails2                  filo                     1.4443 [1.0966, 1.8343]  246.252  4.23e-53  1.69e-52  100
+  Spread unit: pp of incumbent cost. Holm is across the six wheels.
+  k                point above 0.037; CI entirely above 0.037
+  lambda           point above 0.037; CI entirely above 0.037
+  paradigm         point above 0.037; CI entirely above 0.037
+  vertex           point above 0.037; CI entirely above 0.037
+  route            point above 0.037; CI entirely above 0.037
+  solver           point above 0.037; CI entirely above 0.037
+  Adjusted arm means, averaged across instances. Brackets are bootstrap 95% intervals.
+  k
+    within-instance slope per iteration: median -0.0822, IQR [-0.1659, -0.0521]
+    2                       -0.0127  [-0.0399, 0.0123]
+    3                        0.2140  [0.1513, 0.2858]
+    4                        0.3971  [0.2828, 0.5251]
+    6                        0.2311  [0.1573, 0.3127]
+    8                       -0.0566  [-0.0930, -0.0257]
+    10                       0.2008  [0.1235, 0.2825]
+  lambda
+    within-instance slope per iteration: median -0.0817, IQR [-0.1489, -0.0537]
+    0                        0.1369  [0.0955, 0.1860]
+    0.2                     -0.0134  [-0.0394, 0.0129]
+    0.4                     -0.3984  [-0.4983, -0.3083]
+    0.6                      0.1387  [0.0879, 0.1961]
+    0.8                      0.1986  [0.1268, 0.2873]
+    1                        0.3259  [0.2501, 0.4100]
+  paradigm
+    within-instance slope per iteration: median -0.0695, IQR [-0.1277, -0.0421]
+    vertex                   0.1600  [0.1061, 0.2219]
+    route                    0.0547  [0.0297, 0.0839]
+  vertex
+    within-instance slope per iteration: median -0.1163, IQR [-0.2123, -0.0705]
+    kmeans                   0.5644  [0.4356, 0.7342]
+    agglomerative_avg        0.1368  [0.0871, 0.1928]
+    agglomerative_complete   0.3166  [0.2277, 0.4229]
+    kmedoids                -0.3549  [-0.4455, -0.2763]
+    fcm                      0.5050  [0.3701, 0.6678]
+  route
+    within-instance slope per iteration: median -0.0058, IQR [-0.0142, -0.0016]
+    kmeans                  -0.1040  [-0.1226, -0.0863]
+    agglomerative_avg       -0.0449  [-0.0573, -0.0331]
+    agglomerative_complete  -0.0582  [-0.0749, -0.0410]
+  solver
+    within-instance slope per iteration: median -0.0581, IQR [-0.1160, -0.0418]
+    pyvrp                   -0.0619  [-0.0846, -0.0409]
+    filo                    -0.0788  [-0.0954, -0.0639]
+    filo2                    0.1617  [0.1077, 0.2260]
+    ails2                    1.3655  [1.0258, 1.7475]
+
+Warm-up new-incumbent rate, adjusted for the iteration index.
+  wheel            best                   worst                    spread                   95% CI     stat         p      holm    n
+  k                2                      8                        0.3785 [0.3156, 0.4408]  116.977  1.37e-23  6.85e-23  100
+  lambda           1                      0.2                      0.4066 [0.2957, 0.5099]   39.920  1.55e-07  3.10e-07  100
+  paradigm         route                  vertex                   0.0366 [0.0055, 0.0704] 2029.000    0.0881    0.0881  100
+  vertex           fcm                    kmedoids                 0.4439 [0.3913, 0.4938]  158.232  3.50e-33  2.10e-32  100
+  route            agglomerative_avg      kmeans                   0.1467 [0.1069, 0.1883]   34.081  3.98e-08  1.19e-07  100
+  solver           ails2                  filo                     0.1526 [0.1235, 0.1901]   60.516  4.56e-13  1.82e-12  100
+  Spread unit: share of draws. Holm is across the six wheels.
+  Adjusted arm means, averaged across instances. Brackets are bootstrap 95% intervals.
+  k
+    within-instance slope per iteration: median -0.0846, IQR [-0.1068, -0.0594]
+    2                        0.5647  [0.5184, 0.6100]
+    3                        0.3682  [0.3280, 0.4095]
+    4                        0.4030  [0.3502, 0.4601]
+    6                        0.3436  [0.3091, 0.3783]
+    8                        0.1862  [0.1487, 0.2245]
+    10                       0.2832  [0.2487, 0.3166]
+  lambda
+    within-instance slope per iteration: median -0.0735, IQR [-0.0925, -0.0582]
+    0                        0.3256  [0.3027, 0.3494]
+    0.2                      0.2383  [0.1978, 0.2790]
+    0.4                      0.3081  [0.2466, 0.3709]
+    0.6                      0.2898  [0.2536, 0.3245]
+    0.8                      0.3207  [0.3021, 0.3410]
+    1                        0.6449  [0.5388, 0.7389]
+  paradigm
+    within-instance slope per iteration: median -0.0715, IQR [-0.0870, -0.0552]
+    vertex                   0.2974  [0.2816, 0.3128]
+    route                    0.3339  [0.3059, 0.3640]
+  vertex
+    within-instance slope per iteration: median -0.0930, IQR [-0.1096, -0.0789]
+    kmeans                   0.4804  [0.4431, 0.5202]
+    agglomerative_avg        0.3063  [0.2717, 0.3403]
+    agglomerative_complete   0.2934  [0.2567, 0.3340]
+    kmedoids                 0.1009  [0.0525, 0.1515]
+    fcm                      0.5449  [0.5262, 0.5673]
+  route
+    within-instance slope per iteration: median -0.0284, IQR [-0.0545, -0.0083]
+    kmeans                   0.1702  [0.1320, 0.2140]
+    agglomerative_avg        0.3169  [0.2853, 0.3503]
+    agglomerative_complete   0.2870  [0.2428, 0.3359]
+  solver
+    within-instance slope per iteration: median -0.0698, IQR [-0.0865, -0.0499]
+    pyvrp                    0.3280  [0.2811, 0.3743]
+    filo                     0.2468  [0.2243, 0.2705]
+    filo2                    0.3847  [0.3620, 0.4095]
+    ails2                    0.3994  [0.3726, 0.4277]
+
+Figure
+  figures/haos_arm_quality.tex
+  Six panels. Points are the primary adjusted quality means.
+  The band on each panel is that panel's unweighted arm mean ± 0.037 pp.
+  It is the seed-noise floor drawn around the arms, not a band around zero:
+  the BG-AILS candidate is typically a fraction of a percent worse than C_t,
+  so a band at ±0.037 around zero would sit off the estimates.
+

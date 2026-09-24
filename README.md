@@ -1,81 +1,138 @@
 # DRISPI
 
-Python research solver for capacitated VRP. Hierarchical adaptive operator
-selection (HAOS) decomposes the instance, heterogeneous subcluster solvers
-build routes, a route pool feeds set covering / partitioning (SC/SP), and
-boundary-guided AILS-II (BG-AILS) improves the incumbent.
+Python solver for the capacitated vehicle routing problem. It decomposes an instance, solves the pieces with PyVRP, FILO, FILO2, and AILS-II, keeps a route pool, and improves the incumbent with set partitioning and boundary-guided AILS-II.
 
-## Layout
+## Install
 
-| Path | What |
-|------|------|
-| `drispi/` | Installable package (pipeline, HAOS, clustering, solvers, SP, pool) |
-| `scripts/` | Campaign runner and analysis CLIs |
-| `configs/` | YAML profiles; merge on top of `configs/default.yaml` |
-| `tests/` | Pytest suite |
-| `data/` | Instances and BKS files (instances are not in the Docker image) |
-| `ext/` | AILS-II, FILO, FILO2 sources |
-| `docs/` | Mode and Docker notes |
+Python 3.11 or newer. From the repo root:
 
-## Setup
+```bash
+git submodule update --init --recursive
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+```
 
-Python 3.11+. Create an environment and install with `pip install -e ".[dev]"`
-(or `uv sync --dev`). Native solvers live under `ext/` and must be built for
-`filo` / `filo2` / `ails2`.
+`uv sync --dev` is the same install if you use uv.
 
-For Gurobi + compiled solvers on a server, build the image from the repo-root
-`Dockerfile` and mount `gurobi.lic`. See [DOCKER.md](DOCKER.md).
+Set covering and set partitioning call Gurobi (`gurobipy`). Put a license where Gurobi can see it, usually `GRB_LICENSE_FILE` or `~/gurobi.lic`. A run with `sp_sc.mode: "off"` still imports the package.
 
-## Running
+Build FILO, FILO2, and AILS-II before a run that uses them. Steps are in [docs/building.md](docs/building.md).
 
-Single instance:
+Instances used below are under `data/instances/`. Best-known costs are in `data/bks/xl-bks.json` and are loaded automatically.
+
+## One instance
+
+`configs/default.yaml` is the full flag list. Any other YAML in `configs/` is merged on top of it. CLI flags override the YAML.
+
+Sync (DRI, BG-AILS, and SC/SP share the main process):
+
+```bash
+drispi-pipeline data/instances/xl/XL-n2307-k34.vrp \
+  --config configs/sync_example.yaml \
+  --time-limit 600 \
+  --seed 100
+```
+
+Async production slice (6 decompose-route workers, 1 BG-AILS core, 1 SP core):
 
 ```bash
 drispi-pipeline data/instances/xl/XL-n2307-k34.vrp \
   --config configs/async_example.yaml \
-  --cpus 0-7
+  --cpus 0-7 \
+  --time-limit 7200 \
+  --seed 100
 ```
 
-Equivalent: `python -m drispi.pipeline.runner …`. See `--help` for time limits,
-`--gui`, and `--analysis`.
+`python -m drispi.pipeline.runner` is the same entry point. `--help` lists time limit, seed, output directory, `--gui`, and `--analysis`.
 
-Final 100-XL × 3-seed campaign (6+1+1, 4 slices on 32 cores, ~150 h):
+Output goes to `artifacts/runs/<instance>_<timestamp>/` unless the YAML sets `output_dir`. That directory is gitignored.
+
+## Sync and async
+
+Two switches, set independently in YAML. There is no CLI flag for them.
+
+| Block | `sync` | `async` |
+|-------|--------|---------|
+| `bg_ails.mode` | Improvement runs on the main thread and blocks the next iteration. | A worker on `cores.bg` improves while the next decompose-route wave runs. Needs `cores.bg >= 1`. |
+| `sp_sc.mode` | Gurobi and post-SP AILS run on the main thread after the trigger. | A worker on `cores.sp` owns the MIP. The main loop keeps going and applies a finished result at the start of a later iteration. |
+
+`sp_sc.mode: "off"` skips set covering and set partitioning. Quote `off`. In YAML 1.1 an unquoted `off` becomes boolean false.
+
+Sync SC/SP always fires on iterations: after `warmup_iterations`, every `sp_interval` iterations, once the pool meets `min_coverage`. Async can use that same iteration trigger, or `trigger: wallclock` with `interval_minutes`. `trigger: wallclock` is invalid with `mode: sync`.
+
+Short overlays:
+
+- [configs/sync_example.yaml](configs/sync_example.yaml) — sync, no CPU pin.
+- [configs/async_example.yaml](configs/async_example.yaml) — 6+1+1, both workers async, wall-clock SP every 20 minutes.
+- [configs/final_benchmark.yaml](configs/final_benchmark.yaml) — the same 6+1+1 layout with a 2 hour limit.
+
+Scheduling, overlap, and log lines are in [docs/sp_sc_modes.md](docs/sp_sc_modes.md).
+
+## Full benchmark
+
+`scripts/run_final_benchmark.py` runs every `data/instances/xl/*.vrp` file for seeds 100, 200, and 300. Each job uses one 8-core slice and `configs/final_benchmark.yaml` (2 hours, async BG-AILS, async SP). On 32 cores that is 4 slices at a time. Finished `(instance, seed)` rows in `artifacts/final_benchmark/campaign.jsonl` are skipped on the next start.
 
 ```bash
 python scripts/run_final_benchmark.py --dry-run
 python scripts/run_final_benchmark.py --cpu-base 0 --total-cores 32
 ```
 
-Resume is the default: already-`ok` `(instance, seed)` rows in
-`artifacts/final_benchmark/campaign.jsonl` are skipped. SP is on, so mount a
-Gurobi license. Pin an exclusive 32-core island.
+One slice of that campaign, same config and logging:
 
-## Configuration
+```bash
+python scripts/run_final_benchmark.py --single \
+  --instance data/instances/xl/XL-n2307-k34.vrp \
+  --seed 100 --cpus 0-7
+```
 
-`configs/default.yaml` is the complete reference (every `DRISPIConfig` flag).
-Profile YAMLs merge on top; keys they set win.
+A smaller custom set, without the XL campaign layout:
 
-**Production 8-core slice** is 6 DRI + 1 BG-AILS + 1 SP, with both BG and SP
-async. That layout is [`configs/async_example.yaml`](configs/async_example.yaml).
-Uncomment the `cores:` block in `default.yaml` or pass that profile with
-`--cpus 0-7`.
+```bash
+python scripts/run_benchmark.py "data/instances/x/*.vrp" \
+  --config configs/sync_example.yaml \
+  --total-cores 8 \
+  --cores-per-instance 8 \
+  --time-limit 600
+```
 
-BG-AILS quality knobs currently in default: `pair_selection: greedy`,
-`n_chains_mode: k`, `initial_omega: 10`. The time budget tracks the predicted
-decompose-route wall of the current partition:
-`max(floor_s, margin * scale * n_waves^wave_exponent * lockstep_sum)`
-with knobs under `bg_ails.budget` in `default.yaml`. The hang detector uses
-the same predictor, with slack `max(2x, x+120)`.
+`--dry-run` prints the queue and exits.
 
-The HAOS level-1 k domain is no longer a fixed candidate list — it is computed
-once per instance at init from `(n, K_min)` in the instance name (tunables
-under `decomposition.k_domain`; see `drispi/haos/k_domain.py`). Default is
-the confirmation C4 setup: base `{2,3,4,6,8,10,12}` with `ext_per_1000: 4`.
-The computed domain is logged on the run's init JSONL event. The imbalance
-law `max_share = 1.062 * k^{-0.795}` is a recorded measurement only and is
-not applied at runtime.
+## Where things live
 
-SC/SP modes, pinning, and YAML `off` quoting: [docs/sp_sc_modes.md](docs/sp_sc_modes.md).
+`drispi/` is the installable package. A run enters through `drispi/pipeline/runner.py`, which loads YAML into `drispi/pipeline/config.py` and drives `drispi/pipeline/pipeline.py`.
 
-**YAML 1.1:** always quote `sp_sc.mode: "off"`. Unquoted `off` becomes boolean
-`False` and the pipeline silently treats it as sync.
+| Package | Role |
+|---------|------|
+| `drispi/pipeline/` | Main loop, core pinning, sync/async workers for BG-AILS and SC/SP, run logs, post-run charts |
+| `drispi/haos/` | Hierarchical adaptive operator selection: which k, clustering method, and solver to try next |
+| `drispi/clustering/` | Vertex clustering (`kmeans`, agglomerative, k-medoids, fuzzy c-means) and route clustering |
+| `drispi/solvers/` | Subproblem solvers: PyVRP in-process, FILO / FILO2 / AILS-II as subprocesses |
+| `drispi/route_pool/` | Route pool, diversity, coverage, and the AILS pass that follows a successful SP |
+| `drispi/sp/` | Set covering and set partitioning models solved with Gurobi |
+| `drispi/improvement/` | Boundary-guided AILS-II and its time-budget predictor |
+| `drispi/core/` | Instance, solution, and shared types |
+| `drispi/dashboard/` | Streamlit view started with `--gui` |
+| `drispi/ablation/` | BG-AILS ablation study (checkpoints, arm comparison, touch-counter jar). How to run it is in `drispi/ablation/README.md` |
+| `drispi/utils/` | `.vrp` / `.sol` IO, BKS gaps, timestamps |
+
+`configs/default.yaml` lists every flag. `sync_example.yaml`, `async_example.yaml`, and `final_benchmark.yaml` only override what they change.
+
+`ext/` holds the COBRA, FILO, FILO2, and AILS-II sources as submodules. Build steps are in [docs/building.md](docs/building.md). Mode details are in [docs/sp_sc_modes.md](docs/sp_sc_modes.md).
+
+`scripts/` has two runners (`run_final_benchmark.py`, `run_benchmark.py`) and the scripts that turn campaign logs into thesis figures and tables. The figure scripts read `data/results/` and write under `figures/`.
+
+`data/` has three parts:
+
+- `data/instances/x/` and `data/instances/xl/` are the `.vrp` files.
+- `data/bks/xl-bks.json` maps an instance name to a best-known cost.
+- `data/results/` is the committed study output, not a place new runs write to. New runs go to `artifacts/`, which is gitignored. The two campaign tables are `finalBenchmarkResults_lagrange.csv` and `finalBenchmarkResults_dantzig.csv` (per instance, three seeds, cost, gap, and 30/60/90/120 minute checkpoints). The final benchmark on Dantzig is not part of the thesis results (it achieved found one BKS exactly and beat one initial BKS). The benchmark published in the thesis is the one run on Lagrange.  Beside them are the comparison tables (`xl_solver_comparison_*.csv`), HAOS traces (`haos_campaign_lagrange.json`, `haos_wheel_state.csv`, credit CSVs), gap and paired-test JSON, and `bg_ails_ablation/*.json` for the ablation figures. `dantzig_benchmark/` and `lagrange_benchmark/` keep the raw per-run logs those tables were built from.
+
+`tests/` mirrors the package: `unit/`, `clustering/`, `haos/`, `route_pool/`, `sp/`, `improvement/`, `pipeline/`, `dashboard/`, and `ablation/`. `tests/integration/` runs a real pipeline on small and XL instances and is marked `integration` (some cases also `slow`). The default pytest invocation skips those markers:
+
+```bash
+pytest
+pytest -m integration
+```
+
+`thesis/` is the write-up. It is not required to install or run the solver.

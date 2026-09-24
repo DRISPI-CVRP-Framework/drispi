@@ -320,28 +320,26 @@ def test_load_rejects_non_predicted_dr_wall_budget_mode(tmp_path: Path) -> None:
         load_config(path)
 
 
-def test_confirmation_profiles_differ_only_in_k_domain() -> None:
+def test_shipping_profiles_keep_c4_k_domain() -> None:
+    """Pilot overlays are gone. The shipped default is the old C4 domain."""
     repo_root = Path(__file__).resolve().parents[2]
     configs = repo_root / "configs"
-    cell0 = load_config(configs / "pilot_cell0prime.yaml")
-    cell_c4 = load_config(configs / "pilot_cellC4.yaml")
-    cell_c6 = load_config(configs / "pilot_cellC6.yaml")
-    cell_thin = load_config(configs / "pilot_cellC6thin.yaml")
-    assert cell0.decomp_k_base_arms == [1, 2, 3, 4, 6, 8, 10, 12]
-    assert cell0.decomp_k_ext_per_1000 == 0
-    assert cell_c4.decomp_k_base_arms == [2, 3, 4, 6, 8, 10, 12]
-    assert cell_c4.decomp_k_ext_per_1000 == 4
-    assert cell_c6.decomp_k_base_arms == [2, 3, 4, 6, 8, 10, 12]
-    assert cell_c6.decomp_k_ext_per_1000 == 6
-    assert cell_thin.decomp_k_base_arms == [2, 4, 8, 12]
-    assert cell_thin.decomp_k_ext_per_1000 == 6
-    for loaded in (cell0, cell_c4, cell_c6, cell_thin):
+    default = load_config(configs / "default.yaml")
+    final = load_config(configs / "final_benchmark.yaml")
+    async_example = load_config(configs / "async_example.yaml")
+    for loaded in (default, final, async_example):
+        assert loaded.decomp_k_base_arms == [2, 3, 4, 6, 8, 10, 12]
+        assert loaded.decomp_k_ext_per_1000 == 4
+        assert loaded.decomp_k_min_routes_per_cluster == 8
+        assert loaded.decomp_k_min_arm_spacing == 2
         assert loaded.bg_ails_budget_margin == 1.0
+    assert default.bg_ails_mode == "sync"
+    assert default.sp_sc_mode == "sync"
+    assert default.cores_total is None
+    for loaded in (final, async_example):
         assert loaded.cores_dri == 6
         assert loaded.bg_ails_mode == "async"
         assert loaded.sp_sc_mode == "async"
-        assert loaded.decomp_k_min_routes_per_cluster == 8
-        assert loaded.decomp_k_min_arm_spacing == 2
 
 
 def test_build_haos_config_uses_dataclass_k_domain_defaults() -> None:

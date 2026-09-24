@@ -1,0 +1,20 @@
+# Single-process slice: DRI, BG-AILS, and SC/SP all run inline.
+# Merges on top of configs/default.yaml.
+#
+# No cores: block, so parallelism is n_workers on the decompose-route loop.
+# BG-AILS and SC/SP block that loop while they run.
+# Quote mode values. YAML 1.1 turns a bare off into boolean false.
+
+n_workers: 8
+
+bg_ails:
+  mode: sync
+
+sp_sc:
+  mode: sync
+  trigger: iteration
+  warmup_iterations: 5
+  sp_interval: 3
+  min_coverage: 5
+  sp_time_limit: 720.0
+  mip_gap: 0.00025

@@ -18,9 +18,9 @@ The XL set of \citet{queirogaXLInstancesCapacitated2026} closes that range with 
 
 \section{State-of-the-Art Solvers for Large-Scale CVRP}\label{sec:lit-large-cvrp}
 
-On the XL set, the methods that produced the initial \gls{bks} values are metaheuristics that search over the complete solution space. We call such a method monolithic when it maintains one complete feasible solution, or a population of them, under a single search process that can in principle modify any route. Neighborhoods may be localized or sparsified without affecting this classification. What falls outside it are independent customer partitions, solved separately and merged by an outer recombination layer.
+On the XL set, the methods that produced the initial \gls{bks} values are metaheuristics that search over the complete solution space. This thesis uses the term monolithic for a method that maintains one complete feasible solution, or a population of them, under a single search process that can in principle modify any route. Neighborhoods may be localized or sparsified without affecting this classification. What falls outside it are independent customer partitions, solved separately and merged by an outer recombination layer.
 
-\citet{queirogaXLInstancesCapacitated2026} ran AILS-II, FILO, FILO2, KGLS-XXL, HGS-CVRP, SISRs, LKH-3, and OR-Tools on every XL instance, with 60 seeds of two hours per code on a single thread. Of the 100 initial \gls{bks} values, AILS-II found 93, FILO2 six, and FILO one. The authors report HGS-CVRP, SISRs, LKH-3, and OR-Tools as an indication only, because their code implementations were not calibrated for instances with up to 10{,}000 customers. The two-hour time limit is the budget previously, that was also used on X instances of at most 1{,}000 customers.
+\citet{queirogaXLInstancesCapacitated2026} ran AILS-II, FILO, FILO2, KGLS-XXL, HGS-CVRP, SISR, LKH-3, and OR-Tools on every XL instance, with 60 seeds of two hours per code on a single thread. Of the 100 initial \gls{bks} values, AILS-II found 93, FILO2 six, and FILO one. The authors report HGS-CVRP, SISR, LKH-3, and OR-Tools as an indication only, because their code implementations were not calibrated for instances with up to 10{,}000 customers. The two-hour time limit is the budget previously, that was also used on X instances of at most 1{,}000 customers.
 
 A key concept that several of the above-mentioned solvers employ is \gls{ils}. \gls{ils} alternates a perturbation of the current solution with a local search that returns it to a local optimum. An acceptance criterion then decides which local optimum the next perturbation starts from \citep{lourencoIteratedLocalSearch2003}. \citet{lourencoIteratedLocalSearch2003} argue that the perturbation strength governs the behavior of the method. A perturbation that is too weak lets the local search fall back into the same local optimum, while one that is too strong turns the method into a random restart. The classical example calibrated to that tension is the double-bridge move of \citet{martinLargestepMarkovChains1991}, which a simple local search built from small moves cannot undo in one step.
 
@@ -48,7 +48,7 @@ Literature offers several ideas to tackle the scalability problem. Parallel sear
 
 Applied to vehicle routing, these designs multiply processor effort on the full instance. \citet{groerParallelAlgorithmVehicle2011} combine heuristic local search with integer programming across as many as 129 processors. \citet{jinCooperativeParallelMetaheuristic2014} run cooperative tabu-search threads that share a common solution pool, where entering solutions are clustered by similarity so that the clusters can balance between intensification and diversification more effectively.
 
-In both methods, every worker still searches the full customer set. Parallelism changes how many neighborhoods or incumbents are examined per wall-clock second, without reducing the size of the problem each worker faces. \citet{parallel_taillard_1993} instead partitions the customers geographically and solves the resulting subproblems with parallel iterative search. But solving customer subsets concurrently requires a dedicated decomposition layer, on which we focus in Section~\ref{sec:lit-decomposition}.
+In both methods, every worker still searches the full customer set. Parallelism changes how many neighborhoods or incumbents are examined per wall-clock second, without reducing the size of the problem each worker faces. \citet{parallel_taillard_1993} instead partitions the customers geographically and solves the resulting subproblems with parallel iterative search. But solving customer subsets concurrently requires a dedicated decomposition layer, discussed later in Section~\ref{sec:lit-decomposition}.
 
 \subsection{Route Pools and Set Partitioning}\label{sec:lit-set-covering}
 
@@ -138,11 +138,11 @@ An unpublished project study adapted DRSCI to the \gls{cvrp} and reported a mean
 
 No published decomposition framework maintains weights over its decomposition and subsolver choices and updates them from the solution costs observed on the instance it is solving. The reviewed methods settle that configuration in one of five ways:
 \begin{itemize}
-  \item by a fixed rule or a calibrated default \citep{parallel_taillard_1993,queirogaPOPMUSICMatheuristic2021,santiniDecompositionStrategiesVehicle2023},
-  \item by a clustering-quality criterion evaluated once per instance, before routing begins \citep{kerscherDecomposerouteimproveFrameworkSolving2025},
-  \item by a schedule that cycles the routing strategies and narrows the cluster-count range to the interval spanned by the counts that contributed routes to the incumbent \citep{kerscherSolvingHeterogeneousVehicle},
-  \item by a policy trained before the test instance is solved \citep{liLearningDelegate2021,houGeneralizeLearnedHeuristics2023,yeGLOP2024}, or
-  \item by a pretrained model that reads partition diagnostics without cost feedback \citep{karaahmetogluAdaptiveClusterFirst2026}.
+  \item By a fixed rule or a calibrated default \citep{parallel_taillard_1993,queirogaPOPMUSICMatheuristic2021,santiniDecompositionStrategiesVehicle2023},
+  \item By a clustering-quality criterion evaluated once per instance, before routing begins \citep{kerscherDecomposerouteimproveFrameworkSolving2025},
+  \item By a schedule that cycles the routing strategies and narrows the cluster-count range to the interval spanned by the counts that contributed routes to the incumbent \citep{kerscherSolvingHeterogeneousVehicle},
+  \item By a policy trained before the test instance is solved \citep{liLearningDelegate2021,houGeneralizeLearnedHeuristics2023,yeGLOP2024}, or
+  \item By a pretrained model that reads partition diagnostics without cost feedback \citep{karaahmetogluAdaptiveClusterFirst2026}.
 \end{itemize}
 
 DRSCI \citep{kerscherSolvingHeterogeneousVehicle} is the closest of these to this thesis. Its narrowing rule does react to the instance at hand, but it acts on the cluster count alone. It selects uniformly inside the narrowed range, and it credits neither the clustering paradigm nor the routing strategy with the quality of what they produced. The \gls{dri} \citep{kerscherDecomposerouteimproveFrameworkSolving2025} adapts its granularity per instance as well, from a criterion that never observes a routing cost.

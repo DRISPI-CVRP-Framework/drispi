@@ -43,18 +43,15 @@ def main() -> None:
         ax.set_title(title)
         ax.set_xlabel("Standard deviations from the mean")
         ax.grid(True, linestyle=":", color="gray", alpha=0.6)
-        # The 0.222 pp point on panel (a) sits in the upper left and covers
-        # an annotation pinned to the top corner.
-        text_y = 0.72 if ax is axes[0] else 0.96
         ax.text(
             0.04,
-            text_y,
+            0.96,
             f"{fit.slope:+.3f} pp per SD\n$R^2 = {fit.rvalue**2:.3f}$",
             transform=ax.transAxes,
             va="top",
             ha="left",
             fontsize=8,
-            bbox={"facecolor": "white", "edgecolor": "none", "alpha": 0.85, "pad": 1.5},
+            bbox={"facecolor": "white", "edgecolor": "none", "alpha": 0.7, "pad": 1.5},
         )
     axes[0].set_ylabel("Seed standard deviation (pp)")
     axes[0].set_ylim(0, max(y) * 1.12)

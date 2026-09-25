@@ -7,14 +7,14 @@
 Moving and storing goods is expensive.
 In 2025, business logistics costs in the United States reached \$2.4 trillion, or 7.8\% of GDP \citep{cscmpStateOfLogistics2026}.
 Transportation alone accounts for 23\% of global energy-related CO$_2$ emissions \citep[p.~46]{itfTransportOutlook2023}, and the International Transport Forum projects urban freight activity to grow by a factor of 2.6 between 2019 and 2050 \citep[p.~91]{itfTransportOutlook2023}. Parcel delivery shows
-the scale most directly. Carriers in Germany handled 4.37 billion courier, express, and parcel shipments in 2025 \citep[p.~8]{bpexKEPStudie2026}, and carriers in the United States 23.1 billion \citep[p.~3]{pitneyBowesParcelShippingIndex2026}. Where route planning is already automated, further savings have to come from better solutions. At full deployment, the ORION route optimization system at UPS was estimated to cut about 100 million miles a year from roughly 55,000 daily routes \citep[pp.~8, 19]{hollandUPSOptimizesDelivery2017}. That are 100 million miles saved that do not cause anymore costs, emissions, and delays. 
+the scale most directly. Carriers in Germany handled 4.37 billion courier, express, and parcel shipments in 2025 \citep[p.~8]{bpexKEPStudie2026}, and carriers in the United States 23.1 billion \citep[p.~3]{pitneyBowesParcelShippingIndex2026}. Where route planning is already automated, further savings have to come from better solutions. At full deployment, the ORION route optimization system at UPS was estimated to cut about 100 million miles a year from roughly 55,000 daily routes \citep[pp.~8, 19]{hollandUPSOptimizesDelivery2017}. Those are 100 million miles saved that do not cause any more costs, emissions, and delays. 
 
 Modern parcel carriers plan their delivery tours per depot. A single depot can serve several thousand customers a day. Instances that \citet{efficiently_arnold_2019} derive from Belgian parcel operations range from a few thousand to 30{,}000 customers.
 Each such plan can be modeled as an instance of the \gls{cvrp}. A homogeneous fleet of vehicles with limited capacity leaves a depot, visits every customer exactly once, and returns at minimum total travel cost \citep{tothVehicleRouting2014}.
 Once customers and fleet are fixed, the route plan decides the travel cost. A small relative improvement that repeats on every tour of every day can add up to a significant cost reduction in absolute terms. But the plan also has to be ready within hours and at this scale, a method is only useful if it reaches a good solution inside a fixed wall-clock budget.
 
 This is why benchmark research has recently moved to the same scale.
-\citet{queirogaXLInstancesCapacitated2026} released a XL problem set of CVRPLib. The set contains 100 instances ranging from 1{,}000 to 10{,}000 customers, generated under a similar scheme of the X instances \citep{uchoaNewBenchmarkInstances2017}. The release also reports initial \gls{bks} values from two-hour runs of eight published solvers.
+\citet{queirogaXLInstancesCapacitated2026} released an XL problem set of CVRPLib. The set contains 100 instances ranging from 1{,}000 to 10{,}000 customers, generated under a similar scheme of the X instances \citep{uchoaNewBenchmarkInstances2017}. The release also reports initial \gls{bks} values from two-hour runs of eight published solvers.
 With the release they opened a CVRPLib \gls{bks} Challenge on January~12, 2026, allowing any team to submit an improved solution for automatic verification. Within a month, the challenge had improved 99 of the 100 initial values.
 The XL set therefore combines a deliberately varied \gls{cvrp} instance set under a common time budget with a reference that moves as the community improves it.
 
@@ -24,38 +24,35 @@ Of the 100 initial \gls{bks} values, AILS-II \citep{maximoAILSIIAdaptiveIterated
 
 These solvers scale through engineering inside one solution. Granular neighborhoods and selective vertex caching restrict move evaluation to promising arcs and recently changed vertices \citep{tothGranularTabuSearch2003,accorsiFastScalableHeuristic2021}.
 The cost of neighborhood evaluation, the memory for move descriptors, and the number of iterations needed to reach a given quality still grow fast with the customer count \citep{efficiently_arnold_2019,accorsiFastScalableHeuristic2021}.
-Among the eight solvers that \citet{queirogaXLInstancesCapacitated2026} compare, the hybrid genetic search HGS-CVRP \citep{vidalHybridGeneticSearchCVRP2022} has the best mean quality on instances with up to about 330 customers. AILS-II leads on the upper half of the X set and on XL\@. No single solver leads across the size range. And of the above-mentioned, each also runs with one configuration on every instance. But X and XL instances vary depot position, customer distribution, demand, and route length on purpose. A configuration ideally tailored to each instance would require long and computationally expensive tuning campaigns for every single instance.
+Among the eight solvers that \citet{queirogaXLInstancesCapacitated2026} compare, the hybrid genetic search HGS-CVRP \citep{vidalHybridGeneticSearchCVRP2022} has the best mean quality on instances with up to about 330 customers. AILS-II leads on the upper half of the X set and on XL\@. No single solver leads across the size range. Additionally, they also run with a single configuration on every instance. But X and XL instances vary depot position, customer distribution, demand, and route length intentionally. A configuration ideally tailored to each instance would require long and computationally expensive tuning campaigns for every single instance.
 
 Decomposition addresses the first of these limits and makes the second explicit.
 Splitting the customer set into subproblems of a few hundred customers moves each subproblem into the size range where HGS-CVRP leads. The resulting independent subproblems could also be solved in parallel.
 The \gls{dri} framework of \citet{kerscherDecomposerouteimproveFrameworkSolving2025} and its set-covering successor \gls{drsci} \citep{kerscherSolvingHeterogeneousVehicle} wrap existing routing software in this way.
 Both note that their subproblems could be solved in parallel, but the published experiments run on a single thread only so far.
-\citet{santiniDecompositionStrategiesVehicle2023} show that route-based decomposition improves both \gls{alns} and \gls{hgs} on the X instances. The benefit however depends on the strategy and the instance, and a poor decomposition can fail to help just as easily.
+\citet{santiniDecompositionStrategiesVehicle2023} show that route-based decomposition improves both \gls{alns} and \gls{hgs} on the X instances. The benefit, however, depends on the strategy and the instance, and a poor decomposition can fail to help just as easily.
 
-Which decomposition to apply, and which subsolver to run on the subproblems, is therefore a configuration choice of its own.
+Selecting which decomposition to apply and which subsolver to run on the subproblems is therefore a configuration choice of its own.
 State-of-the-art methods settle it by a fixed rule or calibrated default \citep{queirogaPOPMUSICMatheuristic2021,santiniDecompositionStrategiesVehicle2023}, by a clustering-quality criterion evaluated once per instance \citep{kerscherDecomposerouteimproveFrameworkSolving2025}, or by a policy trained before the instance is seen \citep{liLearningDelegate2021,yeGLOP2024}. \gls{drsci} comes closest to adapting within a run.
 It narrows the range of cluster counts to the interval spanned by the counts that contributed routes to the current best solution. But it draws uniformly inside that range and credits neither the clustering paradigm nor the routing strategy with the quality of what they produced. No published decomposition framework weights its decomposition and subsolver choices by the solution costs observed on the instance it is solving (Chapter~\ref{sec:lit-gap}).
 
 This thesis builds on an unpublished project study that adapted \gls{drsci} to the \gls{cvrp} \citep{altendeiteringDRSCICVRP2026} for the above-mentioned CVRPLib \gls{bks} Challenge. That study drew its decomposition and routing configuration uniformly at random in every iteration and reached a mean gap of 0.53\% to the initial XL \gls{bks}\@.
 It left open whether a framework that learns this choice during the run can close the remaining distance to the monolithic solvers.
 
-This thesis develops DRISPI, a decomposition framework for very large \gls{cvrp} instances. Its controller, \gls{haos}, is designed to learn that choice within a single run.
-The primary research question is
+This thesis develops DRISPI, a decomposition framework for very large \gls{cvrp} instances. Its controller, \gls{haos}, is designed to learn that choice within a single run. The central goal of this thesis is to assess the frameworks performance, and therefore the primary research question is formulated as follows.
 
 \researchquestion{RQ1}{Can an adaptive decomposition framework that learns its decomposition and routing strategy within a single run match or outperform state-of-the-art monolithic solvers on very large CVRP instances within the same two-hour wall-clock limit per run?}
 
-To answer the question, this thesis presents a benchmark campaign across all 100 XL instances. We ran DRISPI three times per instance under one shared configuration, with a two-hour wall-clock limit per run.
-We compare its mean gap to the current \gls{bks} against the published mean-of-60 results of the eight solvers benchmarked by \citet{queirogaXLInstancesCapacitated2026}.
-We then test the paired differences with Wilcoxon signed-rank tests under a Holm correction, once for an advantage and once for a disadvantage for each solver within the performance range of DRISPI.
+To answer the question, this thesis presents a benchmark campaign across all 100 XL instances. DRISPI ran three times per instance under one shared configuration, with a two-hour wall-clock limit per run.
+Its mean gap to the current \gls{bks} is then compared against the published mean-of-60 results of the eight solvers benchmarked by \citet{queirogaXLInstancesCapacitated2026}.
+The paired differences with Wilcoxon signed-rank tests under a Holm correction, are then tested once for an advantage and once for a disadvantage against each solver within the performance range of DRISPI.
 
 The secondary research question is concerned with what \gls{haos} learns.
 
 \researchquestion{RQ2}{Do the weight distributions \gls{haos} learns differ systematically with instance characteristics, and do these differences give interpretable insight into instance structure?}
 
-To answer that we analyze the logged weight trajectories of the same 300 runs. Resulting weights can however only reflect instance structure if they reflect the underlying operators' performance.
-We therefore test that precondition first.
-We then check whether the three runs of an instance agree on the choices made by \gls{haos}.
-The campaign contains no control arm with a frozen configuration.
+To answer that the logged weight trajectories of the same 300 runs were analyzed. Resulting weights can however only reflect instance structure if they reflect the underlying operators' performance.
+After testing for that precondition first, the three runs of an instance would have to agree on the choices made by \gls{haos} to proof a pattern. The campaign contains no control arm with a frozen configuration.
 The answer to RQ2 is therefore descriptive. It shows what HAOS learns, not how much the learning itself adds.
 
 This thesis makes four contributions.
@@ -63,8 +60,8 @@ First, it develops the \gls{drispi} framework, an algorithm-agnostic framework t
 Second, it introduces HAOS, a hierarchical roulette-wheel controller in the tradition of \gls{alns} \citep{ropkeAdaptiveLargeNeighborhood2006}.
 In every iteration, HAOS selects the number of subclusters, the degree to which it considers demand dissimilarity, the clustering paradigm, the clustering method, and the subsolver.
 It credits each configuration in two different ways. The first credit is immediate, for the solutions its own iteration produces. The second is deferred, for every route that \gls{sc}/\gls{sp} selects from the pool, traced back through a configuration tag stored on each route.
-Third, it proposes \gls{bg-ails}. This improvement stage perturbs the concatenated subproblem solutions with a focus on subcluster boundaries with a chain of cross-reconnect moves. It then hands the result to AILS-II, which it guides towards the now perturbed boundary regions of the intermediate solution. None of the repair strategies reviewed in Chapter~\ref{sec:lit-repair} uses the partition to place a perturbation. Section~\ref{sec:fra-bg-ails} tests BG-AILS in isolation against a standard AILS-II pass and against the same perturbation without boundary guidance.
-For the fourth and final contribution, it runs these stages as a parallel pipeline on 8~cores. \gls{bg-ails} and the \gls{sc}/\gls{sp} step run asynchronously next to the \gls{dri} loop. A fitted wall-time model sizes the \gls{bg-ails} budget to the stage it overlaps with.
+Third, it proposes \gls{bg-ails}. This improvement stage perturbs the concatenated subproblem solutions with a focus on subcluster boundaries with a chain of cross-reconnect moves. It then hands the result to AILS-II, which it guides towards the now perturbed boundary regions of the intermediate solution. None of the repair strategies reviewed in Chapter~\ref{sec:lit-repair-strategies} uses the partition to place a perturbation. Section~\ref{sec:fra-bg-ails} tests BG-AILS in isolation against a standard AILS-II pass and against the same perturbation without boundary guidance.
+For the fourth and final contribution, it runs these stages as a parallel pipeline on eight cores. \gls{bg-ails} and the \gls{sc}/\gls{sp} step run asynchronously next to the \gls{dri} loop. A fitted wall-time model sizes the \gls{bg-ails} budget to the stage it overlaps with.
 
 The remainder of this thesis is structured as follows.
 Chapter~\ref{chapter:literature} states the \gls{cvrp}. It reviews the monolithic solvers that lead on the XL set and the strategies used to scale routing search. It then locates the research gap this thesis aims to address.

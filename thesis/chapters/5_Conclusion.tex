@@ -130,7 +130,7 @@ Section~\ref{sec:con-scope} covers what the study did not attempt. For each entr
 \subsection{Validity of the Comparison}
 \label{sec:con-validity}
 
-Our study compares runs that differ in hardware, parallelism, and total budget, and none of its gaps correct for these
+This study compares runs that differ in hardware, parallelism, and total budget, and none of its gaps correct for these
 differences. \citet{queirogaXLInstancesCapacitated2026} ran every published solver on a single thread
 of a machine with two AMD EPYC~9654 processors (Zen~4, 2.40\,GHz), 60 seeds of
 two hours per instance. \gls{drispi} ran three seeds of two hours per instance on
@@ -146,7 +146,7 @@ factor of 1.25. That factor functions as a lower bound, since the 8280L rating r
 samples and is measured at the 4.0\,GHz single-core turbo, which the chip cannot
 hold with 24 of its 28 cores busy. Scaled this way, \gls{drispi}'s 7,200 seconds per
 run correspond to at most 5,800 seconds on the published solvers' processor, per
-core in wall-clock time. Our study however reports unscaled gaps and \gls{drispi} was not
+core in wall-clock time. This study, however, reports unscaled gaps, and \gls{drispi} was not
 rerun with a longer limit to offset the slower hardware.
 
 The budget asymmetry points in opposite directions for the two columns of
@@ -185,7 +185,7 @@ than a nuisance the design controlled.
 \subsection{Scope of the Study}
 \label{sec:con-scope}
 
-The 7,200-second limit matches the published per-run budget for a fair wall-clock comparison. This however is not the most favorable run length for \gls{drispi}. At termination, 122 of the 300 runs were still improving their
+The 7,200-second limit matches the published per-run budget for a fair wall-clock comparison. This, however, is not the most favorable run length for \gls{drispi}. At termination, 122 of the 300 runs were still improving their
 incumbent and 221 had improved it within the final hour
 (Section~\ref{sec:stu-convergence}). The residual tracks route length, with
 a Spearman correlation of $+0.52$ ($p = 3.9 \times 10^{-8}$) against $+0.06$ for
@@ -248,11 +248,11 @@ decomposition admits parallel execution by construction where a single search
 process does not.
 
 The second reading matters more for anyone building on this.  The result of
-Section~\ref{sec:results-comparison} was obtained while the adaptive layer was
+Section~\ref{sec:stu-comparison} was obtained while the adaptive layer was
 not working.  Configurations were drawn close to uniform with an arbitrary bias,
 so the reported gap is what the architecture achieves with no configuration
 learning at all, and it is a floor for that architecture rather than a ceiling.
-Section~\ref{sec:results-haos} shows the remaining margin is not hypothetical, but real.
+Section~\ref{sec:stu-haos} shows the remaining margin is not hypothetical, but real.
 Route-based clustering for example outperforms vertex-based by about a tenth of a percentage
 point of realized improvement per draw on every seed, and the controller
 finishes on it in 146 of 300 runs.  A learning controller could realize advantages like this and translate them into a further reduction of the gap.
@@ -262,7 +262,7 @@ along which large-scale CVRP benchmarks are usually organized, and on this set
 it is the weakest of the three continuous quantities tested: route length moves
 the gap by $0.147$ pp per standard deviation against $0.069$ pp for the customer
 count, it alone moves the run-to-run spread, and it moves AILS-II's gap nearly
-as strongly (Section~\ref{sec:results-characteristics}).  Difficulty at this
+as strongly (Section~\ref{sec:stu-characteristics}).  Difficulty at this
 scale sits in how long the routes are rather than in how many customers there
 are.  If that holds on other instance families, it argues for designing and
 reporting against route length rather than against $n$.  The subsections below

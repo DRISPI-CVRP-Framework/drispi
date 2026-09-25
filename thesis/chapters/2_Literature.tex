@@ -16,7 +16,7 @@ Two additional collections reach far beyond 1{,}000 customers. The AGS set of \c
 
 The XL set of \citet{queirogaXLInstancesCapacitated2026} closes that range with 100 instances of 1{,}000 to 10{,}000 customers. They are generated very similarly to the X set, varying the same four attributes. \citet{queirogaXLInstancesCapacitated2026} released the set with initial \gls{bks} values from a selection of state-of-the-art solvers for large-scale instances. With their release, they opened the CVRPLib \gls{bks} Challenge,\footnote{\url{https://galgos.inf.puc-rio.br/cvrplib/index.php/en/bks_challenge/overview}, accessed September 1, 2026.} a community competition that started on January~12, 2026, with the goal to find new \gls{bks} values for the XL set without any further constraints. Chapter~\ref{chapter:study} uses this XL set and lists its attribute levels. Figures~\ref{fig:unsolved-instances} and~\ref{fig:solved-instances} in the appendix visualize two of these instances, unsolved and solved, for illustrative purposes.
 
-\section{State-of-the-Art Solvers for Large-Scale CVRP}\label{sec:lit-large-cvrp}
+\section{Monolithic Solvers for Large-Scale CVRP}\label{sec:lit-large-cvrp}
 
 On the XL set, the methods that produced the initial \gls{bks} values are metaheuristics that search over the complete solution space. This thesis uses the term monolithic for a method that maintains one complete feasible solution, or a population of them, under a single search process that can in principle modify any route. Neighborhoods may be localized or sparsified without affecting this classification. What falls outside it are independent customer partitions, solved separately and merged by an outer recombination layer.
 
@@ -62,7 +62,7 @@ In more modern approaches, \citet{rochatProbabilisticDiversificationIntensificat
 
 A central problem of recombination is that set covering or set partitioning can only choose among routes that some other component has already generated. But this also means a pool dominated by the routes of one incumbent reproduces that incumbent, effectively rendering the set partitioning pointless. The diversity of the result is bounded by the diversity of whatever feeds the pool new routes. The recombination step itself decides nothing about how the instance is split, which solver generates the routes, or how either choice changes during a run.
 
-\subsection{Decomposition}\label{sec:lit-decomposition}
+\subsection{Decomposition Strategies}\label{sec:lit-decomposition}
 
 A decomposition method splits the instance into smaller subproblems, solves each one, and then reassembles a complete solution. How good this divide-and-conquer solution is depends on where the cuts fall, how often they are redrawn, and how the pieces are joined back together. Two central questions in decomposition literature are whether the customers are grouped before or after a tour is built, and whether the groups are formed from customer coordinates or from the routes of an incumbent solution.
 

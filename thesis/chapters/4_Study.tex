@@ -15,7 +15,7 @@ per instance by design without anyexceptions. Section~\ref{sec:stu-dataset} desc
 ran on, section~\ref{sec:stu-hyperparameters} the parameter values, and
 section~\ref{sec:stu-repetitions} the number of seeds and the statistical precision it buys for our experiment.
 
-\subsection{Dataset}\label{sec:stu-dataset}
+\subsection{Dataset and Reference Solutions}\label{sec:stu-dataset}
 The XL set (section~\ref{sec:lit-problem}) extends the generation scheme of the X
 instances of \citet{uchoaNewBenchmarkInstances2017} to up to 10,000 customers. Every instance
 places its nodes on a $[0, 1000] \times [0, 1000]$ grid with Euclidean distances
@@ -47,7 +47,7 @@ The quantity $c$ is the reported solution cost. The current
 \gls{bks} represents the official best known solution. However, we primarily compare against initial \gls{bks}, because published solvers produced it in two-hour single-thread runs on specified hardware
 (Section~\ref{sec:lit-large-cvrp}), using us an experimental design we can reproduce to allow for any algorithmic comparability. The official BKS values, on the other hand, have been achieved without constraints regarding computational, with many of them coming from day-long runs that rely on raw compute, rendering any fair comparison infeasible.
 
-\subsection{Framework Implementation}\label{sec:stu-implementation}
+\subsection{Implementation and Hardware Specifications}\label{sec:stu-implementation}
 All experiments in this chapter run on a single, shared department server under
 Ubuntu 22.04.5 LTS with two Intel Xeon Platinum~8280L CPUs at 2.70\,GHz
 (28 cores each, 56 cores and 112 threads total) and 5,928\,GiB of RAM, with no
@@ -102,7 +102,7 @@ Diversity weight $w_d$ & 0.5 & Section~\ref{sec:fra-sp} \\
 SC/SP trigger interval & 20\,min & Section~\ref{sec:fra-pipeline} \\
 Minimum coverage for SP & 5 & Section~\ref{sec:fra-sp} \\
 MIP time limit / relative gap & 720\,s / 0.025\,\% & Section~\ref{sec:fra-sp} \\
-Improvement pass time limit & 360\,s & Section~\ref{sec:fra-improve} \\
+Post-recombination improvement time limit & 360\,s & Section~\ref{sec:fra-improve} \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -199,9 +199,9 @@ it descriptively and focuses its main comparison and the answer to our primary r
 This Section presents the results of the campaign and analyzes the outcomes. In Section~\ref{sec:stu-comparison}, we compare \gls{drispi}'s 300 runs against the published solver benchmarks on the same 100 instances. Section~\ref{sec:stu-characteristics} shows which instance characteristics effect the solution quality. Section~\ref{sec:stu-haos} focuses on the secondary research question and analyzes the impact and resulting weight trajectories of \gls{haos}.
 Section~\ref{sec:stu-convergence} explores the convergence behavior of \gls{drispi}. Finally, Section~\ref{sec:stu-sources} shows from which stages improvements made by \gls{drispi} originate.
 
-\subsection{Performance Comparison against State-of-the-Art Monolithic Solvers}\label{sec:stu-comparison}
+\subsection{Comparison with Monolithic Solvers}\label{sec:stu-comparison}
 
-This chapter compares \gls{drispi} against the eight monolithic solvers \citet{queirogaXLInstancesCapacitated2026} benchmark on the 100 XL instances: AILS-II, FILO, FILO2, KGLSXXL, HGS-CVRP, SISRs, LKH-3, and OR-Tools. The mean-of-$N$ and best-of-$N$ cost from the original paper reports ($N = 60$ for the published solvers, $N = 3$ for \gls{drispi}) represent the baseline, from which the gap to the current \gls{bks} is calculated. The per-instance gap is then averaged over all 100 instances for the main comparison. In a separate comparison, the mean-of-$N$ and best-of-$N$ gaps of each solver are compared on the fifty instances with fewer than 3,400 customers and the fifty with more, using the same split \citet{queirogaXLInstancesCapacitated2026} established for their own results table. \citet{queirogaXLInstancesCapacitated2026} report their own average gaps against the \gls{bks} at the time of publication, effectively AILS-II's own result for most instances, so those published averages are not comparable to the ones reported here. A detailed instance-level result breakdown of \gls{drispi}'s performance compared to the initial and current \gls{bks} columns can be found in Appendix~\ref{app:xl-results} (Table~\ref{tab:xl-summary}).
+This section compares \gls{drispi} against the eight monolithic solvers \citet{queirogaXLInstancesCapacitated2026} benchmark on the 100 XL instances: AILS-II, FILO, FILO2, KGLSXXL, HGS-CVRP, SISRs, LKH-3, and OR-Tools. The mean-of-$N$ and best-of-$N$ cost from the original paper reports ($N = 60$ for the published solvers, $N = 3$ for \gls{drispi}) represent the baseline, from which the gap to the current \gls{bks} is calculated. The per-instance gap is then averaged over all 100 instances for the main comparison. In a separate comparison, the mean-of-$N$ and best-of-$N$ gaps of each solver are compared on the fifty instances with fewer than 3,400 customers and the fifty with more, using the same split \citet{queirogaXLInstancesCapacitated2026} established for their own results table. \citet{queirogaXLInstancesCapacitated2026} report their own average gaps against the \gls{bks} at the time of publication, effectively AILS-II's own result for most instances, so those published averages are not comparable to the ones reported here. A detailed instance-level result breakdown of \gls{drispi}'s performance compared to the initial and current \gls{bks} columns can be found in Appendix~\ref{app:xl-results} (Table~\ref{tab:xl-summary}).
 
 \begin{longtable}{@{}lrrrrrr@{}}
 \caption{\gls{drispi} Mean Gap to Current \gls{bks} Comparison Against Benchmark Solvers, Sorted by Ascending Mean-of-$N$ Gap Over All Instances.}\label{tab:solver-summary}\\
@@ -620,7 +620,7 @@ terms and holds less comfortably in relative ones. The size split of Table~\ref{
 customers and by $0.177$ pp on the fifty above. Reaching the leading group is
 therefore better supported at the lower end of the XL range than at the upper.
 
-\subsection{HAOS Weights}
+\subsection{Learned HAOS Weights}
 \label{sec:stu-haos}
 
 HAOS chooses the number of subclusters $k$, the demand weight $\lambda_q$,
@@ -883,7 +883,7 @@ improving fastest when the run is stopped, which means part of the long-route
 penalty reported above is a budget artifact rather than a defect of the
 decomposition itself. How much of it is which was not tested here.
 
-\subsection{Improvement Sources}
+\subsection{Contribution by Stage}
 \label{sec:stu-sources}
 
 Sections~\ref{sec:stu-comparison} to~\ref{sec:stu-convergence} treat
@@ -899,9 +899,9 @@ The campaign log records 2,335 incumbent improvements. The 300 decompose--route 
 per-stage timers over the whole run, including the first iteration. Those timers run concurrently on the core split of Section~\ref{sec:stu-implementation}, so the time shares below divide the recorded stage time and not the 7,200 second budget.
 
 One attribution is not recoverable as two separate stages. The SC/SP job
-(Section~\ref{sec:fra-sp}) solves the pool and then runs the standard AILS pass
+(Section~\ref{sec:fra-sp}) solves the pool and then runs the post-SC/SP improvement pass
 of Section~\ref{sec:fra-improve} on the result, and the incumbent update is
-logged only after that pass. Every improvement logged under the name \texttt{standard\_ails} therefore owes partial credit to its preceeding SC/SP job. The two timers are logged separately, and Table~\ref{tab:improvement-sources}
+logged only after that pass. Every improvement logged under the name \texttt{standard\_ails}, the log label of the post-SC/SP improvement pass, therefore owes partial credit to its preceeding SC/SP job. The two timers are logged separately, and Table~\ref{tab:improvement-sources}
 reports them that way.
 
 \begin{table}[H]
@@ -909,16 +909,16 @@ reports them that way.
 \caption{Share of Incumbent Updates, Cost Reduction, and Recorded Stage Time.}
 \label{tab:improvement-sources}
 \ifdefined\improvesharecol\else\newlength{\improvesharecol}\fi
-\settowidth{\improvesharecol}{Decompose--route}%
+\settowidth{\improvesharecol}{Post-SC/SP Improvement}%
 \setlength{\improvesharecol}{\dimexpr(\linewidth-\improvesharecol-6\tabcolsep)/3\relax}%
 \begin{tabular}{@{}l *{3}{w{c}{\improvesharecol}}@{}}
 \toprule
 Stage & Updates & Cost Reduction & Stage Time \\
 \midrule
-Decompose--route & 16.1\% & 3.0\% & 35.1\% \\
+Decompose--Route & 16.1\% & 3.0\% & 35.1\% \\
 BG-AILS & 48.8\% & 88.2\% & 43.4\% \\
 SC/SP & --- & --- & 9.7\% \\
-Standard AILS & 35.1\% & 8.8\% & 11.9\% \\
+Post-SC/SP Improvement & 35.1\% & 8.8\% & 11.9\% \\
 \bottomrule
 \end{tabular}
 
@@ -932,7 +932,7 @@ Standard AILS & 35.1\% & 8.8\% & 11.9\% \\
 BG-AILS accounts for $88.2\%$ of the cost reduction after the opening decompose--route solution, dropping to $40.8\%$ after the first iteration.
 The decompose--route stage accounts for $3.0\%$ of the reduction from $16.1\%$ of
 the updates, and it consumes $35.1\%$ of
-recorded stage time. The SC/SP-plus-standard-AILS package accounts for the
+recorded stage time. The SC/SP plus post-SC/SP improvement accounts for the
 remaining $8.8\%$ of the reduction, from $35.1\%$ of the updates. Since all stages of \gls{drispi} are highly intertwined and cooperative, a higher cost reduction for one step doe not imply that the other steps are less valuable.
 
 \begin{table}[H]
@@ -946,7 +946,7 @@ remaining $8.8\%$ of the reduction, from $35.1\%$ of the updates. Since all stag
 \setlength{\improvesplitcol}{\dimexpr(\linewidth-\improvesplitcol-12\tabcolsep)/6\relax}%
 \begin{tabular}{@{}l *{6}{w{c}{\improvesplitcol}}@{}}
 \toprule
-& \multicolumn{3}{c}{BG-AILS (\%)} & \multicolumn{3}{c}{SC/SP + AILS (\%)} \\
+& \multicolumn{3}{c}{BG-AILS (\%)} & \multicolumn{3}{c}{SC/SP + Improvement (\%)} \\
 \cmidrule(lr){2-4} \cmidrule(lr){5-7}
 Subset & Reduction & Updates & Time & Reduction & Updates & Time \\
 \midrule
@@ -963,9 +963,9 @@ Section~\ref{sec:stu-characteristics} can be checked. BG-AILS does carry a
 larger share of the cost reduction on the long-route instances, $92.1\%$ against
 $87.7\%$, and a larger share of recorded stage time, $46.4\%$ against $43.0\%$.
 Its share of the updates is lower on that length, $39.1\%$ against $50.9\%$,
-because SC/SP + AILS logs $40.2\%$ of the updates there against $34.0\%$ on the short-route band. The prediction
+because SC/SP plus post-SC/SP improvement logs $40.2\%$ of the updates there against $34.0\%$ on the short-route band. The prediction
 about the SC/SP contribution and the 10,000-column pool cap
 (Section~\ref{sec:fra-sp}) does not hold in the form the size split suggests.
 The cap is reached on 72 of the 100 instances: 33 of the 50 with $n < 3{,}400$
 and 39 of the 50 with $n > 3{,}400$, and on none of the 14 long-route instances,
-whose largest observed pools have a median of about 4,200 columns. The SC/SP + AILS time share falls from $24.2\%$ below 3,400 customers to $18.7\%$ above, and from $22.5\%$ on the short-route band to $15.2\%$ on the long-route band. The SC/SP timer inside that sum falls from $12.1\%$ to $7.1\%$ across the size cut, and from $11.0\%$ to $1.0\%$ on the long routes, which is the band whose pools stay below the cap. The SC/SP + AILS share of the cost reduction is $7.4\%$ below 3,400 customers and $9.6\%$ above, and $9.2\%$ on the short-route band against $5.8\%$ on the long-route band. The long-route drop in SC/SP time is real because long-route instances generate fewer total routs, and smaller route pools take less time to solve.
+whose largest observed pools have a median of about 4,200 columns. The SC/SP plus post-SC/SP improvement time share falls from $24.2\%$ below 3,400 customers to $18.7\%$ above, and from $22.5\%$ on the short-route band to $15.2\%$ on the long-route band. The SC/SP timer inside that sum falls from $12.1\%$ to $7.1\%$ across the size cut, and from $11.0\%$ to $1.0\%$ on the long routes, which is the band whose pools stay below the cap. The SC/SP plus post-SC/SP improvement share of the cost reduction is $7.4\%$ below 3,400 customers and $9.6\%$ above, and $9.2\%$ on the short-route band against $5.8\%$ on the long-route band. The long-route drop in SC/SP time is real because long-route instances generate fewer total routs, and smaller route pools take less time to solve.

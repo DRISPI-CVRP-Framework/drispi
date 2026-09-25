@@ -10,6 +10,37 @@
 \setcounter{figure}{0}
 \renewcommand{\thefigure}{A.\arabic{figure}}
 \renewcommand{\theHfigure}{A.\arabic{figure}}
+\section{Instance and Solution Maps}\label{app:instance-maps}
+Figure~\ref{fig:unsolved-instances} shows the two instances before any routes are drawn. The yellow square represents the depot. Both follow the generation scheme of \citet{queirogaXLInstancesCapacitated2026}, as stated in Section~\ref{sec:stu-dataset}. 
+
+Instance XL-n3888-k1010 has a random depot and customers clustered around two seed points, demand is many small values and a few large ones, and the average route length is ultra-short.
+
+Instance XL-n9571-k55 has a random depot and randomly placed customers, demand depends on the quadrant, and the average route length is ultra-long.
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.60\textwidth]{figures/X-n3888-k1010_unsolved.png}\\[0.3em]
+(a) XL-n3888-k1010
+
+\vspace{0.8em}
+\includegraphics[width=0.60\textwidth]{figures/X-n9571-k55_unsolved.png}\\[0.3em]
+(b) XL-n9571-k55
+\caption{Unsolved Instances XL-n3888-k1010 and XL-n9571-k55 for Illustrative Purposes.}
+\label{fig:unsolved-instances}
+\end{figure}
+
+Figure~\ref{fig:solved-instances} shows the best and the worst solutions of \gls{drispi}'s benchmark campaign this thesis presents. Each route has its own color. Legs between the depot and the first or last customer are omitted for better visibility. The XL-n3888-k1010 solution beats the initial \gls{bks} set by AILS-II, with a final gap to the current \gls{bks} of $+0.165\%$. The XL-n9571-k55 solution, on the other hand, is the worst run in the campaign. Its gap to the current \gls{bks} lies at $+1.628\%$.
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.60\textwidth]{figures/X-n3888-k1010_solved.png}\\[0.3em]
+(a) XL-n3888-k1010
+
+\vspace{0.8em}
+\includegraphics[width=0.60\textwidth]{figures/X-n9571-k55_solved.png}\\[0.3em]
+(b) XL-n9571-k55
+\caption{Solved Instances of XL-n3888-k1010 and XL-n9571-k55 (Seed 11 Solutions).}
+\label{fig:solved-instances}
+\end{figure}
+\newpage
 \section{Set Covering Formulation}\label{app:set-covering}
 Section~\ref{sec:fra-sp} introduces set covering (SC) as the fallback \gls{drispi} runs in place of set partitioning (SP) when the route pool does not yet cover every customer at least a minimum number of times. With $R$ the route pool at the time of the solve, $c_r$ the cost of route $r \in R$, $C$ the customer set of the instance (Section~\ref{sec:lit-problem}), $C_r \subseteq C$ the customer set of route $r$, and $x_r \in \{0, 1\}$ selecting route $r$, SC relaxes the partition equality of SP (Equation~\ref{eq:sp-partition}) to the cover inequality of \citet{garfinkelSetPartitioningProblemSetCovering1969}, who characterize set partitioning as set covering under an equality constraint:
 \begin{align}

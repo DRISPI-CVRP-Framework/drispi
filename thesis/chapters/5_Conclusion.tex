@@ -56,21 +56,21 @@ the identical reward, because the three-level reward scale of \gls{haos}
 (Table~\ref{tab:haos-rewards}) discards the magnitude of improvement that separates
 configurations. Second, the smallest achievable reward is positive, so weight accumulates with the
 draw count and ends up reinforcing the arms with higher draw counts. Third, the deferred reward 
-channel through SC/SP supplies an inflated 44\% of all credit mass as a broadcast to many arms at once. The
+channel through \gls{sc}/\gls{sp} supplies an inflated 44\% of all credit mass as a broadcast to many arms at once. The
 learned weights therefore carry no insight into instance structure on this
 campaign. This also negates the possibility of offline warm-starting the framework 
 with a prior fitted to instance characteristics as of now.
 
 Two measurements identify what carries the framework's performance. The controlled
 comparison of Section~\ref{sec:fra-bg-ails} isolates the improvement stage on
-identical input: BG-AILS beats a stock AILS-II pass by $0.056$\,pp of cost
+identical input: \gls{bg-ails} beats a stock AILS-II pass by $0.056$\,pp of cost
 improvement (Hodges--Lehmann, 95\% confidence interval $[0.049,\ 0.063]$, ahead
 on 85 of 100 instances) and a blind cross-reconnect control by $0.058$\,pp
 ($[0.052,\ 0.065]$, ahead on 89 of 100), while that control is itself
 indistinguishable from the stock pass ($-0.004$\,pp, $[-0.011,\ 0.002]$).
 That shows that isolated blind perturbation of the concatenated solution buys nothing. It is the guidance of the perturbation towards the boundaries that pays. Under the full campaign budget, with the opening decompose--route solution excluded,
-Section~\ref{sec:stu-sources} credits BG-AILS with 88.2\% of the relative cost
-reduction, from 48.8\% of the incumbent updates and 43.4\% of recorded stage time. The SC/SP plus post-SC/SP improvement accounts for another 8.8\% of that reduction, and decompose--route for 3.0\%.
+Section~\ref{sec:stu-sources} credits \gls{bg-ails} with 88.2\% of the relative cost
+reduction, from 48.8\% of the incumbent updates and 43.4\% of recorded stage time. The \gls{sc}/\gls{sp} plus post-\gls{sc}/\gls{sp} improvement accounts for another 8.8\% of that reduction, and decompose--route for 3.0\%.
 
 The remaining gap is not principally a matter of instance size. Three
 continuous quantities account for 57\% of its variation across the set, and
@@ -90,10 +90,10 @@ Chapter~\ref{chapter:introduction} sets out four contributions, and the campaign
 bears on them unevenly. The framework itself, the boundary-guided improvement
 stage, and the parallel pipeline hold as stated: \gls{drispi} reaches the leading
 monolithic group on the XL instance set with one configuration and no
-per-instance tuning, Section~\ref{sec:fra-bg-ails} isolates BG-AILS against both a
+per-instance tuning, Section~\ref{sec:fra-bg-ails} isolates \gls{bg-ails} against both a
 stock improvement pass and a blind perturbation control, and the eight-core
 pipeline delivered the 300 runs the study rests on. The second contribution
-does not hold. HAOS was introduced as a controller that learns its
+does not hold. \gls{haos} was introduced as a controller that learns its
 configuration during a run, and on this campaign it does not learn. Its wheels
 concentrate, reaching a median probability of $0.694$ on their leading arm, but
 the arm they concentrate on is uncorrelated with the arm that produced the best solutions. And on
@@ -155,7 +155,7 @@ Table~\ref{tab:solver-summary}. Per run, \gls{drispi} used 16 core-hours (at mos
 the mean-of-$N$ column compares runs in which \gls{drispi} had eight times the cores,
 on older hardware. Effectively, \gls{drispi} used the same wall-clock time, but more core-hours per run.
 But the eight cores do not deliver eight times the search. Subcluster routing runs in waves that leave \gls{dri} cores idle whenever the last wave holds fewer than six subclusters or when the main loop blocks while it waits for
-BG-AILS (Figure~\ref{fig:pipeline-swimlane}). Furthermore, three containers have to share the memory
+\gls{bg-ails} (Figure~\ref{fig:pipeline-swimlane}). Furthermore, three containers have to share the memory
 bandwidth and last-level cache of each socket. And per instance, the core-hour relation 
 reverses. The published best-of-60 baslines are based on 120 CPU-hours and 120 hours of
 wall-clock time, while \gls{drispi}'s best-of-3 is based on 48 core-hours and six hours of wall-clock time (at most 38.4 and 4.8 respectively, after PassMarkscaling). The minimum of 60 runs from a distribution lies
@@ -195,7 +195,7 @@ reported in Section~\ref{sec:stu-characteristics} is a defect of the
 decomposition and how much is a budget artifact was not separated, and no
 campaign at a longer wall-clock limit was run.
 
-The iteration budget bounds how many draws each HAOS arm receives, and that
+The iteration budget bounds how many draws each \gls{haos} arm receives, and that
 bound is tightest on the largest instances: completed iterations fall from about
 117 on the ten smallest to about 31 on the ten largest
 (Section~\ref{sec:stu-convergence}). A longer budget would not have
@@ -220,12 +220,12 @@ with an arbitrary bias. The result of Section~\ref{sec:stu-comparison} was obtai
 rather than because of it, which makes that result robust to the controller and
 removes online learning from what it demonstrates. For future runs, this campaign could therefore serve as control arm.
 
-Two further boundaries apply to the mechanism results. The BG-AILS comparison
+Two further boundaries apply to the mechanism results. The \gls{bg-ails} comparison
 of Section~\ref{sec:fra-bg-ails} runs on one \gls{dri} iteration from a checkpoint under
 one pinned decomposition configuration, so it establishes that boundary guidance
 pays for that stage without establishing what the routes are worth once the pool
 recombines them. The attribution of Section~\ref{sec:stu-sources} covers the full campaign and partly closes
-that gap, but it cannot separate the SC/SP solve from the post-SC/SP improvement pass
+that gap, but it cannot separate the \gls{sc}/\gls{sp} solve from the post-\gls{sc}/\gls{sp} improvement pass
 that adopts its result, because the incumbent update is logged only after the
 pass. Finally, every claim in this thesis is conditioned on the fixed XL set of
 \citet{queirogaXLInstancesCapacitated2026}. No instance outside it, and no additional \gls{cvrp} variant, was tested.
@@ -237,7 +237,7 @@ invent.  The clustering methods of Section~\ref{sec:fra-decomposition}, the
 routing subsolvers of Section~\ref{sec:fra-routing} and the \gls{sp}
 recombination of Section~\ref{sec:fra-sp} are existing techniques
 placed behind fixed interfaces. And also the central part of the pipeline built here that
-demonstrably performs, BG-AILS, is a targeted modification of a published local
+demonstrably performs, \gls{bg-ails}, is a targeted modification of a published local
 search.  That composition reaches the leading monolithic group on the XL set
 with a single configuration.  The solvers it sits among are the product of
 sustained engineering inside one search process, specific to the constraints
@@ -258,7 +258,7 @@ point of realized improvement per draw on every seed, and the controller
 finishes on it in 146 of 300 runs.  A learning controller could realize advantages like this and translate them into a further reduction of the gap.
 
 A last observation is independent of the framework.  Instance size is the axis
-along which large-scale CVRP benchmarks are usually organized, and on this set
+along which large-scale \gls{cvrp} benchmarks are usually organized, and on this set
 it is the weakest of the three continuous quantities tested: route length moves
 the gap by $0.147$ pp per standard deviation against $0.069$ pp for the customer
 count, it alone moves the run-to-run spread, and it moves AILS-II's gap nearly
@@ -271,7 +271,7 @@ take up what extensions \gls{drispi} in particular would need to further improve
 \subsection{Repairing the Controller}
 \label{sec:con-controller}
 
-Section~\ref{sec:stu-haos} locates three reasons the HAOS weights carry no
+Section~\ref{sec:stu-haos} locates three reasons the \gls{haos} weights carry no
 ranking, and each suggests a change that can be tested without altering the remainder
 of the framework.
 
@@ -283,14 +283,14 @@ an arm currently earns just for having been drawn, which is what converts sampli
 noise into a stable leader, and it requires no new signal.
 
 The reward also needs resolution. Three levels place 84\% of selections in one
-bucket, because BG-AILS nearly always improves on the previous candidate and
+bucket, because \gls{bg-ails} nearly always improves on the previous candidate and
 nearly never sets a new best. Scoring the normalized improvement
 $(c_{\text{prev}} - c_{\text{new}})/c_{\text{prev}}$, or an arm's rank within a
 sliding window of recent outcomes, keeps the magnitude that currently separates
 configurations in mind, that is currently discarded.
 
 The deferred channel should be normalized by the contribution it rewards.
-Paying every distinct tag among the SC/SP-selected routes the full value credits
+Paying every distinct tag among the \gls{sc}/\gls{sp}-selected routes the full value credits
 a configuration that supplied one route exactly as much as one that supplied
 twenty, and it supplies 44\% of all credit mass. Dividing by the number of
 routes a tag contributed, or holding the channel out until the first two changes
@@ -345,7 +345,7 @@ resource-matched one. The last is the most informative and the most expensive.
 
 Section~\ref{sec:stu-characteristics} identifies route length as the largest
 driver of both the gap and its run-to-run spread, and attributes it to a fixed
-BG-AILS budget meeting a quantity of boundary repair work that grows with how
+\gls{bg-ails} budget meeting a quantity of boundary repair work that grows with how
 many boundaries cut through long routes. That suggests a budget for the stage that
 scales with the realized boundary work of the current decomposition rather than
 with the wall-clock time of the surrounding decompose-route stage

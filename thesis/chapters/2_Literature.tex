@@ -16,7 +16,7 @@ Two additional collections reach far beyond 1{,}000 customers. The AGS set of \c
 
 The XL set of \citet{queirogaXLInstancesCapacitated2026} closes that range with 100 instances of 1{,}000 to 10{,}000 customers. They are generated very similarly to the X set, varying the same four attributes. They released the set with initial \gls{bks} values from a selection of state-of-the-art solvers for large-scale instances. With their release, they opened the CVRPLib \gls{bks} Challenge,\footnote{\url{https://galgos.inf.puc-rio.br/cvrplib/index.php/en/bks_challenge/overview}, accessed September 1, 2026.} a community competition that started on January~12, 2026, with the goal to find new \gls{bks} values for the XL set without any further constraints. Chapter~\ref{chapter:study} uses this XL set and lists its attribute levels. Figures~\ref{fig:unsolved-instances} and~\ref{fig:solved-instances} in the appendix visualize two of these instances, unsolved and solved, for illustrative purposes.
 
-\section{Monolithic Solvers for Large-Scale CVRP}\label{sec:lit-large-cvrp}
+\section[Monolithic Solvers for Large-Scale CVRP]{\texorpdfstring{Monolithic Solvers for Large-Scale \gls{cvrp}}{Monolithic Solvers for Large-Scale CVRP}}\label{sec:lit-large-cvrp}
 
 On the XL set, the methods that produced the initial \gls{bks} values are metaheuristics that search over the complete solution space. This thesis uses the term monolithic for a method that maintains one complete feasible solution, or a population of them, under a single search process that can in principle modify any route. Neighborhoods may be localized or sparsified without affecting this classification. What falls outside it are independent customer partitions, solved separately and merged by an outer recombination layer.
 
@@ -166,27 +166,27 @@ Table~\ref{tab:lit-research-gap} can be read in two directions. Down the four ca
       >{\raggedright\arraybackslash}p{2.85cm}
       r@{}}
     \toprule
-    Method & Problem & P & D & SC & Ag & Configuration & Largest $n$ \\
+    Method & Problem & P & D & \gls{sc} & Ag & Configuration & Largest $n$ \\
     \midrule
-    \tblcite{maximoAILSIIAdaptiveIterated2024} & CVRP & no & no\textsuperscript{a} & no & -- & \tblcfg{fixed} & $30{,}000$ \\
-    \tblcite{accorsiRoutingOneMillion2024} & CVRP & no & no\textsuperscript{a} & no & -- & \tblcfg{fixed} & $1{,}000{,}000$ \\
-    \tblcite{rochatProbabilisticDiversificationIntensification1995} & \begin{tabular}[t]{@{}l@{}}\gls{cvrp} \& \\\gls{vrptw}\end{tabular} & no & no & yes & -- & \tblcfg{fixed} & $385$ \\
-    \tblcite{cavaliereIntegratedLocalsearchSetpartitioning2022} & CVRP & no & no & yes & -- & \tblcfg{fixed} & $30{,}000$ \\
-    \tblcite{queirogaPOPMUSICMatheuristic2021} & CVRP & $\sim$\textsuperscript{b} & yes & no & $\sim$ & \tblcfg{fixed} & $1{,}000$ \\
-    \tblcite{santiniDecompositionStrategiesVehicle2023} & CVRP & $\sim$ & yes & no & -- & \tblcfg{calibrated} & $1{,}000$ \\
-    \tblcite{liLearningDelegate2021} & CVRP & $\sim$ & yes & no & yes & \tblcfg{trained offline} & $3{,}000$ \\
+    \tblcite{maximoAILSIIAdaptiveIterated2024} & \gls{cvrp} & no & no\textsuperscript{a} & no & -- & \tblcfg{fixed} & $30{,}000$ \\
+    \tblcite{accorsiRoutingOneMillion2024} & \gls{cvrp} & no & no\textsuperscript{a} & no & -- & \tblcfg{fixed} & $1{,}000{,}000$ \\
+    \tblcite{rochatProbabilisticDiversificationIntensification1995} & \begin{tabular}[t]{@{}l@{}}\gls{cvrp}\\\gls{vrptw}\end{tabular} & no & no & yes & -- & \tblcfg{fixed} & $385$ \\
+    \tblcite{cavaliereIntegratedLocalsearchSetpartitioning2022} & \gls{cvrp} & no & no & yes & -- & \tblcfg{fixed} & $30{,}000$ \\
+    \tblcite{queirogaPOPMUSICMatheuristic2021} & \gls{cvrp} & $\sim$\textsuperscript{b} & yes & no & $\sim$ & \tblcfg{fixed} & $1{,}000$ \\
+    \tblcite{santiniDecompositionStrategiesVehicle2023} & \gls{cvrp} & $\sim$ & yes & no & -- & \tblcfg{calibrated} & $1{,}000$ \\
+    \tblcite{liLearningDelegate2021} & \gls{cvrp} & $\sim$ & yes & no & yes & \tblcfg{trained offline} & $3{,}000$ \\
     \tblcite{karaahmetogluAdaptiveClusterFirst2026} & \gls{hvrp} & yes & yes & no & $\sim$ & \tblcfg{pretrained} & $500{,}000$ \\
     \tblcite{kerscherDecomposerouteimproveFrameworkSolving2025} & \gls{vrptw} & no\textsuperscript{c} & yes & no & yes & \tblcfg{silhouette per instance} & $30{,}000$ \\
     \tblcite{kerscherSolvingHeterogeneousVehicle} & \gls{hvrp} & no\textsuperscript{c} & yes & yes & yes & \tblcfg{scheduled, range narrowed} & $1{,}001$ \\
-    \tblcite{altendeiteringDRSCICVRP2026} & CVRP & $\sim$ & yes & yes & yes & \tblcfg{random} & $10{,}000$ \\
-    This thesis & CVRP & yes & yes & yes & yes & \tblcfg{learned online} & $10{,}000$ \\
+    \tblcite{altendeiteringDRSCICVRP2026} & \gls{cvrp} & $\sim$ & yes & yes & yes & \tblcfg{random} & $10{,}000$ \\
+    This thesis & \gls{cvrp} & yes & yes & yes & yes & \tblcfg{learned online} & $10{,}000$ \\
     \bottomrule
   \end{tabularx}
 
   \medskip
   \begin{minipage}{\linewidth}
     \footnotesize
-    P = parallel subproblem solving, D = customer-set decomposition, SC = route-pool set covering or set partitioning, and Ag = algorithm-agnostic solver plug-in. $\sim$ marks a partial capability. Largest $n$ is the largest customer count in the original computational study.\\
+    P = parallel subproblem solving, D = customer-set decomposition, \gls{sc} = route-pool set covering or set partitioning, and Ag = algorithm-agnostic solver plug-in. $\sim$ marks a partial capability. Largest $n$ is the largest customer count in the original computational study.\\
     \textsuperscript{a} Localized neighborhoods through granular arcs and selective vertex caching, not customer-set decomposition \citep{accorsiFastScalableHeuristic2021,tothGranularTabuSearch2003}.\\
     \textsuperscript{b} Subproblems are reoptimized within an intensification loop rather than solved as a standing parallel layer.\\
     \textsuperscript{c} The published experiments run on a single thread. Both papers note that the subproblems are independent and that route generation is parallelizable by design.

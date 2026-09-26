@@ -41,7 +41,7 @@ It left open whether a framework that learns this choice during the run can clos
 
 This thesis develops \gls{drispi}, a decomposition framework for very large \gls{cvrp} instances. Its controller, \gls{haos}, is designed to learn that choice within a single run. The central goal of this thesis is to assess the frameworks performance, and therefore the primary research question is formulated as follows.
 
-\researchquestion{RQ1}{Can an adaptive decomposition framework that learns its decomposition and routing strategy within a single run match or outperform state-of-the-art monolithic solvers on very large CVRP instances within the same two-hour wall-clock limit per run?}
+\researchquestion{RQ1}{Can an adaptive decomposition framework that learns its decomposition and routing strategy within a single run match or outperform state-of-the-art monolithic solvers on very large \gls{cvrp} instances within the same two-hour wall-clock limit per run?}
 
 To answer the question, this thesis presents a benchmark campaign across all 100 XL instances. \gls{drispi} ran three times per instance under one shared configuration, with a two-hour wall-clock limit per run.
 Its mean gap to the current \gls{bks} is then compared against the published mean-of-60 results of the eight solvers benchmarked by \citet{queirogaXLInstancesCapacitated2026}.
@@ -53,18 +53,18 @@ The secondary research question is concerned with what \gls{haos} learns.
 
 To answer that the logged weight trajectories of the same 300 runs were analyzed. Resulting weights can however only reflect instance structure if they reflect the underlying operators' performance.
 After testing for that precondition first, the three runs of an instance would have to agree on the choices made by \gls{haos} to proof a pattern. The campaign contains no control arm with a frozen configuration.
-The answer to RQ2 is therefore descriptive. It shows what HAOS learns, not how much the learning itself adds.
+The answer to RQ2 is therefore descriptive. It shows what \gls{haos} learns, not how much the learning itself adds.
 
 This thesis makes four contributions.
 First, it develops the \gls{drispi} framework, an algorithm-agnostic framework that repeats a \gls{dri} loop. The framework stores every route it generates in a persistent pool, which it periodically recombines that pool by running a \gls{sc} or \gls{sp} problem over it. Any \gls{cvrp} solver that takes an instance and returns routes is a valid subsolver. The deployed configuration chooses among AILS-II, FILO, FILO2, and PyVRP \citep{woudaPyVRPHighPerformanceVRP2024}.
-Second, it introduces HAOS, a hierarchical roulette-wheel controller in the tradition of \gls{alns} \citep{ropkeAdaptiveLargeNeighborhood2006}.
-In every iteration, HAOS selects the number of subclusters, the degree to which it considers demand dissimilarity, the clustering paradigm, the clustering method, and the subsolver.
+Second, it introduces \gls{haos}, a hierarchical roulette-wheel controller in the tradition of \gls{alns} \citep{ropkeAdaptiveLargeNeighborhood2006}.
+In every iteration, \gls{haos} selects the number of subclusters, the degree to which it considers demand dissimilarity, the clustering paradigm, the clustering method, and the subsolver.
 It credits each configuration in two different ways. The first credit is immediate, for the solutions its own iteration produces. The second is deferred, for every route that \gls{sc}/\gls{sp} selects from the pool, traced back through a configuration tag stored on each route.
-Third, it proposes \gls{bg-ails}. This improvement stage perturbs the concatenated subproblem solutions with a focus on subcluster boundaries with a chain of cross-reconnect moves. It then hands the result to AILS-II, which it guides towards the now perturbed boundary regions of the intermediate solution. None of the repair strategies reviewed in Chapter~\ref{sec:lit-boundary-repair} uses the partition to place a perturbation. Section~\ref{sec:fra-bg-ails} tests BG-AILS in isolation against a standard AILS-II pass and against the same perturbation without boundary guidance.
+Third, it proposes \gls{bg-ails}. This improvement stage perturbs the concatenated subproblem solutions with a focus on subcluster boundaries with a chain of cross-reconnect moves. It then hands the result to AILS-II, which it guides towards the now perturbed boundary regions of the intermediate solution. None of the repair strategies reviewed in Chapter~\ref{sec:lit-boundary-repair} uses the partition to place a perturbation. Section~\ref{sec:fra-bg-ails} tests \gls{bg-ails} in isolation against a standard AILS-II pass and against the same perturbation without boundary guidance.
 For the fourth and final contribution, it runs these stages as a parallel pipeline on eight cores. \gls{bg-ails} and the \gls{sc}/\gls{sp} step run asynchronously next to the \gls{dri} loop. A fitted wall-time model sizes the \gls{bg-ails} budget to the stage it overlaps with.
 
 The remainder of this thesis is structured as follows.
 Chapter~\ref{chapter:literature} states the \gls{cvrp}. It reviews the monolithic solvers that lead on the XL set and the strategies used to scale routing search. It then locates the research gap this thesis aims to address.
 Chapter~\ref{chapter:framework} presents \gls{drispi} stage by stage and closes with the parallel pipeline and its main loop.
-Chapter~\ref{chapter:study} describes the experimental design. It reports the comparison with the published solvers, analyzes the results by instance characteristic, the resulting HAOS weights and their implications, the convergence behavior, and the improvement contributions of each stage.
+Chapter~\ref{chapter:study} describes the experimental design. It reports the comparison with the published solvers, analyzes the results by instance characteristic, the resulting \gls{haos} weights and their implications, the convergence behavior, and the improvement contributions of each stage.
 Chapter~\ref{chapter:conclusion} answers both research questions, discusses the limitations of the study, and outlines directions for future research. Detailed instance-level results to the benchmark campaign can be found in Appendix~\ref{app:xl-results}.

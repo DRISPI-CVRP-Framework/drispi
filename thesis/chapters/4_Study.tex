@@ -3,11 +3,11 @@ This chapter tests \gls{drispi} on the 100 XL instances of Queiroga et al.\ (202
 against the eight monolithic solvers benchmarked there. The study aims to answer two questions:
 The first is whether an adaptive decomposition framework that learns its
 decomposition and routing choices during a run can match state-of-the-art
-monolithic solvers at this scale. The second is whether the weights HAOS learns along the way provide interpretable 
+monolithic solvers at this scale. The second is whether the weights \gls{haos} learns along the way provide interpretable 
 insights about the instances they were learned on.
 
 Section~\ref{sec:stu-experiment} describes the dataset, specifies implementation and
-hardware specificiations, the parameter values, and explains expertimental design choices. Section~\ref{sec:stu-results} shows and analyzes the results. Here the primary and secondary research questions is answered through comparison with the published solvers, break the results down by instance characteristics, examine the learned HAOS weights and the convergence of individual runs, and attribute the improvement to the stages that produced it.
+hardware specificiations, the parameter values, and explains expertimental design choices. Section~\ref{sec:stu-results} shows and analyzes the results. Here the primary and secondary research questions is answered through comparison with the published solvers, break the results down by instance characteristics, examine the learned \gls{haos} weights and the convergence of individual runs, and attribute the improvement to the stages that produced it.
 
 \section{Experimental Design}\label{sec:stu-experiment}
 All 100 instances are solved by the same \gls{drispi} configuration. Nothing is tuned
@@ -53,9 +53,9 @@ Ubuntu 22.04.5 LTS with two Intel Xeon Platinum~8280L CPUs at 2.70\,GHz
 (28 cores each, 56 cores and 112 threads total) and 5,928\,GiB of RAM, with no
 GPU\@. \gls{drispi} runs inside Docker containers (Docker 28.1.1) pinned to a disjoint physical-core range with \texttt{--cpuset-cpus}. This pinned CPU count, not a library thread-pool default, sets the framework's parallelism budget.
 
-The campaign presented in section~\ref{sec:stu-comparison} is comprised of all 100 instances, each run on three seeds with a wallclock runtime budget and termination criterion of T=2h (300 runs, 7{,}200 seconds each). For that 48 of the server's 56 physical cores are pinned as six exclusive 8-core Docker containers, three per socket, parallelizing as outlined in section~\ref{sec:fra-pipeline} with a split into six \gls{dri} workers, one BG-AILS worker, and one SP worker. SMT siblings are left idle. Runs are packed into waves ordered by instance size so that the three seeds of the largest instance, XL-n10001-k1570, never share a wave. The full campaign takes 50 waves and about 100 hours of wall-clock time.
+The campaign presented in section~\ref{sec:stu-comparison} is comprised of all 100 instances, each run on three seeds with a wallclock runtime budget and termination criterion of T=2h (300 runs, 7{,}200 seconds each). For that 48 of the server's 56 physical cores are pinned as six exclusive 8-core Docker containers, three per socket, parallelizing as outlined in section~\ref{sec:fra-pipeline} with a split into six \gls{dri} workers, one \gls{bg-ails} worker, and one \gls{sp} worker. SMT siblings are left idle. Runs are packed into waves ordered by instance size so that the three seeds of the largest instance, XL-n10001-k1570, never share a wave. The full campaign takes 50 waves and about 100 hours of wall-clock time.
 
-\gls{drispi} uses Python 3.11, with dependencies locked via \texttt{uv}: Libraries PyVRP 0.13.3 (HGS-CVRP), scikit-learn 1.8.0 (K-Means and Agglomerative Clustering), scikit-learn-extra 0.3.0 (K-Medoids), scikit-fuzzy 0.5.0 (Fuzzy C-Means), gurobipy 13.0.1 (SC/SP), and vrplib 2.1.0 for instance parsing. AILS-II, FILO, and FILO2 are vendored as git submodules pinned to a fixed commit each and compiled at image build time, rather than resolved from a floating branch, so a rebuild reproduces the exact binaries behind the results in Section~\ref{sec:stu-comparison}. The whole framework runs inside a Docker image built from this locked environment, so the software stack behind every reported run is fixed independently of the host it executes on.
+\gls{drispi} uses Python 3.11, with dependencies locked via \texttt{uv}: Libraries PyVRP 0.13.3 (HGS-CVRP), scikit-learn 1.8.0 (K-Means and Agglomerative Clustering), scikit-learn-extra 0.3.0 (K-Medoids), scikit-fuzzy 0.5.0 (Fuzzy C-Means), gurobipy 13.0.1 (\gls{sc}/\gls{sp}), and vrplib 2.1.0 for instance parsing. AILS-II, FILO, and FILO2 are vendored as git submodules pinned to a fixed commit each and compiled at image build time, rather than resolved from a floating branch, so a rebuild reproduces the exact binaries behind the results in Section~\ref{sec:stu-comparison}. The whole framework runs inside a Docker image built from this locked environment, so the software stack behind every reported run is fixed independently of the host it executes on.
 
 \subsection{Hyperparameters}\label{sec:stu-hyperparameters}
 \begin{table}[!htb]
@@ -73,7 +73,7 @@ The campaign presented in section~\ref{sec:stu-comparison} is comprised of all 1
 \toprule
 Parameter & Value & Defined in \\
 \midrule
-\multicolumn{3}{@{}l}{\emph{HAOS}} \\
+\multicolumn{3}{@{}l}{\emph{\gls{haos}}} \\
 Warm-up iterations & 10 & Section~\ref{sec:fra-haos} \\
 Decay $\gamma$ & 0.95 & Equation~\ref{eq:haos-decay} \\
 Starting weight $w_0$ & 10.0 & Equation~\ref{eq:haos-update} \\
@@ -87,7 +87,7 @@ Minimum routes per subcluster & 8 & Section~\ref{sec:fra-haos} \\
 Minimum spacing between $k$ arms & 2 & Section~\ref{sec:fra-haos} \\
 Subcluster time budget & $\max(5\,\mathrm{s},\ 0.06\,\mathrm{s} \cdot n_c)$ & Section~\ref{sec:fra-routing} \\
 \addlinespace
-\multicolumn{3}{@{}l}{\emph{BG-AILS}} \\
+\multicolumn{3}{@{}l}{\emph{\gls{bg-ails}}} \\
 Boundary threshold $\tau$ & 0.5 & Equation~\ref{eq:bg-ails-threshold} \\
 Small-cluster cap $\sigma$ / boost $\alpha$ & 20 / 0.5 & Equation~\ref{eq:bg-ails-weighted} \\
 Initial $\omega_0$ & 10 & Section~\ref{sec:fra-bg-ails} \\
@@ -96,11 +96,11 @@ Chain length & $k$ & Section~\ref{sec:fra-bg-ails} \\
 Boundary mask on first local search & on & Section~\ref{sec:fra-bg-ails} \\
 Budget floor / margin & 60\,s / 1.0 & Equation~\ref{eq:bg-ails-budget} \\
 \addlinespace
-\multicolumn{3}{@{}l}{\emph{Route Pool, SC/SP, and Improvement}} \\
+\multicolumn{3}{@{}l}{\emph{Route Pool, \gls{sc}/\gls{sp}, and Improvement}} \\
 Maximum pool size & 10{,}000 & Section~\ref{sec:fra-sp} \\
 Diversity weight $w_d$ & 0.5 & Section~\ref{sec:fra-sp} \\
-SC/SP trigger interval & 20\,min & Section~\ref{sec:fra-pipeline} \\
-Minimum coverage for SP & 5 & Section~\ref{sec:fra-sp} \\
+\gls{sc}/\gls{sp} trigger interval & 20\,min & Section~\ref{sec:fra-pipeline} \\
+Minimum coverage for \gls{sp} & 5 & Section~\ref{sec:fra-sp} \\
 MIP time limit / relative gap & 720\,s / 0.025\,\% & Section~\ref{sec:fra-sp} \\
 Post-recombination improvement time limit & 360\,s & Section~\ref{sec:fra-improve} \\
 \bottomrule
@@ -110,23 +110,23 @@ Table~\ref{tab:hyperparameters} lists the parameter values of the benchmark
 configuration, which all 100 instances and all three seeds share.
 Chapter~\ref{chapter:framework} introduces each parameter with its mechanism, the
 table collects the values used to achieve the results presented in section~\ref{sec:stu-results}.
-Most parameters were tuned during development in isolated pilot studies per category (HAOS, Decomposition and Routing, BG-AILS, Route Pool, SC/SP, and Improvement). These small studies were comprised of a few instances and seeds, usually running a limited parameter grid search, aimed at finding a reasonable default rather than an optimum, and these studies are not reported here. The only exception is the BG-AILS comparison of Section~\ref{sec:fra-bg-ails}, which ran on all 100 XL
+Most parameters were tuned during development in isolated pilot studies per category (\gls{haos}, Decomposition and Routing, \gls{bg-ails}, Route Pool, \gls{sc}/\gls{sp}, and Improvement). These small studies were comprised of a few instances and seeds, usually running a limited parameter grid search, aimed at finding a reasonable default rather than an optimum, and these studies are not reported here. The only exception is the \gls{bg-ails} comparison of Section~\ref{sec:fra-bg-ails}, which ran on all 100 XL
 instances and fixed the first-route rule and the boundary mask; these two
 settings are therefore chosen on the benchmark set itself. No sensitivity
 analysis over the full set was run for any of the other values.
 
-Not included in the table are the option sets HAOS draws from: the number of subclusters $k$, the six values of $\lambda_q$, the two paradigms, the eight clustering methods of Table~\ref{tab:decomp-methods}, and the four
+Not included in the table are the option sets \gls{haos} draws from: the number of subclusters $k$, the six values of $\lambda_q$, the two paradigms, the eight clustering methods of Table~\ref{tab:decomp-methods}, and the four
 routing solvers of Section~\ref{sec:fra-routing}. They define the search space of
-HAOS rather than a value within it. Also excluded are settings regarding the campaign architecture and experimental design: the core split and asynchronous modes of Section~\ref{sec:fra-pipeline}, the fitted coefficients of the
-BG-AILS wall-time model (Equation~\ref{eq:bg-ails-dr-wall}), and the time limit and seeds that Section~\ref{sec:stu-repetitions} covers.
+\gls{haos} rather than a value within it. Also excluded are settings regarding the campaign architecture and experimental design: the core split and asynchronous modes of Section~\ref{sec:fra-pipeline}, the fitted coefficients of the
+\gls{bg-ails} wall-time model (Equation~\ref{eq:bg-ails-dr-wall}), and the time limit and seeds that Section~\ref{sec:stu-repetitions} covers.
 
 \subsection{Replication Design}\label{sec:stu-repetitions}
 The campaign runs \gls{drispi} on every one of the 100 XL instances three times, at
-seeds 11, 22, and 33. The seed drives the weighted HAOS draws, the angular
+seeds 11, 22, and 33. The seed drives the weighted \gls{haos} draws, the angular
 offset, and the random choices inside decomposition. It is also
-passed to PyVRP, FILO, and FILO2, but AILS-II has no seed flag. This makes the routing phase, BG-AILS and the post-SC/SP improvement pass independent of the seed. This makes the runs non-reproducible. Additionally, the plugged-in solvers run under wall-clock limits, so how far their search gets depends on machine load, and the worker pool
+passed to PyVRP, FILO, and FILO2, but AILS-II has no seed flag. This makes the routing phase, \gls{bg-ails} and the post-\gls{sc}/\gls{sp} improvement pass independent of the seed. This makes the runs non-reproducible. Additionally, the plugged-in solvers run under wall-clock limits, so how far their search gets depends on machine load, and the worker pool
 schedules subcluster jobs in no fixed order. This affects again, the entire routing phase,
-BG-AILS, and the post-SC/SP improvement pass alike, so two runs at the same seed
+\gls{bg-ails}, and the post-\gls{sc}/\gls{sp} improvement pass alike, so two runs at the same seed
 can differ in solution quality. Disclosing the seeds therefore does not suffice
 for exact reproducibility. The three runs per instance are exchangeable replications.
 
@@ -546,7 +546,7 @@ cut line passes through the route rather than around it. Once a long route
 straddles a cluster boundary this way, the routing stage
 (Section~\ref{sec:fra-routing}) still solves each side of the cut to a good local
 optimum in isolation, but the seam between them is exactly the kind of defect
-BG-AILS exists to repair (Section~\ref{sec:fra-bg-ails}). BG-AILS repairs every
+\gls{bg-ails} exists to repair (Section~\ref{sec:fra-bg-ails}). \gls{bg-ails} repairs every
 seam in an instance under the same fixed chain length of $k$ cross-reconnects
 and the same wall-clock budget of Equation~\ref{eq:bg-ails-budget} regardless of
 how many of those seams cut through a long route, so an
@@ -554,7 +554,7 @@ instance whose long routes cross more boundaries has more repair work competing
 for a budget that does not grow to match it. The variance result fits this phenomenon: a repair budget that is sometimes sufficient and sometimes not produces run-to-run spread, which is what the long-route band shows. 
 
 These results point at a specific parameter rather than at the stage as a
-whole. Equation~\ref{eq:bg-ails-budget} adapts the BG-AILS budget according to the
+whole. Equation~\ref{eq:bg-ails-budget} adapts the \gls{bg-ails} budget according to the
 wall-clock time of the surrounding decompose-route stage. It tracks through the
 per-subcluster budgets of Section~\ref{sec:fra-routing} subcluster
 customer counts, so it scales with the cost of producing the decomposition
@@ -620,10 +620,10 @@ terms and holds less comfortably in relative ones. The size split of Table~\ref{
 customers and by $0.177$ pp on the fifty above. Reaching the leading group is
 therefore better supported at the lower end of the XL range than at the upper.
 
-\subsection{Learned HAOS Weights}
+\subsection[Learned HAOS Weights]{\texorpdfstring{Learned \gls{haos} Weights}{Learned HAOS Weights}}
 \label{sec:stu-haos}
 
-HAOS chooses the number of subclusters $k$, the demand weight $\lambda_q$,
+\gls{haos} chooses the number of subclusters $k$, the demand weight $\lambda_q$,
 the decomposition paradigm, the clustering method, and the subsolver, one draw per \gls{dri}
 iteration, and updates its weights from the rewards of
 Table~\ref{tab:haos-rewards} (Section~\ref{sec:fra-haos}).  The clustering method is split in
@@ -653,7 +653,7 @@ the six wheels. Normalized entropy goes from zero, at absolute singularity, to o
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{figures/haos_entropy.pdf}
-\caption{Normalized Shannon Entropy of the Six HAOS Wheels Against \gls{dri} Iteration.}
+\caption[Normalized Shannon Entropy of the Six HAOS Wheels Against DRI Iteration.]{Normalized Shannon Entropy of the Six \gls{haos} Wheels Against \gls{dri} Iteration.}
 \label{fig:haos-entropy}
 \end{figure}
 
@@ -744,21 +744,21 @@ arm its own early draws happened to favor.
 
 That explains a mostly flat weight vector. It does not explain however why a weight vector that
 has moved to 1.4 to 1.9 times uniform on an arm chosen at random. Figure~\ref{fig:haos-reward} gives the immediate reward $R$ banked by one
-selection, summed over the decompose-route candidate and the BG-AILS candidate.
+selection, summed over the decompose-route candidate and the \gls{bg-ails} candidate.
 Of 19,803 post-warm-up selections, 16,591 bank exactly $R = 5$: the
-decompose-route candidate scores the no-improvement value of 1 and BG-AILS
-scores the improvement-over-previous-iteration value of 4.  A BG-AILS reward is present on
+decompose-route candidate scores the no-improvement value of 1 and \gls{bg-ails}
+scores the improvement-over-previous-iteration value of 4.  A \gls{bg-ails} reward is present on
 96.8\% of selections.  The median $R$ is 5 and the mean 4.94, and with 84\% of all
 selections, almost all receive the identical reward.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{figures/haos_reward.pdf}
-\caption{Immediate (a) and Deferred (b) HAOS Rewards, Excluding the Ten Warm-Up Iterations.}
+\caption[Immediate (a) and Deferred (b) HAOS Rewards, Excluding the Ten Warm-Up Iterations.]{Immediate (a) and Deferred (b) \gls{haos} Rewards, Excluding the Ten Warm-Up Iterations.}
 \label{fig:haos-reward}
 \end{figure}
 
-BG-AILS almost always improves on the
+\gls{bg-ails} almost always improves on the
 previous candidate, and almost never produces a
 new incumbent best, so nearly every selection lands in the middle bucket.  The
 factor that separates a good configuration from a mediocre one on this
@@ -799,12 +799,12 @@ correction for how often their paradigm was drawn and are not reconciled here.
 
 That deferred channel as a mechanism actively works against
 ranking.  The deferred reward is credited once to every distinct \gls{haos}
-tag among the routes SC/SP selected, at the full value regardless of how many
+tag among the routes \gls{sc}/\gls{sp} selected, at the full value regardless of how many
 routes that tag contributed (Section~\ref{sec:fra-sp}).  On an
 iteration that carries a positive deferred reward, 1.8 to 5.3 arms of the same
 wheel gain weight at once, against 0.55 to 1.34 on an ordinary iteration, and
 about 62 weight units are injected against about 5.  Nearly half the credit in
-the system arrives as a broadcast timed to the SC/SP schedule rather than as a
+the system arrives as a broadcast timed to the \gls{sc}/\gls{sp} schedule rather than as a
 judgement about the arm that received it.
 
 The secondary research question asked whether the learned weight distributions
@@ -870,14 +870,14 @@ shows the two route lengths separately, and the long-route curve is still
 descending visibly at the cutoff where the short-route curve has flattened.
 
 The two findings are consistent once the binding constraint is stated
-correctly. Fewer iterations on large instances leave HAOS with fewer draws per
+correctly. Fewer iterations on large instances leave \gls{haos} with fewer draws per
 arm, but Section~\ref{sec:stu-haos} shows that the arms are statistically
 indistinguishable on all six wheels, so a configuration drawn under a shorter
 iteration budget is not inherently inferior. The iteration count
 constrains what the wheels can learn. It does not by itself leave cost on the
 table. Long routes leave cost on the table for the different reason given in
 Section~\ref{sec:stu-characteristics}: they generate more boundary repair
-work than the fixed BG-AILS budget covers within one iteration, so the repair
+work than the fixed \gls{bg-ails} budget covers within one iteration, so the repair
 continues across iterations and needs more wall-clock time. The instances with the largest gaps are therefore also the instances still
 improving fastest when the run is stopped, which means part of the long-route
 penalty reported above is a budget artifact rather than a defect of the
@@ -890,18 +890,18 @@ Sections~\ref{sec:stu-comparison} to~\ref{sec:stu-convergence} treat
 \gls{drispi} as one procedure. It includes five stages, and the route pool tags every
 route with the stage that produced it, so the improvement each stage contributes can be attributed rather than assumed. The
 question matters for two reasons. The framework's contribution over its
-predecessor \gls{drsci} \citep{altendeiteringDRSCICVRP2026} rests on BG-AILS and HAOS, and the BG-AILS ablation of Section~\ref{sec:fra-bg-ails} measured that stage in isolation
+predecessor \gls{drsci} \citep{altendeiteringDRSCICVRP2026} rests on \gls{bg-ails} and \gls{haos}, and the \gls{bg-ails} ablation of Section~\ref{sec:fra-bg-ails} measured that stage in isolation
 on a fixed checkpoint rather than inside a full 7,200-second run. And a stage that
 carries only few of the total improvements under the campaign budget is also the
 first candidate for reallocating core time.
 
-The campaign log records 2,335 incumbent improvements. The 300 decompose--route solutions of the first iteration are each run's opening solution, and both the update counts and the cost reduction below exclude them. Cost reduction is measured from that opening solution to the final incumbent, so the 298 BG-AILS repairs logged on the same iteration are included. The remaining 2,035 updates are the denominator below. Stage time is the sum of the
+The campaign log records 2,335 incumbent improvements. The 300 decompose--route solutions of the first iteration are each run's opening solution, and both the update counts and the cost reduction below exclude them. Cost reduction is measured from that opening solution to the final incumbent, so the 298 \gls{bg-ails} repairs logged on the same iteration are included. The remaining 2,035 updates are the denominator below. Stage time is the sum of the
 per-stage timers over the whole run, including the first iteration. Those timers run concurrently on the core split of Section~\ref{sec:stu-implementation}, so the time shares below divide the recorded stage time and not the 7,200 second budget.
 
-One attribution is not recoverable as two separate stages. The SC/SP job
-(Section~\ref{sec:fra-sp}) solves the pool and then runs the post-SC/SP improvement pass
+One attribution is not recoverable as two separate stages. The \gls{sc}/\gls{sp} job
+(Section~\ref{sec:fra-sp}) solves the pool and then runs the post-\gls{sc}/\gls{sp} improvement pass
 of Section~\ref{sec:fra-improve} on the result, and the incumbent update is
-logged only after that pass. Every improvement logged under the name \texttt{standard\_ails}, the log label of the post-SC/SP improvement pass, therefore owes partial credit to its preceeding SC/SP job. The two timers are logged separately, and Table~\ref{tab:improvement-sources}
+logged only after that pass. Every improvement logged under the name \texttt{standard\_ails}, the log label of the post-\gls{sc}/\gls{sp} improvement pass, therefore owes partial credit to its preceeding \gls{sc}/\gls{sp} job. The two timers are logged separately, and Table~\ref{tab:improvement-sources}
 reports them that way.
 
 \begin{table}[H]
@@ -909,16 +909,16 @@ reports them that way.
 \caption{Share of Incumbent Updates, Cost Reduction, and Recorded Stage Time.}
 \label{tab:improvement-sources}
 \ifdefined\improvesharecol\else\newlength{\improvesharecol}\fi
-\settowidth{\improvesharecol}{Post-SC/SP Improvement}%
+\settowidth{\improvesharecol}{Post-\gls{sc}/\gls{sp} Improvement}%
 \setlength{\improvesharecol}{\dimexpr(\linewidth-\improvesharecol-6\tabcolsep)/3\relax}%
 \begin{tabular}{@{}l *{3}{w{c}{\improvesharecol}}@{}}
 \toprule
 Stage & Updates & Cost Reduction & Stage Time \\
 \midrule
 Decompose--Route & 16.1\% & 3.0\% & 35.1\% \\
-BG-AILS & 48.8\% & 88.2\% & 43.4\% \\
-SC/SP & --- & --- & 9.7\% \\
-Post-SC/SP Improvement & 35.1\% & 8.8\% & 11.9\% \\
+\gls{bg-ails} & 48.8\% & 88.2\% & 43.4\% \\
+\gls{sc}/\gls{sp} & --- & --- & 9.7\% \\
+Post-\gls{sc}/\gls{sp} Improvement & 35.1\% & 8.8\% & 11.9\% \\
 \bottomrule
 \end{tabular}
 
@@ -929,10 +929,10 @@ Post-SC/SP Improvement & 35.1\% & 8.8\% & 11.9\% \\
 \end{minipage}
 \end{table}
 
-BG-AILS accounts for $88.2\%$ of the cost reduction after the opening decompose--route solution, dropping to $40.8\%$ after the first iteration.
+\gls{bg-ails} accounts for $88.2\%$ of the cost reduction after the opening decompose--route solution, dropping to $40.8\%$ after the first iteration.
 The decompose--route stage accounts for $3.0\%$ of the reduction from $16.1\%$ of
 the updates, and it consumes $35.1\%$ of
-recorded stage time. The SC/SP plus post-SC/SP improvement accounts for the
+recorded stage time. The \gls{sc}/\gls{sp} plus post-\gls{sc}/\gls{sp} improvement accounts for the
 remaining $8.8\%$ of the reduction, from $35.1\%$ of the updates. Since all stages of \gls{drispi} are highly intertwined and cooperative, a higher cost reduction for one step doe not imply that the other steps are less valuable.
 
 \begin{table}[H]
@@ -946,7 +946,7 @@ remaining $8.8\%$ of the reduction, from $35.1\%$ of the updates. Since all stag
 \setlength{\improvesplitcol}{\dimexpr(\linewidth-\improvesplitcol-12\tabcolsep)/6\relax}%
 \begin{tabular}{@{}l *{6}{w{c}{\improvesplitcol}}@{}}
 \toprule
-& \multicolumn{3}{c}{BG-AILS (\%)} & \multicolumn{3}{c}{SC/SP + Improvement (\%)} \\
+& \multicolumn{3}{c}{\gls{bg-ails} (\%)} & \multicolumn{3}{c}{\gls{sc}/\gls{sp} + Improvement (\%)} \\
 \cmidrule(lr){2-4} \cmidrule(lr){5-7}
 Subset & Reduction & Updates & Time & Reduction & Updates & Time \\
 \midrule
@@ -959,13 +959,13 @@ $n > 3{,}400$ & 86.3 & 46.5 & 41.6 & 9.6 & 38.3 & 18.7 \\
 \end{table}
 
 Table~\ref{tab:improvement-splits} is where the two predictions from
-Section~\ref{sec:stu-characteristics} can be proven. BG-AILS does carry a
+Section~\ref{sec:stu-characteristics} can be proven. \gls{bg-ails} does carry a
 larger share of the cost reduction on the long-route instances, $92.1\%$ against
 $87.7\%$, and a larger share of recorded stage time, $46.4\%$ against $43.0\%$.
 Its share of the updates is lower on that length, $39.1\%$ against $50.9\%$,
-because SC/SP plus post-SC/SP improvement logs $40.2\%$ of the updates there against $34.0\%$ on the short-route band. The prediction
-about the SC/SP contribution and the 10,000-column pool cap
+because \gls{sc}/\gls{sp} plus post-\gls{sc}/\gls{sp} improvement logs $40.2\%$ of the updates there against $34.0\%$ on the short-route band. The prediction
+about the \gls{sc}/\gls{sp} contribution and the 10,000-column pool cap
 (Section~\ref{sec:fra-sp}) does not hold in the form the size split suggests.
 The cap is reached on 72 of the 100 instances: 33 of the 50 with $n < 3{,}400$
 and 39 of the 50 with $n > 3{,}400$, and on none of the 14 long-route instances,
-whose largest observed pools have a median of about 4,200 columns. The SC/SP plus post-SC/SP improvement time share falls from $24.2\%$ below 3,400 customers to $18.7\%$ above, and from $22.5\%$ on the short-route band to $15.2\%$ on the long-route band. The SC/SP timer inside that sum falls from $12.1\%$ to $7.1\%$ across the size cut, and from $11.0\%$ to $1.0\%$ on the long routes, which is the band whose pools stay below the cap. The SC/SP plus post-SC/SP improvement share of the cost reduction is $7.4\%$ below 3,400 customers and $9.6\%$ above, and $9.2\%$ on the short-route band against $5.8\%$ on the long-route band. The long-route drop in SC/SP time is real because long-route instances generate fewer total routs, and smaller route pools take less time to solve.
+whose largest observed pools have a median of about 4,200 columns. The \gls{sc}/\gls{sp} plus post-\gls{sc}/\gls{sp} improvement time share falls from $24.2\%$ below 3,400 customers to $18.7\%$ above, and from $22.5\%$ on the short-route band to $15.2\%$ on the long-route band. The \gls{sc}/\gls{sp} timer inside that sum falls from $12.1\%$ to $7.1\%$ across the size cut, and from $11.0\%$ to $1.0\%$ on the long routes, which is the band whose pools stay below the cap. The \gls{sc}/\gls{sp} plus post-\gls{sc}/\gls{sp} improvement share of the cost reduction is $7.4\%$ below 3,400 customers and $9.6\%$ above, and $9.2\%$ on the short-route band against $5.8\%$ on the long-route band. The long-route drop in \gls{sc}/\gls{sp} time is real because long-route instances generate fewer total routs, and smaller route pools take less time to solve.

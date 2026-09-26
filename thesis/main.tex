@@ -11,6 +11,8 @@
 \renewcommand{\thepage}{\roman{page}}
 \setcounter{page}{1}
 \onehalfspacing
+\input{Abbr} % define abbreviations before the abstract uses them
+\glsunset{haos}\glsunset{bg-ails}% keep the abstract on the short forms
 \input{chapters/0_Abstract}
 \pdfbookmark[1]{Table of contents}{toc}
 \renewcommand\contentsname{Table of Contents}
@@ -19,8 +21,8 @@
 \listoftables  % (optional)
 \printglossary[type=\acronymtype,style=long ,title=Abbreviations, toctitle=Abbreviations]
 \input{Symbols}
-\include{Abbr} % all abbreviations (optional)
 \glsreset{bks}% list of figures uses this acronym before the main text
+\glsreset{haos}\glsreset{bg-ails}% abstract kept these short; introduce them in the text
 \input{chapters/1_Introduction}
 \input{chapters/2_Literature}
 \input{chapters/3_Framework}

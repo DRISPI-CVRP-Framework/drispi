@@ -1,6 +1,105 @@
-\newglossaryentry{symb:N}{sort={3},
-name={$\mathbb N$},
-first={first $\mathbb N$},
-text={additional $\mathbb N$},
-description={Set of natural numbers},
-type=symbolslist}
+\addchap{Symbols}
+\noindent
+The same letter is sometimes used for two different objects. Where that happens, both meanings are listed.
+
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.26\textwidth}>{\raggedright\arraybackslash}p{0.70\textwidth}@{}}
+\toprule
+Symbol & Meaning \\
+\midrule
+\endfirsthead
+\multicolumn{2}{@{}l}{Symbols, continued}\\
+\toprule
+Symbol & Meaning \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\multicolumn{2}{@{}l}{Capacitated vehicle routing problem} \\
+\midrule
+$G = (V, E)$ & Complete undirected graph of the instance. \\
+$V$ & Locations. The depot together with the customers. \\
+$0$ & The depot. \\
+$C$ & Customer set, $C = \{1, \dots, n\}$. \\
+$n = |C|$ & Customer count, excluding the depot. \\
+$E$ & Edges. Each edge is an unordered pair $\{i, j\}$. \\
+$i, j$ & Customer indices. \\
+$c_{ij}$ & Travel cost of edge $\{i, j\}$. \\
+$q_i$ & Demand of customer $i$. \\
+$Q$ & Vehicle capacity. \\
+\midrule
+\multicolumn{2}{@{}l}{Decomposition} \\
+\midrule
+$k$ & Number of subclusters. \\
+$\lambda_q$ & Weight of the demand term in the dissimilarity. \\
+$\pi$ & Clustering paradigm, vertex-based or route-based. \\
+$m$ & Clustering method. \\
+$s$ & Routing subsolver. \\
+$\theta$ & Configuration $(k, \lambda_q, \pi, m, s)$. \\
+$\phi$ & Angular offset of the dissimilarity, drawn from $[0, 2\pi)$. \\
+$(x_i, y_i)$ & Coordinates of customer $i$. \\
+$d_{ij}$ & Dissimilarity of customers $i$ and $j$. \\
+$\lambda_\theta$ & Scale of the angular term in $d_{ij}$. \\
+$\Delta\theta_{ij}$ & Shortest angular distance between $i$ and $j$ around the depot. \\
+\midrule
+\multicolumn{2}{@{}l}{Hierarchical adaptive operator selection} \\
+\midrule
+$W_1, W_2, W_3, W_5$ & Roulette wheels for $k$, $\lambda_q$, the paradigm, and the subsolver. \\
+$W_4^{\mathrm{v}}, W_4^{\mathrm{r}}$ & Method wheels for the vertex-based and route-based paradigms. \\
+$w_a$, $w_i$ & Weight of an arm. \\
+$w_0$ & Starting weight, also the floor a weight cannot fall below. \\
+$r$ & Reward added to the weight of a selected arm. \\
+$R$ & Stationary reward per selection in the weight fixed point. \\
+$w^{*}$ & Fixed-point weight of an arm. \\
+$\gamma$ & Decay factor applied to every weight once per iteration. \\
+$\hat{p}_i$ & Normalized arm weight before the probability floor. \\
+$p_i$ & Draw probability of an arm after the floor and renormalization. \\
+$p_{\min}$ & Probability floor, before renormalization. \\
+$p$ & Steady selection probability in the fixed-point formula. \\
+$A$ & Number of arms on a wheel. \\
+$i$ & Iteration index when paired with the warm-up $i_0$. Also an arm index in the weight updates. \\
+$i_0$ & Last warm-up iteration. Reward updates and decay start after it. \\
+$a$ & An arm belonging to the credited configuration $\theta$. \\
+$S^{\star}$ & Incumbent solution seen by the HAOS draw. \\
+\midrule
+\multicolumn{2}{@{}l}{Boundary-guided adaptive iterated local search} \\
+\midrule
+$\kappa(i)$ & Cluster label of customer $i$. \\
+$|\kappa(i)|$ & Number of customers in the cluster of $i$. \\
+$b_i$ & Raw boundary score of customer $i$. \\
+$\tilde{b}_i$ & Boundary score after the cluster-size adjustment. \\
+$\hat{b}_i$ & Boundary score after min--max renormalization to $[0, 1]$. \\
+$d_{\min}, d_{\max}$ & Smallest and largest nearest-other-cluster dissimilarities. \\
+$\alpha$ & Boost applied to clusters smaller than $\sigma$. \\
+$\sigma$ & Small-cluster cap. \\
+$\tau$ & Boundary threshold. Ranks at or below $\tau$ are set to zero. \\
+$\rho_i$ & Gated boundary rank of customer $i$. \\
+$\rho(r)$ & Weight of route $r$, the maximum $\rho_i$ among its customers. \\
+$A_{r,\cdot}$ & Affinity of route $r$ toward the other clusters. \\
+$\omega$, $\omega_0$ & AILS-II diversification parameter, and the value BG-AILS passes in. \\
+$T$ & Wall-clock budget passed to the AILS-II call. \\
+$\widehat{T}_{\mathrm{DR}}$ & Fitted wall-clock time of the decompose-route stage. \\
+$n_{\mathrm{waves}}$ & Number of routing waves in that stage. \\
+\midrule
+\multicolumn{2}{@{}l}{Route pool and set covering or set partitioning} \\
+\midrule
+$r$ & A route, or one entry of the pool. \\
+$C_r$ & Customers served by route $r$. \\
+$R$ & Route pool at the time of a score update or a solve. \\
+$\bar{J}(r)$ & Mean Jaccard distance of route $r$ to the other pool entries. \\
+$\rho_q(r), \rho_d(r)$ & Quality rank and diversity rank of route $r$. \\
+$\Phi(r)$ & Eviction fitness, $\rho_q(r) + w_d \cdot \rho_d(r)$. \\
+$w_d$ & Weight of the diversity rank in $\Phi(r)$. \\
+$c_r$ & Travel cost of route $r$. \\
+$x_r$ & Decision variable selecting route $r$. Binary in the integer model, continuous in the LP relaxation. \\
+\midrule
+\multicolumn{2}{@{}l}{Computational study} \\
+\midrule
+$\mathrm{Gap}$ & Percentage gap of a solution cost to a reference cost. \\
+$c$ & Solution cost. \\
+$c_{\mathrm{BKS}}$ & Best-known solution cost used as the reference. \\
+$\bar{G}$ & Grand mean gap over instances and seeds. \\
+$\bar{\sigma}^{2}$ & Average per-instance variance across seeds. \\
+$I$ & Number of instances in the campaign. \\
+$S$ & Number of seeds per instance. \\
+$\mathrm{Var}(\bar{G})$ & Variance of the grand mean, $\bar{\sigma}^{2} / (I \cdot S)$. \\
+\end{longtable}

@@ -7,13 +7,13 @@ monolithic solvers at this scale. The second is whether the weights HAOS learns 
 insights about the instances they were learned on.
 
 Section~\ref{sec:stu-experiment} describes the dataset, specifies implementation and
-hardware specificiations, the parameter values, and explains expertimental design choices. Section~\ref{sec:stu-results} shows and analyzes the results. Here we answer the primary and secondary research questions through comparison with the published solvers, break the results down by instance characteristics, examine the learned HAOS weights and the convergence of individual runs, and attribute the improvement to the stages that produced it.
+hardware specificiations, the parameter values, and explains expertimental design choices. Section~\ref{sec:stu-results} shows and analyzes the results. Here the primary and secondary research questions is answered through comparison with the published solvers, break the results down by instance characteristics, examine the learned HAOS weights and the convergence of individual runs, and attribute the improvement to the stages that produced it.
 
 \section{Experimental Design}\label{sec:stu-experiment}
 All 100 instances are solved by the same \gls{drispi} configuration. Nothing is tuned
 per instance by design without anyexceptions. Section~\ref{sec:stu-dataset} describes the instances and the reference solutions used as baseline, section~\ref{sec:stu-implementation} the software and hardware the campaign
 ran on, section~\ref{sec:stu-hyperparameters} the parameter values, and
-section~\ref{sec:stu-repetitions} the number of seeds and the statistical precision it buys for our experiment.
+section~\ref{sec:stu-repetitions} the number of seeds and the statistical precision it buys for this experiment.
 
 \subsection{Dataset and Reference Solutions}\label{sec:stu-dataset}
 The XL set (section~\ref{sec:lit-problem}) extends the generation scheme of the X
@@ -37,15 +37,15 @@ runs described in section~\ref{sec:lit-large-cvrp} and were released as baseline
 CVRPLib BKS Challenge, a community competition opened on January~12, 2026, in
 which any team can submit an improved solution for automatic verification. By
 the current record,\footnote{\url{https://galgos.inf.puc-rio.br/cvrplib/index.php/en/bks_challenge/score/instances}, accessed September 7, 2026.} the challenge has improved 99 of the 100
-initial values, leaving only XL-n1094-k157 to still hold its initial value. We report the
-percentage gap to baselines such as the initial and the current \gls{bks}:
+initial values, leaving only XL-n1094-k157 to still hold its initial value. The
+percentage gap is reported to baselines such as the initial and the current \gls{bks}:
 \begin{equation}
 \mathrm{Gap} = 100 \times \frac{c - c_{\mathrm{BKS}}}{c_{\mathrm{BKS}}}.
 \label{eq:gap}
 \end{equation}
 The quantity $c$ is the reported solution cost. The current
-\gls{bks} represents the official best known solution. However, we primarily compare against initial \gls{bks}, because published solvers produced it in two-hour single-thread runs on specified hardware
-(Section~\ref{sec:lit-large-cvrp}), using us an experimental design we can reproduce to allow for any algorithmic comparability. The official BKS values, on the other hand, have been achieved without constraints regarding computational, with many of them coming from day-long runs that rely on raw compute, rendering any fair comparison infeasible.
+\gls{bks} represents the official best known solution. However, the comparison is primarily gainst initial \gls{bks}, because published solvers produced it in two-hour single-thread runs on specified hardware
+(Section~\ref{sec:lit-large-cvrp}), using an experimental design that can be reproduced here to allow for any algorithmic comparability. The official BKS values, on the other hand, have been achieved without constraints regarding computational, with many of them coming from day-long runs that rely on raw compute, rendering any fair comparison infeasible.
 
 \subsection{Implementation and Hardware Specifications}\label{sec:stu-implementation}
 All experiments in this chapter run on a single, shared department server under
@@ -53,7 +53,7 @@ Ubuntu 22.04.5 LTS with two Intel Xeon Platinum~8280L CPUs at 2.70\,GHz
 (28 cores each, 56 cores and 112 threads total) and 5,928\,GiB of RAM, with no
 GPU\@. \gls{drispi} runs inside Docker containers (Docker 28.1.1) pinned to a disjoint physical-core range with \texttt{--cpuset-cpus}. This pinned CPU count, not a library thread-pool default, sets the framework's parallelism budget.
 
-The campaign presented in section~\ref{sec:stu-comparison} is comprised of all 100 instances, each run on three seeds with a wallclock runtime budget and termination criterion of T=2h (300 runs, 7{,}200 seconds each). For that we pin 48 of the server's 56 physical cores as six exclusive 8-core Docker containers, three per socket, parallelizing as outlined in section~\ref{sec:fra-pipeline} with a split into six DRI workers, one BG-AILS worker, and one SP worker. SMT siblings are left idle. Runs are packed into waves ordered by instance size so that the three seeds of the largest instance, XL-n10001-k1570, never share a wave. The full campaign takes 50 waves and about 100 hours of wall-clock time.
+The campaign presented in section~\ref{sec:stu-comparison} is comprised of all 100 instances, each run on three seeds with a wallclock runtime budget and termination criterion of T=2h (300 runs, 7{,}200 seconds each). For that 48 of the server's 56 physical cores are pinned as six exclusive 8-core Docker containers, three per socket, parallelizing as outlined in section~\ref{sec:fra-pipeline} with a split into six DRI workers, one BG-AILS worker, and one SP worker. SMT siblings are left idle. Runs are packed into waves ordered by instance size so that the three seeds of the largest instance, XL-n10001-k1570, never share a wave. The full campaign takes 50 waves and about 100 hours of wall-clock time.
 
 \gls{drispi} uses Python 3.11, with dependencies locked via \texttt{uv}: Libraries PyVRP 0.13.3 (HGS-CVRP), scikit-learn 1.8.0 (K-Means and Agglomerative Clustering), scikit-learn-extra 0.3.0 (K-Medoids), scikit-fuzzy 0.5.0 (Fuzzy C-Means), gurobipy 13.0.1 (SC/SP), and vrplib 2.1.0 for instance parsing. AILS-II, FILO, and FILO2 are vendored as git submodules pinned to a fixed commit each and compiled at image build time, rather than resolved from a floating branch, so a rebuild reproduces the exact binaries behind the results in Section~\ref{sec:stu-comparison}. The whole framework runs inside a Docker image built from this locked environment, so the software stack behind every reported run is fixed independently of the host it executes on.
 
@@ -130,12 +130,12 @@ BG-AILS, and the post-SC/SP improvement pass alike, so two runs at the same seed
 can differ in solution quality. Disclosing the seeds therefore does not suffice
 for exact reproducibility. The three runs per instance are exchangeable replications.
 
-Because each run is stopped after 7,200 seconds (120 minutes) of wall-clock time rather than at convergence, each run resembles a terminating simulation in the sense of \citet{lawSimulationModelingAnalysis2000}: a fixed initial condition, the first DRI iteration's decomposition and routing pass (Section~\ref{sec:fra-decomposition}), and a fixed stopping rule rather than a steady state. The replication method of \citet[ch.~9]{lawSimulationModelingAnalysis2000} therefore applies.
+Because each run is stopped after 7,200 seconds (120 minutes) of wall-clock time rather than at convergence, each run resembles a terminating simulation in the sense of \citet[p.~490]{lawSimulationModelingAnalysis2000}: a fixed initial condition, the first DRI iteration's decomposition and routing pass (Section~\ref{sec:fra-decomposition}), and a fixed stopping rule rather than a steady state. The replication method of \citet[p.~495]{lawSimulationModelingAnalysis2000} therefore applies.
 
 The precision target refers to the fixed set of 100 instances, which are a design
 factor \citep{queirogaXLInstancesCapacitated2026} rather than a sample from a larger
 population, so the seed is the only randomness the design controls. Using
-$\bar G$ the grand mean gap and $\bar\sigma^2$ the average per-instance seed
+$\bar G$, the grand mean gap, and $\bar\sigma^2$, the average per-instance seed
 variance, we get $\mathrm{Var}(\bar G) = \bar\sigma^2 / (I \cdot S)$ with
 $I = 100$. The $I \cdot S$ observations are independent by construction. Every
 run is a separate process with its own random-number stream, and no pool, cache,
@@ -169,7 +169,7 @@ $S$ & SE (pp) & Half-width (pp) \\
 Three other considerations set $S = 3$. At $S = 1$ there are no within-instance
 degrees of freedom and no interval at all. At $S = 2$ a discrepancy between two
 runs is visible, but cannot be attributed to either of them. At $S = 3$, however, one
-anomalous run stands out against the other two. We also require $S > 1$ to present a best-of-$S$ column, which is the
+anomalous run stands out against the other two. $S > 1$ is also required to present a best-of-$S$ column, which is the
 convention on this instance set \citep{queirogaXLInstancesCapacitated2026}.
 
 A fourth seed would add 100 runs and 1,600 core-hours to shrink the half-width
@@ -180,7 +180,7 @@ every run of a campaign alike, so more seeds do not reduce it, and the budget of
 a fourth seed would not buy a meaningfully more precise $\bar{G}$
 \citep{barrDesigningReportingComputational1995,johnsonTheoreticiansGuideExperimental2002}.
 Neyman allocation, which assigns seeds in proportion to each instance's standard
-deviation \citep{neymanTwoDifferentAspects1934,cochranSamplingTechniques1977}, would have further complicated the experimental design while only cutting the standard error of $\bar{G}$ by 8.8\% at the same total budget. Therefore, every instance receives
+deviation (\citealp[pp.~97--98]{cochranSamplingTechniques1977}; \citealp{neymanTwoDifferentAspects1934}), would have further complicated the experimental design while only cutting the standard error of $\bar{G}$ by 8.8\% at the same total budget. Therefore, every instance receives
 three seeds.
 
 The pilot value was conservative. In the campaign, the mean per-instance seed
@@ -191,12 +191,12 @@ puts the realized 95\% half-width of $\bar G$ near 0.006\,pp. This
 interval applies to the mean over seeds only. Best-of-$S$ is an extreme-value
 statistic whose expectation depends on $S$, so it is not comparable across
 studies with different replication counts. Section~\ref{sec:stu-comparison} uses
-it descriptively and focuses its main comparison and the answer to our primary research questions on the mean-of-$S$ gap.
+it descriptively and focuses its main comparison and the answer to this thesis's primary research questions on the mean-of-$S$ gap.
 
 \section{Results}
 \label{sec:stu-results}
 
-This Section presents the results of the campaign and analyzes the outcomes. In Section~\ref{sec:stu-comparison}, we compare \gls{drispi}'s 300 runs against the published solver benchmarks on the same 100 instances. Section~\ref{sec:stu-characteristics} shows which instance characteristics effect the solution quality. Section~\ref{sec:stu-haos} focuses on the secondary research question and analyzes the impact and resulting weight trajectories of \gls{haos}.
+This Section presents the results of the campaign and analyzes the outcomes. In Section~\ref{sec:stu-comparison}, \gls{drispi}'s 300 runs are compared against the published solver benchmarks on the same 100 instances. Section~\ref{sec:stu-characteristics} shows which instance characteristics effect the solution quality. Section~\ref{sec:stu-haos} focuses on the secondary research question and analyzes the impact and resulting weight trajectories of \gls{haos}.
 Section~\ref{sec:stu-convergence} explores the convergence behavior of \gls{drispi}. Finally, Section~\ref{sec:stu-sources} shows from which stages improvements made by \gls{drispi} originate.
 
 \subsection{Comparison with Monolithic Solvers}\label{sec:stu-comparison}
@@ -496,7 +496,7 @@ $0.423$ to $0.570$ and leaves three significant slopes: $0.147$ pp per standard
 deviation for $r$ ($p = 5.1 \times 10^{-15}$), $0.090$ pp for $\log \bar{q}$
 ($p = 1.2 \times 10^{-7}$), and $0.069$ pp for $n$ ($p = 2.1 \times 10^{-5}$).
 Route length remains the largest of the three, and customer count the smallest,
-in every specification we fitted.
+in every specification that was fitted.
 
 Figure~\ref{fig:gap-scale} fits each predictor on its own. The slopes for
 $r$ and $\log \bar{q}$ are smaller there than in the joint model because the
@@ -690,7 +690,7 @@ on the vertex-method wheel against 0.200, 0.481 on the route-method wheel
 against 0.333, and 0.432 on the subsolver against 0.250.  Every wheel ends
 between 1.4 and 1.9 times uniform on its leading arm.
 
-Since we have established that the arms move, we need to investigate their direction now. Because what the wheels have not done is rank the arms.  Within a run, the Spearman correlation between an arm's mean realized reward and that arm's final
+Since it is now established that the arms move, the direction of movement needs to investigated now. Because what the wheels have not done is rank the arms.  Within a run, the Spearman correlation between an arm's mean realized reward and that arm's final
 probability is 0.081 on the $k$ wheel, 0.045 on $\lambda_q$, 0.043 on the
 vertex-method wheel, 0.030 on the route-method wheel, and 0.042 on the
 subsolver.  The arms that finish heavy are not the arms that produces high-quality solutions. Figure~\ref{fig:haos-scatter} plots the two against each other.
@@ -959,7 +959,7 @@ $n > 3{,}400$ & 86.3 & 46.5 & 41.6 & 9.6 & 38.3 & 18.7 \\
 \end{table}
 
 Table~\ref{tab:improvement-splits} is where the two predictions from
-Section~\ref{sec:stu-characteristics} can be checked. BG-AILS does carry a
+Section~\ref{sec:stu-characteristics} can be proven. BG-AILS does carry a
 larger share of the cost reduction on the long-route instances, $92.1\%$ against
 $87.7\%$, and a larger share of recorded stage time, $46.4\%$ against $43.0\%$.
 Its share of the updates is lower on that length, $39.1\%$ against $50.9\%$,

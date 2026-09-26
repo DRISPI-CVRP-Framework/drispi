@@ -32,20 +32,20 @@ XL-n4535-k1134. This $k$ equals $\lceil \sum_{i=1}^{n} q_i / Q \rceil$, making i
 fixed by the benchmark and unrelated to the subcluster count $k$ of Section~\ref{sec:fra-haos}.
 Table~\ref{tab:xl-summary} breaks down the above mentioned characteristics on a per-instance basis along with \gls{drispi}'s result and comparison to initial and current \gls{bks} values.
 
-The initial BKS values of \citet{queirogaXLInstancesCapacitated2026} come from the solver
+The initial \gls{bks} values of \citet{queirogaXLInstancesCapacitated2026} come from the solver
 runs described in section~\ref{sec:lit-large-cvrp} and were released as baselines with the
-CVRPLib BKS Challenge, a community competition opened on January~12, 2026, in
+CVRPLib \gls{bks} Challenge, a community competition opened on January~12, 2026, in
 which any team can submit an improved solution for automatic verification. By
 the current record,\footnote{\url{https://galgos.inf.puc-rio.br/cvrplib/index.php/en/bks_challenge/score/instances}, accessed September 7, 2026.} the challenge has improved 99 of the 100
 initial values, leaving only XL-n1094-k157 to still hold its initial value. The
 percentage gap is reported to baselines such as the initial and the current \gls{bks}:
 \begin{equation}
-\mathrm{Gap} = 100 \times \frac{c - c_{\mathrm{BKS}}}{c_{\mathrm{BKS}}}.
+\mathrm{Gap} = 100 \times \frac{c - c_{\text{\gls{bks}}}}{c_{\text{\gls{bks}}}}.
 \label{eq:gap}
 \end{equation}
 The quantity $c$ is the reported solution cost. The current
 \gls{bks} represents the official best known solution. However, the comparison is primarily gainst initial \gls{bks}, because published solvers produced it in two-hour single-thread runs on specified hardware
-(Section~\ref{sec:lit-large-cvrp}), using an experimental design that can be reproduced here to allow for any algorithmic comparability. The official BKS values, on the other hand, have been achieved without constraints regarding computational, with many of them coming from day-long runs that rely on raw compute, rendering any fair comparison infeasible.
+(Section~\ref{sec:lit-large-cvrp}), using an experimental design that can be reproduced here to allow for any algorithmic comparability. The official \gls{bks} values, on the other hand, have been achieved without constraints regarding computational, with many of them coming from day-long runs that rely on raw compute, rendering any fair comparison infeasible.
 
 \subsection{Implementation and Hardware Specifications}\label{sec:stu-implementation}
 All experiments in this chapter run on a single, shared department server under
@@ -53,7 +53,7 @@ Ubuntu 22.04.5 LTS with two Intel Xeon Platinum~8280L CPUs at 2.70\,GHz
 (28 cores each, 56 cores and 112 threads total) and 5,928\,GiB of RAM, with no
 GPU\@. \gls{drispi} runs inside Docker containers (Docker 28.1.1) pinned to a disjoint physical-core range with \texttt{--cpuset-cpus}. This pinned CPU count, not a library thread-pool default, sets the framework's parallelism budget.
 
-The campaign presented in section~\ref{sec:stu-comparison} is comprised of all 100 instances, each run on three seeds with a wallclock runtime budget and termination criterion of T=2h (300 runs, 7{,}200 seconds each). For that 48 of the server's 56 physical cores are pinned as six exclusive 8-core Docker containers, three per socket, parallelizing as outlined in section~\ref{sec:fra-pipeline} with a split into six DRI workers, one BG-AILS worker, and one SP worker. SMT siblings are left idle. Runs are packed into waves ordered by instance size so that the three seeds of the largest instance, XL-n10001-k1570, never share a wave. The full campaign takes 50 waves and about 100 hours of wall-clock time.
+The campaign presented in section~\ref{sec:stu-comparison} is comprised of all 100 instances, each run on three seeds with a wallclock runtime budget and termination criterion of T=2h (300 runs, 7{,}200 seconds each). For that 48 of the server's 56 physical cores are pinned as six exclusive 8-core Docker containers, three per socket, parallelizing as outlined in section~\ref{sec:fra-pipeline} with a split into six \gls{dri} workers, one BG-AILS worker, and one SP worker. SMT siblings are left idle. Runs are packed into waves ordered by instance size so that the three seeds of the largest instance, XL-n10001-k1570, never share a wave. The full campaign takes 50 waves and about 100 hours of wall-clock time.
 
 \gls{drispi} uses Python 3.11, with dependencies locked via \texttt{uv}: Libraries PyVRP 0.13.3 (HGS-CVRP), scikit-learn 1.8.0 (K-Means and Agglomerative Clustering), scikit-learn-extra 0.3.0 (K-Medoids), scikit-fuzzy 0.5.0 (Fuzzy C-Means), gurobipy 13.0.1 (SC/SP), and vrplib 2.1.0 for instance parsing. AILS-II, FILO, and FILO2 are vendored as git submodules pinned to a fixed commit each and compiled at image build time, rather than resolved from a floating branch, so a rebuild reproduces the exact binaries behind the results in Section~\ref{sec:stu-comparison}. The whole framework runs inside a Docker image built from this locked environment, so the software stack behind every reported run is fixed independently of the host it executes on.
 
@@ -130,7 +130,7 @@ BG-AILS, and the post-SC/SP improvement pass alike, so two runs at the same seed
 can differ in solution quality. Disclosing the seeds therefore does not suffice
 for exact reproducibility. The three runs per instance are exchangeable replications.
 
-Because each run is stopped after 7,200 seconds (120 minutes) of wall-clock time rather than at convergence, each run resembles a terminating simulation in the sense of \citet[p.~490]{lawSimulationModelingAnalysis2000}: a fixed initial condition, the first DRI iteration's decomposition and routing pass (Section~\ref{sec:fra-decomposition}), and a fixed stopping rule rather than a steady state. The replication method of \citet[p.~495]{lawSimulationModelingAnalysis2000} therefore applies.
+Because each run is stopped after 7,200 seconds (120 minutes) of wall-clock time rather than at convergence, each run resembles a terminating simulation in the sense of \citet[p.~490]{lawSimulationModelingAnalysis2000}: a fixed initial condition, the first \gls{dri} iteration's decomposition and routing pass (Section~\ref{sec:fra-decomposition}), and a fixed stopping rule rather than a steady state. The replication method of \citet[p.~495]{lawSimulationModelingAnalysis2000} therefore applies.
 
 The precision target refers to the fixed set of 100 instances, which are a design
 factor \citep{queirogaXLInstancesCapacitated2026} rather than a sample from a larger
@@ -316,7 +316,7 @@ approximation to the signed-rank statistic without a continuity correction.
 \end{table}
 
 Table~\ref{tab:paired-tests} splits the five tested solvers into three
-groups. \gls{drispi} is significantly better than SISR and HGS-CVRP. The margin
+groups. \gls{drispi} is significantly better than SISRs and HGS-CVRP. The margin
 is $0.286$\,pp against SISRs and $1.152$\,pp against HGS-CVRP, and \gls{drispi} is
 ahead on 98 and 99 of the 100 instances. Against FILO the mean paired difference
 is marginal at $-0.037$\,pp and the \mbox{Hodges--Lehmann} shift $-0.026$\,pp, with an uncorrected
@@ -344,7 +344,7 @@ instance-specific tuning, which is the claim Chapter~\ref{chapter:framework} set
 \label{fig:gap-ecdf}
 \end{figure}
 
-Figure~\ref{fig:gap-ecdf} shows why the Table~\ref{tab:solver-summary} means
+The empirical \gls{cdf} in Figure~\ref{fig:gap-ecdf} shows why the Table~\ref{tab:solver-summary} means
 understate \gls{drispi}'s typical result and its tail at once. \gls{drispi}'s mean-of-3
 gap has a mean of $0.296\%$ against a median of $0.239\%$ (interquartile range
 $0.162\%$ to $0.374\%$, ninetieth percentile $0.493\%$, maximum $1.556\%$), following a very
@@ -616,7 +616,7 @@ decomposition cost rather than general difficulty. Over the full observed range
 of the set, $3.6$ standard deviations of $n$ and $4.6$ of $r$, the
 corresponding penalties relative to AILS-II are about $0.17$ pp and $0.25$ pp.
 The weak scale dependence claimed for the gap therefore holds in absolute
-terms and holds less comfortably in relative ones. The size split of Table~\ref{tab:solver-summary} shows the same without a model: DRISPI trails AILS-II by $0.097$ pp on the fifty instances below 3,400
+terms and holds less comfortably in relative ones. The size split of Table~\ref{tab:solver-summary} shows the same without a model: \gls{drispi} trails AILS-II by $0.097$ pp on the fifty instances below 3,400
 customers and by $0.177$ pp on the fifty above. Reaching the leading group is
 therefore better supported at the lower end of the XL range than at the upper.
 
@@ -624,7 +624,7 @@ therefore better supported at the lower end of the XL range than at the upper.
 \label{sec:stu-haos}
 
 HAOS chooses the number of subclusters $k$, the demand weight $\lambda_q$,
-the decomposition paradigm, the clustering method, and the subsolver, one draw per DRI
+the decomposition paradigm, the clustering method, and the subsolver, one draw per \gls{dri}
 iteration, and updates its weights from the rewards of
 Table~\ref{tab:haos-rewards} (Section~\ref{sec:fra-haos}).  The clustering method is split in
 two wheels, one per paradigm, so the five decisions are drawn from six decision wheels.  Whether
@@ -890,7 +890,7 @@ Sections~\ref{sec:stu-comparison} to~\ref{sec:stu-convergence} treat
 \gls{drispi} as one procedure. It includes five stages, and the route pool tags every
 route with the stage that produced it, so the improvement each stage contributes can be attributed rather than assumed. The
 question matters for two reasons. The framework's contribution over its
-predecessor DRSCI \citep{altendeiteringDRSCICVRP2026} rests on BG-AILS and HAOS, and the BG-AILS ablation of Section~\ref{sec:fra-bg-ails} measured that stage in isolation
+predecessor \gls{drsci} \citep{altendeiteringDRSCICVRP2026} rests on BG-AILS and HAOS, and the BG-AILS ablation of Section~\ref{sec:fra-bg-ails} measured that stage in isolation
 on a fixed checkpoint rather than inside a full 7,200-second run. And a stage that
 carries only few of the total improvements under the campaign budget is also the
 first candidate for reallocating core time.

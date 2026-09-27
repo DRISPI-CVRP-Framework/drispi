@@ -203,27 +203,23 @@ Section~\ref{sec:stu-convergence} explores the convergence behavior of \gls{dris
 
 This section compares \gls{drispi} against the eight monolithic solvers \citet{queirogaXLInstancesCapacitated2026} benchmark on the 100 XL instances: AILS-II, FILO, FILO2, KGLSXXL, HGS-CVRP, SISRs, LKH-3, and OR-Tools. The mean-of-$N$ and best-of-$N$ cost from the original paper reports ($N = 60$ for the published solvers, $N = 3$ for \gls{drispi}) represent the baseline, from which the gap to the current \gls{bks} is calculated. The per-instance gap is then averaged over all 100 instances for the main comparison. In a separate comparison, the mean-of-$N$ and best-of-$N$ gaps of each solver are compared on the fifty instances with fewer than 3,400 customers and the fifty with more, using the same split \citet{queirogaXLInstancesCapacitated2026} established for their own results table. \citet{queirogaXLInstancesCapacitated2026} report their own average gaps against the \gls{bks} at the time of publication, effectively AILS-II's own result for most instances, so those published averages are not comparable to the ones reported here. A detailed instance-level result breakdown of \gls{drispi}'s performance compared to the initial and current \gls{bks} columns can be found in Appendix~\ref{app:xl-results} (Table~\ref{tab:xl-summary}).
 
-\begin{longtable}{@{}lrrrrrr@{}}
-\caption{\gls{drispi} Mean Gap to Current \gls{bks} Comparison Against Benchmark Solvers, Sorted by Ascending Mean-of-$N$ Gap Over All Instances.}\label{tab:solver-summary}\\
+\begin{table}[!htb]
+\centering
+\caption{\gls{drispi} Mean Gap to Current \gls{bks} Comparison Against Benchmark Solvers, Sorted by Ascending Mean-of-$N$ Gap Over All Instances.}
+\label{tab:solver-summary}
+\setlength{\tabcolsep}{3pt}
+\makeatletter
+\def\solvertablebody{\@@input tables/solver_summary_table_lagrange }
+\makeatother
+\begin{tabular*}{\linewidth}{@{\extracolsep{\fill}}lrrrrrr@{}}
 \toprule
 & \multicolumn{3}{c}{Mean-of-$N$ Gap (\%)} & \multicolumn{3}{c}{Best-of-$N$ Gap (\%)} \\
 \cmidrule(lr){2-4} \cmidrule(lr){5-7}
-Solver & All & $n<3{,}400$ & $n>3{,}400$ & All & $n<3{,}400$ & $n>3{,}400$ \\
+Solver & All & $n{<}3{,}400$ & $n{>}3{,}400$ & All & $n{<}3{,}400$ & $n{>}3{,}400$ \\
 \midrule
-\endfirsthead
-\toprule
-& \multicolumn{3}{c}{Mean-of-$N$ Gap (\%)} & \multicolumn{3}{c}{Best-of-$N$ Gap (\%)} \\
-\cmidrule(lr){2-4} \cmidrule(lr){5-7}
-Solver & All & $n<3{,}400$ & $n>3{,}400$ & All & $n<3{,}400$ & $n>3{,}400$ \\
-\midrule
-\endhead
-\bottomrule
-\endfoot
-\bottomrule
-\endlastfoot
-\input{tables/solver_summary_table_lagrange}
-\end{longtable}
-
+\solvertablebody
+\end{tabular*}
+\end{table}
 The mean-of-$N$ is used for the primary comparison in Table~\ref{tab:solver-summary}, because \gls{drispi}'s mean-of-3 and each published solver's mean-of-60 estimate the same expected cost of a single run, and differ only in how many draws the average rests on. Best-of-$N$ on the other hand is an extreme-value statistic whose
 expectation falls as $N$ grows. \gls{drispi}'s minimum over three draws stands
 here against the minimum over sixty for every published solver, a sampling budget
@@ -297,6 +293,9 @@ approximation to the signed-rank statistic without a continuity correction.
     Solver's Mean-of-60 Gap, Over the 100 XL Instances.}
   \label{tab:paired-tests}
   \small
+  \makeatletter
+  \def\pairedtestsbody{\@@input tables/paired_tests_body }
+  \makeatother
   \begin{tabularx}{\linewidth}{@{}lrr
       >{\centering\arraybackslash}X
       >{\centering\arraybackslash}X
@@ -306,7 +305,7 @@ approximation to the signed-rank statistic without a continuity correction.
     \cmidrule(lr){4-5}
     & & & better & worse & \\
     \midrule
-    \input{tables/paired_tests_body}
+    \pairedtestsbody
   \end{tabularx}
   \medskip
   \begin{minipage}{\linewidth}
@@ -314,6 +313,7 @@ approximation to the signed-rank statistic without a continuity correction.
     $\Delta$ is the mean paired difference in percentage points; a negative value favours \gls{drispi}. $p$-values are one-sided Wilcoxon signed-rank, Holm-corrected within each of the two families of five tests.
   \end{minipage}
 \end{table}
+\vspace{-\intextsep}
 
 Table~\ref{tab:paired-tests} splits the five tested solvers into three
 groups. \gls{drispi} is significantly better than SISRs and HGS-CVRP. The margin
@@ -343,6 +343,7 @@ instance-specific tuning, which is the claim Chapter~\ref{chapter:framework} set
 \caption{Empirical CDF of the Mean-of-$N$ Gap to the Current \gls{bks}.}
 \label{fig:gap-ecdf}
 \end{figure}
+\vspace{-\intextsep}
 
 The empirical \gls{cdf} in Figure~\ref{fig:gap-ecdf} shows why the Table~\ref{tab:solver-summary} means
 understate \gls{drispi}'s typical result and its tail at once. \gls{drispi}'s mean-of-3
@@ -391,6 +392,7 @@ there is the initial \gls{bks}, which that run also beats.
   \end{tabular}%
   }
   \end{table}
+\vspace{-6pt}
 
 Two further results come from earlier campaigns run under the same parameter
 configuration as Table~\ref{tab:hyperparameters} and are reported here because
@@ -437,6 +439,7 @@ XL-n8028-k294 & 8{,}028 & C & R & Q & 27.3 & +0.61 \\
   Abbreviations are used as defined in Section~\ref{sec:stu-dataset}.
 \end{minipage}
 \end{table}
+\vspace{-\intextsep}
 
 \subsection{Performance by Instance Characteristics}
 \label{sec:stu-characteristics}
@@ -510,6 +513,7 @@ slope moves the other way, from $0.077$ to $0.069$.
 \caption{Mean-of-3 Gap to the Current \gls{bks} Against Customer Count, Average Route Length, and Log Average Demand per Customer.}
 \label{fig:gap-scale}
 \end{figure}
+\vspace{-\intextsep}
 
 The same asymmetry appears in a quantity the gap regressions do not measure.
 Regressing the per-instance seed standard deviation on each standardized
@@ -533,6 +537,7 @@ conditional on $r$.
 \caption{Per-Instance Seed Standard Deviation Against Customer Count and Average Route Length.}
 \label{fig:seed-spread}
 \end{figure}
+\vspace{-\intextsep}
 
 The concentration of the largest gaps on long routes is intuitive when considering what
 decomposition does to a long route. Every clustering method in
@@ -575,6 +580,7 @@ or both, does therefore not measurably change what \gls{drispi} achieves.
 \caption{Mean-of-3 Gap to the Current \gls{bks} by Instance Characteristic.}
 \label{fig:characteristics-panels}
 \end{figure}
+\vspace{-\intextsep}
 
 The demand-distribution effect is real but it is not a seventh independent
 factor. The group means run from $0.127\%$ on the unitary instances to
@@ -656,6 +662,7 @@ the six wheels. Normalized entropy goes from zero, at absolute singularity, to o
 \caption[Normalized Shannon Entropy of the Six HAOS Wheels Against DRI Iteration.]{Normalized Shannon Entropy of the Six \gls{haos} Wheels Against \gls{dri} Iteration.}
 \label{fig:haos-entropy}
 \end{figure}
+\vspace{-\intextsep}
 
 But the weights do move, and the reward recurrence says how far they should. Credit
 adds the reward earned on the iterations an arm is drawn. Decay removes a
@@ -695,7 +702,7 @@ probability is 0.081 on the $k$ wheel, 0.045 on $\lambda_q$, 0.043 on the
 vertex-method wheel, 0.030 on the route-method wheel, and 0.042 on the
 subsolver.  The arms that finish heavy are not the arms that produces high-quality solutions. Figure~\ref{fig:haos-scatter} plots the two against each other.
 
-\begin{figure}[H]
+\begin{figure}[htb]
   \centering
   \includegraphics[width=\textwidth]{figures/haos_scatter.pdf}
   \caption{Mean Immediate Reward of Each Arm Against Its Final Wheel Probability. Each point represents one arm in one run with at least five draws.}
@@ -757,6 +764,7 @@ selections, almost all receive the identical reward.
 \caption[Immediate (a) and Deferred (b) HAOS Rewards, Excluding the Ten Warm-Up Iterations.]{Immediate (a) and Deferred (b) \gls{haos} Rewards, Excluding the Ten Warm-Up Iterations.}
 \label{fig:haos-reward}
 \end{figure}
+\vspace{-\intextsep}
 
 \gls{bg-ails} almost always improves on the
 previous candidate, and almost never produces a
@@ -782,6 +790,7 @@ longer, because a reinforced random walk diverges rather than converges.
 \caption{Mean Pairwise Total-Variation Distance Between the Three Seeds' Final Wheel Probabilities, Against the Instance's Mean Number of Completed \gls{dri} Iterations. The distance is $\tfrac{1}{2}\sum_a |w_a - w_b|$, averaged over the three seed pairs. The line is a LOWESS smooth.}
 \label{fig:haos-seeds}
 \end{figure}
+\vspace{-\intextsep}
 
 But the weight level itself is not explained by the immediate reward alone. As shown, the interior fixed point of the recurrence in Equations~\ref{eq:haos-update}
 and~\ref{eq:haos-decay}, for a stationary selection probability $p$ and a
@@ -847,6 +856,7 @@ the first, and more than twice the realized 95\% half-width of the grand mean.
 \caption{Convergence Over the 7,200-Second Budget. (a) Number of Incumbent Updates By Wall-Clock Mark, (b) Mean-of-3 Gap By Route Length to the Current \gls{bks} at Each Wall-Clock Mark}
 \label{fig:improvement-quarters}
 \end{figure}
+\vspace{-\intextsep}
 
 The run-level counts say the same thing more directly. Of the 300 runs, 122
 improved their incumbent after the 90-minute mark and 221 after the 60-minute
@@ -928,6 +938,7 @@ Post-\gls{sc}/\gls{sp} Improvement & 35.1\% & 8.8\% & 11.9\% \\
   Summed over all 300 runs. Updates and cost reduction exclude that opening solution. Stage time includes it.
 \end{minipage}
 \end{table}
+\vspace{-\intextsep}
 
 \gls{bg-ails} accounts for $88.2\%$ of the cost reduction after the opening decompose--route solution, dropping to $40.8\%$ after the first iteration.
 The decompose--route stage accounts for $3.0\%$ of the reduction from $16.1\%$ of
@@ -957,6 +968,7 @@ $n > 3{,}400$ & 86.3 & 46.5 & 41.6 & 9.6 & 38.3 & 18.7 \\
 \bottomrule
 \end{tabular}
 \end{table}
+\vspace{-6pt}
 
 Table~\ref{tab:improvement-splits} is where the two predictions from
 Section~\ref{sec:stu-characteristics} can be proven. \gls{bg-ails} does carry a

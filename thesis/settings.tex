@@ -36,6 +36,15 @@
 % paragraph formatting
 \setlength{\parindent}{0cm}
 \setlength{\parskip}{6pt plus 2pt minus 2pt}
+% Itemize inherits a paragraph gap (\itemsep + \parsep) on top of the line
+% spacing. Zero both so consecutive bullets sit on ordinary line spacing.
+\let\thesisitemize\itemize
+\renewcommand{\itemize}{%
+  \thesisitemize
+  \setlength{\itemsep}{0pt}%
+  \setlength{\parsep}{0pt}%
+  \setlength{\parskip}{0pt}%
+}
 
 % fonts
 \usepackage{times} % use times as default font

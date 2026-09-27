@@ -46,8 +46,6 @@ def main() -> None:
     for solver in solvers:
         row = table[solver]
         label = r"\gls{drispi}" if solver == "DRISPI" else solver
-        if row["n_mean_all"] < 100:
-            label = f"{solver} ($n = {row['n_mean_all']}$)"
         cells = [
             label,
             _fmt(row["mean_all"], args.digits),
@@ -57,10 +55,16 @@ def main() -> None:
             _fmt(row["best_lo"], args.digits),
             _fmt(row["best_hi"], args.digits),
         ]
-        lines.append(" & ".join(cells) + r" \\")
+        # The trailing % eats the newline, so a following \bottomrule is not
+        # preceded by a space token (which makes booktabs' \noalign fail).
+        lines.append(" & ".join(cells) + r" \\%")
 
+    # \bottomrule lives in this file. A space token after \input makes
+    # booktabs' \noalign illegal, and the final % removes the newline before it.
+    # No newline after \endinput. A token after the last rule becomes a blank row.
+    lines.append(r"\bottomrule\endinput")
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    args.output.write_text("\n".join(lines), encoding="utf-8")
     print(f"Wrote {len(lines)} rows to {args.output}")
 
 

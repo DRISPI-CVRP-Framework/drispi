@@ -148,8 +148,10 @@ def main() -> None:
 
     # \bottomrule has to live in this file. A \\ at the end of an \input,
     # followed by \bottomrule in the parent, is tokenized as an open cell.
-    lines.append("\\bottomrule")
-    OUT_TEX.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    # \endinput with no trailing newline stops LaTeX's \input hook from
+    # leaving a token that becomes a blank row under the rule.
+    lines.append("\\bottomrule\\endinput")
+    OUT_TEX.write_bytes("\n".join(lines).encode("utf-8"))
     OUT_JSON.write_text(json.dumps(rows, indent=2) + "\n", encoding="utf-8")
     print(f"Wrote {BASELINE_CSV}")
     print(f"Wrote {OUT_JSON}")

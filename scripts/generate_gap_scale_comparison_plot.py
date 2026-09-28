@@ -2,7 +2,7 @@
 """Three-panel scatter of the mean-of-3 gap against standardized n, r, and log qbar.
 
 All panels share the y-axis. Each line is the ordinary least-squares fit on
-all 100 instances. qbar = Q / r from Table A.1.
+all 100 instances. qbar is the mean customer demand read from the instance file.
 
 Writes thesis/figures/gap_scale_comparison.pdf.
 """

@@ -7,11 +7,11 @@ monolithic solvers at this scale. The second is whether the weights \gls{haos} l
 insights about the instances they were learned on.
 
 Section~\ref{sec:stu-experiment} describes the dataset, specifies implementation and
-hardware specificiations, the parameter values, and explains expertimental design choices. Section~\ref{sec:stu-results} shows and analyzes the results. Here the primary and secondary research questions is answered through comparison with the published solvers, break the results down by instance characteristics, examine the learned \gls{haos} weights and the convergence of individual runs, and attribute the improvement to the stages that produced it.
+hardware specifications, the parameter values, and explains experimental design choices. Section~\ref{sec:stu-results} shows and analyzes the results. Here the primary and secondary research questions is answered through comparison with the published solvers, break the results down by instance characteristics, examine the learned \gls{haos} weights and the convergence of individual runs, and attribute the improvement to the stages that produced it.
 
 \section{Experimental Design}\label{sec:stu-experiment}
 All 100 instances are solved by the same \gls{drispi} configuration. Nothing is tuned
-per instance by design without anyexceptions. Section~\ref{sec:stu-dataset} describes the instances and the reference solutions used as baseline, section~\ref{sec:stu-implementation} the software and hardware the campaign
+per instance by design without any exceptions. Section~\ref{sec:stu-dataset} describes the instances and the reference solutions used as baseline, section~\ref{sec:stu-implementation} the software and hardware the campaign
 ran on, section~\ref{sec:stu-hyperparameters} the parameter values, and
 section~\ref{sec:stu-repetitions} the number of seeds and the statistical precision it buys for this experiment.
 
@@ -44,7 +44,7 @@ percentage gap is reported to baselines such as the initial and the current \gls
 \label{eq:gap}
 \end{equation}
 The quantity $c$ is the reported solution cost. The current
-\gls{bks} represents the official best known solution. However, the comparison is primarily gainst initial \gls{bks}, because published solvers produced it in two-hour single-thread runs on specified hardware
+\gls{bks} represents the official best known solution. However, the comparison is primarily against the solutions produced by the published solvers, because they originate from two-hour single-thread runs on specified hardware
 (Section~\ref{sec:lit-large-cvrp}), using an experimental design that can be reproduced here to allow for any algorithmic comparability. The official \gls{bks} values, on the other hand, have been achieved without constraints regarding computational, with many of them coming from day-long runs that rely on raw compute, rendering any fair comparison infeasible.
 
 \subsection{Implementation and Hardware Specifications}\label{sec:stu-implementation}
@@ -122,8 +122,7 @@ routing solvers of Section~\ref{sec:fra-routing}. They define the search space o
 
 \subsection{Replication Design}\label{sec:stu-repetitions}
 The campaign runs \gls{drispi} on every one of the 100 XL instances three times, at
-seeds 11, 22, and 33. The seed drives the weighted \gls{haos} draws, the angular
-offset, and the random choices inside decomposition. It is also
+seeds 11, 22, and 33. The seed drives the weighted \gls{haos} draws and the random choices inside decomposition. It is also
 passed to PyVRP, FILO, and FILO2, but AILS-II has no seed flag. This makes the routing phase, \gls{bg-ails} and the post-\gls{sc}/\gls{sp} improvement pass independent of the seed. This makes the runs non-reproducible. Additionally, the plugged-in solvers run under wall-clock limits, so how far their search gets depends on machine load, and the worker pool
 schedules subcluster jobs in no fixed order. This affects again, the entire routing phase,
 \gls{bg-ails}, and the post-\gls{sc}/\gls{sp} improvement pass alike, so two runs at the same seed
@@ -196,12 +195,12 @@ it descriptively and focuses its main comparison and the answer to this thesis's
 \section{Results}
 \label{sec:stu-results}
 
-This Section presents the results of the campaign and analyzes the outcomes. In Section~\ref{sec:stu-comparison}, \gls{drispi}'s 300 runs are compared against the published solver benchmarks on the same 100 instances. Section~\ref{sec:stu-characteristics} shows which instance characteristics effect the solution quality. Section~\ref{sec:stu-haos} focuses on the secondary research question and analyzes the impact and resulting weight trajectories of \gls{haos}.
+This Section presents the results of the campaign and analyzes the outcomes. In Section~\ref{sec:stu-comparison}, \gls{drispi}'s 300 runs are compared against the published solver benchmarks on the same 100 instances. Section~\ref{sec:stu-characteristics} shows which instance characteristics affect the solution quality. Section~\ref{sec:stu-haos} focuses on the secondary research question and analyzes the impact and resulting weight trajectories of \gls{haos}.
 Section~\ref{sec:stu-convergence} explores the convergence behavior of \gls{drispi}. Finally, Section~\ref{sec:stu-sources} shows from which stages improvements made by \gls{drispi} originate.
 
 \subsection{Comparison with Monolithic Solvers}\label{sec:stu-comparison}
 
-This section compares \gls{drispi} against the eight monolithic solvers \citet{queirogaXLInstancesCapacitated2026} benchmark on the 100 XL instances: AILS-II, FILO, FILO2, KGLSXXL, HGS-CVRP, SISRs, LKH-3, and OR-Tools. The mean-of-$N$ and best-of-$N$ cost from the original paper reports ($N = 60$ for the published solvers, $N = 3$ for \gls{drispi}) represent the baseline, from which the gap to the current \gls{bks} is calculated. The per-instance gap is then averaged over all 100 instances for the main comparison. In a separate comparison, the mean-of-$N$ and best-of-$N$ gaps of each solver are compared on the fifty instances with fewer than 3,400 customers and the fifty with more, using the same split \citet{queirogaXLInstancesCapacitated2026} established for their own results table. \citet{queirogaXLInstancesCapacitated2026} report their own average gaps against the \gls{bks} at the time of publication, effectively AILS-II's own result for most instances, so those published averages are not comparable to the ones reported here. A detailed instance-level result breakdown of \gls{drispi}'s performance compared to the initial and current \gls{bks} columns can be found in Appendix~\ref{app:xl-results} (Table~\ref{tab:xl-summary}).
+This section compares \gls{drispi} against the eight monolithic solvers \citet{queirogaXLInstancesCapacitated2026} benchmark on the 100 XL instances: AILS-II, FILO, FILO2, KGLS-XXL, HGS-CVRP, SISRs, LKH-3, and OR-Tools. The mean-of-$N$ and best-of-$N$ cost from the original paper reports ($N = 60$ for the published solvers, $N = 3$ for \gls{drispi}) represent the baseline, from which the gap to the current \gls{bks} is calculated. The per-instance gap is then averaged over all 100 instances for the main comparison. In a separate comparison, the mean-of-$N$ and best-of-$N$ gaps of each solver are compared on the fifty instances with fewer than 3,400 customers and the fifty with more, using the same split \citet{queirogaXLInstancesCapacitated2026} established for their own results table. \citet{queirogaXLInstancesCapacitated2026} report their own average gaps against the \gls{bks} at the time of publication, effectively AILS-II's own result for most instances, so those published averages are not comparable to the ones reported here. A detailed instance-level result breakdown of \gls{drispi}'s performance compared to the initial and current \gls{bks} columns can be found in Appendix~\ref{app:xl-results} (Table~\ref{tab:xl-summary}).
 
 \begin{table}[!htb]
 \centering
@@ -233,7 +232,7 @@ of the three retained seed pairs gives a best-of-2 gap at $0.273\%$. The actual
 three-seed minimum then gives the best-of-3 gap at $0.264\%$ as reported in
 Table~\ref{tab:solver-summary}. The first extra sample is worth $0.023$
 percentage points (pp) and the second $0.009$ pp, and the sequence is still
-falling at $N = 3$. AILS-II, FILO2, FILO, SISRs, KGLSXXL, and HGS-CVRP gain
+falling at $N = 3$. AILS-II, FILO2, FILO, SISRs, KGLS-XXL, and HGS-CVRP gain
 $0.07$, $0.09$, $0.10$, $0.16$, $0.21$, and $0.25$ pp respectively between
 their own mean-of-60 and best-of-60 columns, which are even larger reductions drawn from many
 more repetitions. \gls{drispi}'s mean per-instance seed standard deviation is
@@ -253,7 +252,7 @@ a mean of $0.037$ pp and a median of $0.026$ pp. Its root mean square, the
 quantity that enters $\mathrm{Var}(\bar{G})$, is $0.052$ pp, and the realized
 95\% half-width of the grand mean is $0.006$ pp
 (Section~\ref{sec:stu-repetitions}). The three runs are therefore exchangeable at set level: both tests block on
-instances and rule out a seed acting as a systematic factor across the 100,
+instances and do not detect a seed acting as a systematic factor across the 100,
 so the mean over them is a property of the configuration rather than of a
 particular seed. Neither establishes that the three runs are interchangeable
 on any individual instance, and three observations at two degrees of freedom
@@ -266,11 +265,11 @@ rather than instance size, a pattern Section~\ref{sec:stu-characteristics}
 takes up with the gap itself.
 
 The means presented in Table~\ref{tab:solver-summary} do also not establish whether an
-observed difference is real rather than an artifact of the 100 sampled
+observed difference is real rather than an artifact of the 100 
 instances. \gls{drispi}'s mean-of-3 column is tested against the corresponding
 mean-of-60 column of five of the eight published solvers, AILS-II, FILO2, FILO,
 SISRs, and HGS-CVRP, using the paired Wilcoxon signed-rank test
-\citep{demsVarStatisticalComparisonsClassifiers}, treating the 100 instances as matched pairs. KGLSXXL,
+\citep{demsVarStatisticalComparisonsClassifiers}, treating the 100 instances as matched pairs. KGLS-XXL,
 LKH-3, and OR-Tools are omitted, because their gaps in Table~\ref{tab:solver-summary} are large enough that the paired comparison would not be informative.
 
 Each baseline is tested twice, in opposite directions, because the two claims
@@ -310,7 +309,7 @@ approximation to the signed-rank statistic without a continuity correction.
   \medskip
   \begin{minipage}{\linewidth}
     \footnotesize
-    $\Delta$ is the mean paired difference in percentage points; a negative value favours \gls{drispi}. $p$-values are one-sided Wilcoxon signed-rank, Holm-corrected within each of the two families of five tests.
+    $\Delta$ is the mean paired difference in percentage points; a negative value favors \gls{drispi}. $p$-values are one-sided Wilcoxon signed-rank, Holm-corrected within each of the two families of five tests.
   \end{minipage}
 \end{table}
 \vspace{-\intextsep}
@@ -335,7 +334,7 @@ only 4 of 100 instances. AILS-II found 93 of the 100 initial \gls{bks} values
 \citep{queirogaXLInstancesCapacitated2026} and remains the strongest solver on this set by a clear
 margin. \gls{drispi}, being level with FILO2, and not separated from FILO
 by the corrected test, places inside the leading group without
-instance-specific tuning, which is the claim Chapter~\ref{chapter:framework} sets out to support.
+instance-specific tuning, which is the claim Chapter~\ref{chapter:introduction} sets out to support.
 
 \begin{figure}[H]
 \centering
@@ -350,7 +349,7 @@ understate \gls{drispi}'s typical result and its tail at once. \gls{drispi}'s me
 gap has a mean of $0.296\%$ against a median of $0.239\%$ (interquartile range
 $0.162\%$ to $0.374\%$, ninetieth percentile $0.493\%$, maximum $1.556\%$), following a very
 right-skewed distribution in which most instances sit below the mean, and a
-short tail sits well above it. \gls{drispi}'s curve tracks above FILO2's up to a gap
+long tail sits well above it. \gls{drispi}'s curve tracks above FILO2's up to a gap
 of about $0.3\%$ (59\% of instances at or below that gap, against 55\% for
 FILO2) and falls below it from $0.4\%$ (79\% against 86\%), the crossover the
 non-significant paired test against FILO2 allows: \gls{drispi} wins on the tighter
@@ -360,7 +359,7 @@ at a gap of $0.3\%$ or below, against 41\% for FILO, and 79\% against 69\% at
 $0.4\%$), the same direction as the mean paired difference, which the Holm
 correction leaves just short of rejection. FILO moves ahead only past a gap of about $0.66\%$.
 
-One individual result does not appear in any aggregate. On XL-n3888-k1010, \gls{drispi}'s
+One individual is hidden by the aggregates. On XL-n3888-k1010, \gls{drispi}'s
 best-of-3 cost of 1,880,215 beats the initial \gls{bks} of 1,880,368
 \citet{queirogaXLInstancesCapacitated2026} reported at publication. The seed 11 solution that attains this cost is drawn in Figure~\ref{fig:solved-instances}(a). Its gap to the current \gls{bks} is $+0.165\%$. No best-of-3 cost in this
 campaign matches the current \gls{bks}. Across all 100 instances, \gls{drispi}'s
@@ -404,9 +403,8 @@ $0.009\%$. On XL-n4535-k1134 a run finished below the published initial \gls{bks
 seed spread of Section~\ref{sec:stu-repetitions}, outcomes of this kind are
 a property of the run distribution rather than of a particular campaign, and three seeds are too few to find them reliably.
 
-In contrast,Table~\ref{tab:gap-tail} lists the instances behind the tail of
-Figure~\ref{fig:gap-ecdf}, the largest mean-of-3 gaps in
-Table~\ref{tab:xl-summary}, in descending order down to about $+0.6$
+In contrast, Table~\ref{tab:gap-tail} lists the instances behind the tail of
+Figure~\ref{fig:gap-ecdf}, the largest mean-of-3 gaps, in descending order down to about $+0.6$
 percent. XL-n9571-k55 leads that list. Figure~\ref{fig:solved-instances}(b) draws its seed 11 solution, the worst run in the campaign, at a gap of $+1.628\%$ to the current \gls{bks}. The table's $+1.56\%$ is the mean of the three seeds. Five of those seven fall in the dataset's ultra-long route length,
 $r \geq 50$ (Section~\ref{sec:stu-dataset}), which holds only 14 of the 100
 instances, and the remaining two both carry the quadrant-dependent demand
@@ -475,7 +473,7 @@ Customer count and route length can be compared directly once each is measured
 in sample standard deviations from its own mean. One standard deviation is
 2,456 customers for $n$ and $40.4$ stops for $r$. On that common scale the
 slope on $n$ is $0.077$ pp per standard deviation ($R^2 = 0.110$) and the slope
-on $r$ is $0.133$ pp per standard deviation ($R^2 = 0.332$). This shows that Route length
+on $r$ is $0.133$ pp per standard deviation ($R^2 = 0.332$). This shows that route length
 accounts for about three times as much of the variation in the gap, and its
 slope per standard deviation is $1.7$ times the slope on $n$. A joint
 regression on both standardized predictors leaves a partial slope of $0.070$ pp
@@ -484,28 +482,29 @@ partial slope exceeds the customer-count partial slope by $0.060$ pp per
 standard deviation ($t = 2.31$, $p = 0.023$, 95\% confidence interval
 $[0.008,\ 0.111]$).
 
-Capacity $Q$ and route length are set jointly by the generation scheme, so
-their ratio produces a quantity neither variable carries on its own. With
-$k \approx \sum_i q_i / Q$ the minimum fleet and $r \approx n/k$, the average
-demand per customer satisfies $\bar{q} = \sum_i q_i / n \approx Q/r$. On this
-set $\bar{q}$ ranges from $0.9$ on the unitary-demand instances to $75.7$ on
-the 50--100 instances, and its logarithm correlates with $r$ at only $-0.188$,
-which makes it a third axis rather than a restatement of the first two.
+Capacity $Q$ and route length are set jointly by the generation scheme.
+With $k \approx \sum_i q_i / Q$ the minimum fleet and $r \approx n/k$, the ratio
+$Q/r$ approximates the average demand per customer
+$\bar{q} = \sum_i q_i / n$. The regressions use $\bar{q}$ computed from the
+instance files. On this set $\bar{q}$ ranges from $1$ on the unitary-demand
+instances to $75.5$ on the 50--100 instances, and its logarithm correlates
+with $r$ at only $-0.189$, which makes it a third axis rather than a
+restatement of the first two.
 On its own, standardized $\log \bar{q}$ has a slope of $0.062$ pp per standard
-deviation ($R^2 = 0.073$).
+deviation ($R^2 = 0.072$).
 
 Adding standardized $\log \bar{q}$ to the joint regression raises $R^2$ from
 $0.423$ to $0.570$ and leaves three significant slopes: $0.147$ pp per standard
-deviation for $r$ ($p = 5.1 \times 10^{-15}$), $0.090$ pp for $\log \bar{q}$
-($p = 1.2 \times 10^{-7}$), and $0.069$ pp for $n$ ($p = 2.1 \times 10^{-5}$).
+deviation for $r$ ($p = 4.8 \times 10^{-15}$), $0.090$ pp for $\log \bar{q}$
+($p = 1.1 \times 10^{-7}$), and $0.070$ pp for $n$ ($p = 2.0 \times 10^{-5}$).
 Route length remains the largest of the three, and customer count the smallest,
 in every specification that was fitted.
 
 Figure~\ref{fig:gap-scale} fits each predictor on its own. The slopes for
 $r$ and $\log \bar{q}$ are smaller there than in the joint model because the
-two are mildly negatively correlated ($-0.188$) while both raise the gap, so
+two are mildly negatively correlated ($-0.189$) while both raise the gap, so
 each masks part of the other until both are in the model; the customer-count
-slope moves the other way, from $0.077$ to $0.069$.
+slope moves the other way, from $0.077$ to $0.070$.
 
 \begin{figure}[H]
 \centering
@@ -520,8 +519,8 @@ Regressing the per-instance seed standard deviation on each standardized
 predictor in turn gives $0.022$ pp per standard deviation for $r$
 ($p = 7.2 \times 10^{-11}$, $R^2 = 0.353$), $0.002$ pp for $n$ ($p = 0.60$,
 $R^2 = 0.003$), and a slope indistinguishable from zero for $\log \bar{q}$
-($p = 1.00$). In the joint model only $r$ survives, at $0.022$ pp per standard
-deviation ($p = 4.6 \times 10^{-11}$). Instance size therefore moves the level of the
+($p = 0.99$). In the joint model only $r$ survives, at $0.022$ pp per standard
+deviation ($p = 4.7 \times 10^{-11}$). Instance size therefore moves the level of the
 gap without moving its stability, whereas route length moves both.
 Figure~\ref{fig:seed-spread} shows the two panels side by side. Mean seed
 standard deviation is $0.093$ pp on the 14 instances with $r \geq 50$ against
@@ -563,14 +562,14 @@ whole. Equation~\ref{eq:bg-ails-budget} adapts the \gls{bg-ails} budget accordin
 wall-clock time of the surrounding decompose-route stage. It tracks through the
 per-subcluster budgets of Section~\ref{sec:fra-routing} subcluster
 customer counts, so it scales with the cost of producing the decomposition
-rather than with the amount of boundary or length of boundary-adjacent routes that the decomposition created. Seizing that from the boundary membership the framework already computes is the change Section~\ref{sec:con-future} proposes to improve on this central weakness of \gls{drispi}.
+rather than with the amount of boundary or length of boundary-adjacent routes that the decomposition created. Sizing that from the boundary membership the framework already computes is the change Section~\ref{sec:con-future} proposes to improve on this central weakness of \gls{drispi}.
 
 Figure~\ref{fig:characteristics-panels} analyzes the remaining instance characteristics against the gap: depot position, customer distribution, and demand distribution. Of the three, only demand distribution separates the groups. Kruskal-Wallis tests give $p = 0.153$ for depot position (three levels), $p = 0.180$ for customer distribution (three levels), and $p = 0.00085$ for demand distribution (seven levels). Under Holm correction across the three
 tests the first two stay well above any conventional threshold (adjusted
 $p = 0.305$ for both) and the third remains significant (adjusted
 $p = 0.0025$). Depot position and customer distribution are also
 non-significant after controlling for $n$ and $r$ (partial $F$-tests,
-$p = 0.76$ and $p = 0.55$). Whether the depot sits at the centre, in the
+$p = 0.76$ and $p = 0.55$). Whether the depot sits at the center, in the
 corner, or at a random point, and whether customers are scattered, clustered,
 or both, does therefore not measurably change what \gls{drispi} achieves.
 
@@ -594,7 +593,7 @@ distribution makes demand a function of position, where a partition drawn from
 coordinates alone cuts along a demand gradient and hands subclusters very
 unequal loads. Once standardized $\log \bar{q}$ enters the model alongside $n$
 and $r$, the demand-distribution grouping no longer adds anything
-($F = 1.51$, $p = 0.18$), and neither does depot position ($p = 0.22$) or
+($F = 1.52$, $p = 0.18$), and neither does depot position ($p = 0.22$) or
 customer distribution ($p = 0.98$).
 
 Additionally, each of the seven demand classes holds only 14 or 15 instances, leading to the
@@ -606,17 +605,17 @@ In conclusion, \gls{drispi}'s gap to the \gls{bks} mixes two things: how hard th
 what additional costs decomposition adds on top of that. The per-instance mean-of-60 gaps of
 AILS-II separate them. Fitting the same three standardized predictors to
 AILS-II's own gap gives $0.091$ pp per standard deviation for $r$
-($p = 6.8 \times 10^{-18}$), $0.046$ pp for $\log \bar{q}$, and $0.024$ pp for
-$n$ ($p = 0.0064$). Longer routes are therefore hard for the monolithic solver
+($p = 6.5 \times 10^{-18}$), $0.046$ pp for $\log \bar{q}$, and $0.024$ pp for
+$n$ ($p = 0.0061$). Longer routes are therefore hard for the monolithic solver
 too, and nearly as strongly as they are for \gls{drispi}, while customer count moves
 AILS-II's gap by about a third of what it moves \gls{drispi}'s.
 
 Fitting the same model to the paired difference then isolates what additional cost decomposition imposes. All three slopes are positive and significant, and they are close to
 one another: $0.055$ pp per standard deviation for $r$
-($p = 4.1 \times 10^{-8}$), $0.046$ pp for $n$ ($p = 2.3 \times 10^{-6}$), and
-$0.044$ pp for $\log \bar{q}$ ($p = 5.9 \times 10^{-6}$). Route length
+($p = 3.9 \times 10^{-8}$), $0.046$ pp for $n$ ($p = 2.2 \times 10^{-6}$), and
+$0.045$ pp for $\log \bar{q}$ ($p = 5.6 \times 10^{-6}$). Route length
 dominates the raw gap because it is a factor expressing instance difficulty that happens to
-hit \gls{drispi} slightly harder than it hits AILS-II. Customer count dominates
+hit \gls{drispi} harder than it hits AILS-II. Customer count dominates
 neither, but what little it does to the raw gap is almost entirely a
 decomposition cost rather than general difficulty. Over the full observed range
 of the set, $3.6$ standard deviations of $n$ and $4.6$ of $r$, the
@@ -650,7 +649,7 @@ weights reproduces the logged probabilities to a maximum absolute deviation of
 roughly $10^{-16}$ across 630,000 arm snapshots, so the weight trajectories
 below are read rather than reconstructed.  The ten warm-up iterations are
 excluded throughout.  Without them, runs complete between 22 and 118 iterations with a median
-of 78, and 149 of the 300 reach that median, so the later part of every
+of 78, and 149 of the 300 exceed that median, so the later part of every
 trajectory describes the longer half of the campaign.
 
 Figure~\ref{fig:haos-entropy} shows normalized entropy staying high on five of
@@ -697,10 +696,10 @@ on the vertex-method wheel against 0.200, 0.481 on the route-method wheel
 against 0.333, and 0.432 on the subsolver against 0.250.  Every wheel ends
 between 1.4 and 1.9 times uniform on its leading arm.
 
-Since it is now established that the arms move, the direction of movement needs to investigated now. Because what the wheels have not done is rank the arms.  Within a run, the Spearman correlation between an arm's mean realized reward and that arm's final
+Since it is now established that the arms move, the direction of movement needs to be investigated now. Because what the wheels have not done is rank the arms.  Within a run, the Spearman correlation between an arm's mean realized reward and that arm's final
 probability is 0.081 on the $k$ wheel, 0.045 on $\lambda_q$, 0.043 on the
 vertex-method wheel, 0.030 on the route-method wheel, and 0.042 on the
-subsolver.  The arms that finish heavy are not the arms that produces high-quality solutions. Figure~\ref{fig:haos-scatter} plots the two against each other.
+subsolver.  The arms that finish heavy are not the arms that produce high-quality solutions. Figure~\ref{fig:haos-scatter} plots the two against each other.
 
 \begin{figure}[htb]
   \centering
@@ -845,7 +844,7 @@ wall-clock quarter in which they were logged, measured from the first timestamp
 of each run log. Every run's first solution is one of these updates, so naturally, 300 of them fall in the first quarter, and only 1,286 first-quarter updates lower an incumbent that already exists.
 
 Simply counting updates overstates how much of the run is spent converging, because
-the updates late in a run are individually larger than the ones early in it.
+the updates late in a run are more important, but smaller than the ones early in it.
 Figure~\ref{fig:improvement-quarters}(b) therefore tracks the quantity the rest of this chapter reports. The mean-of-3 gap to the current \gls{bks} stands at $0.391\%$ at the 30-minute mark, $0.335\%$ at 60 minutes, $0.311\%$ at 90 minutes, against the $0.296\%$ of Table~\ref{tab:solver-summary} once the 120 minute mark is reached. The
 gains per quarter are $0.056$, $0.025$, and $0.014$ pp. While they are falling, they are not falling to zero: the last of the three is still about a quarter of
 the first, and more than twice the realized 95\% half-width of the grand mean.
@@ -899,19 +898,19 @@ decomposition itself. How much of it is which was not tested here.
 Sections~\ref{sec:stu-comparison} to~\ref{sec:stu-convergence} treat
 \gls{drispi} as one procedure. It includes five stages, and the route pool tags every
 route with the stage that produced it, so the improvement each stage contributes can be attributed rather than assumed. The
-question matters for two reasons. The framework's contribution over its
+question matters for two reasons. The framework's contribution over its \gls{cvrp} 
 predecessor \gls{drsci} \citep{altendeiteringDRSCICVRP2026} rests on \gls{bg-ails} and \gls{haos}, and the \gls{bg-ails} ablation of Section~\ref{sec:fra-bg-ails} measured that stage in isolation
 on a fixed checkpoint rather than inside a full 7,200-second run. And a stage that
 carries only few of the total improvements under the campaign budget is also the
 first candidate for reallocating core time.
 
-The campaign log records 2,335 incumbent improvements. The 300 decompose--route solutions of the first iteration are each run's opening solution, and both the update counts and the cost reduction below exclude them. Cost reduction is measured from that opening solution to the final incumbent, so the 298 \gls{bg-ails} repairs logged on the same iteration are included. The remaining 2,035 updates are the denominator below. Stage time is the sum of the
+The campaign log records 2,335 incumbent improvements. The 300 decompose-route solutions of the first iteration are each run's opening solution, and both the update counts and the cost reduction below exclude them. Cost reduction is measured from that opening solution to the final incumbent, so the 298 \gls{bg-ails} repairs logged on the same iteration are included. The remaining 2,035 updates are the denominator below. Stage time is the sum of the
 per-stage timers over the whole run, including the first iteration. Those timers run concurrently on the core split of Section~\ref{sec:stu-implementation}, so the time shares below divide the recorded stage time and not the 7,200 second budget.
 
 One attribution is not recoverable as two separate stages. The \gls{sc}/\gls{sp} job
 (Section~\ref{sec:fra-sp}) solves the pool and then runs the post-\gls{sc}/\gls{sp} improvement pass
 of Section~\ref{sec:fra-improve} on the result, and the incumbent update is
-logged only after that pass. Every improvement logged under the name \texttt{standard\_ails}, the log label of the post-\gls{sc}/\gls{sp} improvement pass, therefore owes partial credit to its preceeding \gls{sc}/\gls{sp} job. The two timers are logged separately, and Table~\ref{tab:improvement-sources}
+logged only after that pass. Every improvement logged under the name \texttt{standard\_ails}, the log label of the post-\gls{sc}/\gls{sp} improvement pass, therefore owes partial credit to its preceding \gls{sc}/\gls{sp} job. The two timers are logged separately, and Table~\ref{tab:improvement-sources}
 reports them that way.
 
 \begin{table}[H]
@@ -940,11 +939,11 @@ Post-\gls{sc}/\gls{sp} Improvement & 35.1\% & 8.8\% & 11.9\% \\
 \end{table}
 \vspace{-\intextsep}
 
-\gls{bg-ails} accounts for $88.2\%$ of the cost reduction after the opening decompose--route solution, dropping to $40.8\%$ after the first iteration.
-The decompose--route stage accounts for $3.0\%$ of the reduction from $16.1\%$ of
+\gls{bg-ails} accounts for $88.2\%$ of the cost reduction after the opening decompose-route solution, dropping to $40.8\%$ after the first iteration.
+The decompose-route stage accounts for $3.0\%$ of the reduction from $16.1\%$ of
 the updates, and it consumes $35.1\%$ of
 recorded stage time. The \gls{sc}/\gls{sp} plus post-\gls{sc}/\gls{sp} improvement accounts for the
-remaining $8.8\%$ of the reduction, from $35.1\%$ of the updates. Since all stages of \gls{drispi} are highly intertwined and cooperative, a higher cost reduction for one step doe not imply that the other steps are less valuable.
+remaining $8.8\%$ of the reduction, from $35.1\%$ of the updates. Since all stages of \gls{drispi} are highly intertwined and cooperative, a higher cost reduction for one step does not imply that the other steps are less valuable.
 
 \begin{table}[H]
 \centering
@@ -980,4 +979,4 @@ about the \gls{sc}/\gls{sp} contribution and the 10,000-column pool cap
 (Section~\ref{sec:fra-sp}) does not hold in the form the size split suggests.
 The cap is reached on 72 of the 100 instances: 33 of the 50 with $n < 3{,}400$
 and 39 of the 50 with $n > 3{,}400$, and on none of the 14 long-route instances,
-whose largest observed pools have a median of about 4,200 columns. The \gls{sc}/\gls{sp} plus post-\gls{sc}/\gls{sp} improvement time share falls from $24.2\%$ below 3,400 customers to $18.7\%$ above, and from $22.5\%$ on the short-route band to $15.2\%$ on the long-route band. The \gls{sc}/\gls{sp} timer inside that sum falls from $12.1\%$ to $7.1\%$ across the size cut, and from $11.0\%$ to $1.0\%$ on the long routes, which is the band whose pools stay below the cap. The \gls{sc}/\gls{sp} plus post-\gls{sc}/\gls{sp} improvement share of the cost reduction is $7.4\%$ below 3,400 customers and $9.6\%$ above, and $9.2\%$ on the short-route band against $5.8\%$ on the long-route band. The long-route drop in \gls{sc}/\gls{sp} time is real because long-route instances generate fewer total routs, and smaller route pools take less time to solve.
+whose largest observed pools have a median of about 4,200 columns. The \gls{sc}/\gls{sp} plus post-\gls{sc}/\gls{sp} improvement time share falls from $24.2\%$ below 3,400 customers to $18.7\%$ above, and from $22.5\%$ on the short-route band to $15.2\%$ on the long-route band. The \gls{sc}/\gls{sp} timer inside that sum falls from $12.1\%$ to $7.1\%$ across the size cut, and from $11.0\%$ to $1.0\%$ on the long routes, which is the band whose pools stay below the cap. The \gls{sc}/\gls{sp} plus post-\gls{sc}/\gls{sp} improvement share of the cost reduction is $7.4\%$ below 3,400 customers and $9.6\%$ above, and $9.2\%$ on the short-route band against $5.8\%$ on the long-route band. The long-route drop in \gls{sc}/\gls{sp} time is real because long-route instances generate fewer total routes, and smaller route pools take less time to solve.

@@ -7,7 +7,7 @@
 Moving and storing goods is expensive.
 In 2025, business logistics costs in the United States reached \$2.4 trillion, or 7.8\% of GDP \citep{cscmpStateOfLogistics2026}.
 Transportation alone accounts for 23\% of global energy-related CO$_2$ emissions \citep[p.~46]{itfTransportOutlook2023}, and the International Transport Forum projects urban freight activity to grow by a factor of 2.6 between 2019 and 2050 \citep[p.~91]{itfTransportOutlook2023}. Parcel delivery shows
-the scale most directly. Carriers in Germany handled 4.37 billion courier, express, and parcel shipments in 2025 \citep[p.~8]{bpexKEPStudie2026}, and carriers in the United States 23.1 billion \citep[p.~3]{pitneyBowesParcelShippingIndex2026}. Where route planning is already automated, further savings have to come from better solutions. At full deployment, the ORION route optimization system at UPS was estimated to cut about 100 million miles a year from roughly 55,000 daily routes \citep[pp.~8, 19]{hollandUPSOptimizesDelivery2017}. Those are 100 million miles saved that do not cause any more costs, emissions, and delays. 
+the scale most directly. Carriers in Germany handled 4.37 billion courier, express, and parcel shipments in 2025 \citep{bpexKEPStudie2026}, and carriers in the United States 23.1 billion \citep[p.~3]{pitneyBowesParcelShippingIndex2026}. Where route planning is already automated, further savings have to come from better solutions. At full deployment, the ORION route optimization system at UPS was estimated to cut about 100 million miles a year from roughly 55,000 daily routes \citep[pp.~8, 19]{hollandUPSOptimizesDelivery2017}. Those are 100 million miles saved that do not cause any more costs, emissions, and delays. 
 
 Modern parcel carriers plan their delivery tours per depot. A single depot can serve several thousand customers a day. Instances that \citet{efficiently_arnold_2019} derive from Belgian parcel operations range from a few thousand to 30{,}000 customers.
 Each such plan can be modeled as an instance of the \gls{cvrp}. A homogeneous fleet of vehicles with limited capacity leaves a depot, visits every customer exactly once, and returns at minimum total travel cost \citep[p.~3]{tothVehicleRouting2014}.
@@ -39,7 +39,7 @@ It narrows the range of cluster counts to the interval spanned by the counts tha
 This thesis builds on an unpublished project study that adapted \gls{drsci} to the \gls{cvrp} \citep{altendeiteringDRSCICVRP2026} for the above-mentioned CVRPLib \gls{bks} Challenge. That study drew its decomposition and routing configuration uniformly at random in every iteration and reached a mean gap of 0.53\% to the initial XL \gls{bks}\@.
 It left open whether a framework that learns this choice during the run can close the remaining distance to the monolithic solvers.
 
-This thesis develops \gls{drispi}, a decomposition framework for very large \gls{cvrp} instances. Its controller, \gls{haos}, is designed to learn that choice within a single run. The central goal of this thesis is to assess the frameworks performance, and therefore the primary research question is formulated as follows.
+This thesis develops \gls{drispi}, a decomposition framework for very large \gls{cvrp} instances. Its controller, \gls{haos}, is designed to learn that choice within a single run. The central goal of this thesis is to assess the framework's performance, and therefore the primary research question is formulated as follows.
 
 \researchquestion{RQ1}{Can an adaptive decomposition framework that learns its decomposition and routing strategy within a single run match or outperform state-of-the-art monolithic solvers on very large \gls{cvrp} instances within the same two-hour wall-clock limit per run?}
 
@@ -52,7 +52,7 @@ The secondary research question is concerned with what \gls{haos} learns.
 \researchquestion{RQ2}{Do the weight distributions \gls{haos} learns differ systematically with instance characteristics, and do these differences give interpretable insight into instance structure?}
 
 To answer that the logged weight trajectories of the same 300 runs were analyzed. Resulting weights can however only reflect instance structure if they reflect the underlying operators' performance.
-After testing for that precondition first, the three runs of an instance would have to agree on the choices made by \gls{haos} to proof a pattern. The campaign contains no control arm with a frozen configuration.
+After testing for that precondition first, the three runs of an instance would have to agree on the choices made by \gls{haos} to prove a pattern. The campaign contains no control arm with a frozen configuration.
 The answer to RQ2 is therefore descriptive. It shows what \gls{haos} learns, not how much the learning itself adds.
 
 This thesis makes four contributions.
@@ -60,7 +60,7 @@ First, it develops the \gls{drispi} framework, an algorithm-agnostic framework t
 Second, it introduces \gls{haos}, a hierarchical roulette-wheel controller in the tradition of \gls{alns} \citep{ropkeAdaptiveLargeNeighborhood2006}.
 In every iteration, \gls{haos} selects the number of subclusters, the degree to which it considers demand dissimilarity, the clustering paradigm, the clustering method, and the subsolver.
 It credits each configuration in two different ways. The first credit is immediate, for the solutions its own iteration produces. The second is deferred, for every route that \gls{sc}/\gls{sp} selects from the pool, traced back through a configuration tag stored on each route.
-Third, it proposes \gls{bg-ails}. This improvement stage perturbs the concatenated subproblem solutions with a focus on subcluster boundaries with a chain of cross-reconnect moves. It then hands the result to AILS-II, which it guides towards the now perturbed boundary regions of the intermediate solution. None of the repair strategies reviewed in Chapter~\ref{sec:lit-boundary-repair} uses the partition to place a perturbation. Section~\ref{sec:fra-bg-ails} tests \gls{bg-ails} in isolation against a standard AILS-II pass and against the same perturbation without boundary guidance.
+Third, it proposes \gls{bg-ails}. This improvement stage perturbs the concatenated subproblem solutions with a focus on subcluster boundaries with a chain of cross-reconnect moves. It then hands the result to AILS-II, and a boundary mask restricts the first local-search pass to the customers in those perturbed regions. None of the repair strategies reviewed in Chapter~\ref{sec:lit-boundary-repair} uses the partition to place a perturbation. Section~\ref{sec:fra-bg-ails} tests \gls{bg-ails} in isolation against a standard AILS-II pass and against a blind cross-reconnect whose route pairs are drawn uniformly and whose AILS-II call carries no boundary mask.
 For the fourth and final contribution, it runs these stages as a parallel pipeline on eight cores. \gls{bg-ails} and the \gls{sc}/\gls{sp} step run asynchronously next to the \gls{dri} loop. A fitted wall-time model sizes the \gls{bg-ails} budget to the stage it overlaps with.
 
 The remainder of this thesis is structured as follows.

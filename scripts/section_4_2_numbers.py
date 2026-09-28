@@ -8,7 +8,10 @@ Inputs
 
 r is the Table A.1 target average route length (r_tab), not (n-1)/K.
 "gap" without qualification is the mean-of-3 percentage gap to the current BKS.
-qbar = Q / r is the implied average demand per customer.
+qbar is the mean customer demand, sum of customer demands divided by the
+number of customers, read from the instance file. Q/r approximates it
+(the generation scheme sets capacity from the target route length) but is
+not the regressor: on unitary demand Q/r falls to about 0.9 while qbar is 1.
 
 Run from the repository root:
     python scripts/section_4_2_numbers.py
@@ -44,13 +47,34 @@ def holm(praw: dict) -> dict:
     return dict(zip(keys, adj))
 
 
+def mean_customer_demand(instance: str) -> float:
+    """Mean demand over customers. Node 1 is the depot and is excluded."""
+    path = ROOT / "data/instances/xl" / f"{instance}.vrp"
+    demands: list[int] = []
+    in_demand = False
+    for line in path.read_text().splitlines():
+        if line.startswith("DEMAND_SECTION"):
+            in_demand = True
+            continue
+        if not in_demand:
+            continue
+        if line.startswith("DEPOT_SECTION") or line.startswith("EOF"):
+            break
+        parts = line.split()
+        if len(parts) >= 2:
+            demands.append(int(parts[1]))
+    if len(demands) < 2:
+        raise ValueError(f"no customer demands in {path}")
+    return float(np.mean(demands[1:]))
+
+
 def load():
     df = pd.read_csv(CSV).merge(pd.read_csv(CHARS), on="instance", validate="1:1")
     df["r"] = df.r_tab
     df["g"] = df.gap_bks_mean3
     df["a"] = df.gap_bks_ails2_mean
     df["paired_diff"] = df.g - df.a
-    df["qbar"] = df.Q / df.r
+    df["qbar"] = df.instance.map(mean_customer_demand)
     df["long"] = df.r >= 50
     df["cust_grp"] = df.cust.str.replace(r"\(\d+\)", "", regex=True).str.strip()
     for src, dst in [("n", "zn"), ("r", "zr")]:
@@ -216,7 +240,7 @@ def sec_422(df):
         )
     for k, v in holm(raw).items():
         print(f"    Holm over the three: {k:9s} adjusted p = {v:.4f}")
-    print("\n  gap and implied mean demand by demand class:")
+    print("\n  gap and mean demand by demand class:")
     print(
         df.groupby("demand")
         .agg(N=("g", "size"), gap=("g", "mean"), qbar=("qbar", "mean"), r=("r", "mean"), n=("n", "mean"))

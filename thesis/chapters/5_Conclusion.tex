@@ -21,13 +21,13 @@ Section~\ref{sec:con-future} outlines extensions and future paths for research.
 the initial \gls{bks} across the 100 XL instances, which places it third of the nine
 solvers in Table~\ref{tab:solver-summary} by mean-of-$N$ and well inside the
 leading group. Against FILO2 the paired difference is $+0.003$\,pp and neither
-one-sided test rejects. Against FILO it is $-0.037$\,pp in \gls{drispi}'s favour, on
+one-sided test rejects. Against FILO it is $-0.037$\,pp in \gls{drispi}'s favor, on
 55 of 100 instances, which the uncorrected signed-rank test separates at
-$p = 0.043$ and the Holm correction does not
+$p = 0.021$ and the Holm correction does not
 \citep{demsVarStatisticalComparisonsClassifiers}
 (Table~\ref{tab:paired-tests}). Across 100 instances with a paired-difference
 standard deviation of $0.203$\,pp the corrected test resolves a shift of about
-$0.066$\,pp, not enough to statistically separate the two. Against SISRs, KGLSXXL, HGS-CVRP, LKH-3, and OR-Tools the
+$0.066$\,pp, not enough to statistically separate the two. Against SISRs, KGLS-XXL, HGS-CVRP, LKH-3, and OR-Tools the
 margin is decisive. Against AILS-II, which found 93 of the 100 initial \gls{bks}
 values \citep{queirogaXLInstancesCapacitated2026}, \gls{drispi} is $0.137$\,pp behind and beats it only on 4
 instances. One best-of-3 cost, on XL-n3888-k1010, falls below the published
@@ -63,19 +63,19 @@ with a prior fitted to instance characteristics as of now.
 
 Two measurements identify what carries the framework's performance. The controlled
 comparison of Section~\ref{sec:fra-bg-ails} isolates the improvement stage on
-identical input: \gls{bg-ails} beats a stock AILS-II pass by $0.056$\,pp of cost
+identical input: \gls{bg-ails} beats a standard AILS-II pass by $0.056$\,pp of cost
 improvement (Hodges--Lehmann, 95\% confidence interval $[0.049,\ 0.063]$, ahead
 on 85 of 100 instances) and a blind cross-reconnect control by $0.058$\,pp
 ($[0.052,\ 0.065]$, ahead on 89 of 100), while that control is itself
 indistinguishable from the stock pass ($-0.004$\,pp, $[-0.011,\ 0.002]$).
-That shows that isolated blind perturbation of the concatenated solution buys nothing. It is the guidance of the perturbation towards the boundaries that pays. Under the full campaign budget, with the opening decompose--route solution excluded,
+That shows that isolated blind perturbation of the concatenated solution buys nothing. What pays is placing the perturbation on the boundaries and masking the first local-search pass onto the same customers. Under the full campaign budget, with the opening decompose-route solution excluded,
 Section~\ref{sec:stu-sources} credits \gls{bg-ails} with 88.2\% of the relative cost
-reduction, from 48.8\% of the incumbent updates and 43.4\% of recorded stage time. The \gls{sc}/\gls{sp} plus post-\gls{sc}/\gls{sp} improvement accounts for another 8.8\% of that reduction, and decompose--route for 3.0\%.
+reduction, dropping to 40.8\% after the first iteration, and resulting from 48.8\% of the incumbent updates and 43.4\% of recorded stage time. The \gls{sc}/\gls{sp} plus post-\gls{sc}/\gls{sp} improvement accounts for another 8.8\% of that reduction, and decompose-route for 3.0\%.
 
 The remaining gap is not principally a matter of instance size. Three
 continuous quantities account for 57\% of its variation across the set, and
 route length is the largest of them at $0.147$\,pp per standard deviation against
-$0.090$\,pp for the implied average demand per customer and only $0.069$\,pp for the
+$0.090$\,pp for the average demand per customer and only $0.070$\,pp for the
 customer count. Route length alone drives the run-to-run spread. Customer count
 and demand per customer do not move it. Depot position and customer
 distribution are not significant before or after controlling.
@@ -95,13 +95,13 @@ stock improvement pass and a blind perturbation control, and the eight-core
 pipeline delivered the 300 runs the study rests on. The second contribution
 does not hold. \gls{haos} was introduced as a controller that learns its
 configuration during a run, and on this campaign it does not learn. Its wheels
-concentrate, reaching a median probability of $0.694$ on their leading arm, but
+concentrate, reaching a median probability of up to $0.694$ on a leading arm, but
 the arm they concentrate on is uncorrelated with the arm that produced the best solutions. And on
 the one wheel where a consistent advantage exists the controller finishes on
 the better arm in 146 of 300 runs against the 150 that chance would give. The
 additive reward, the global decay and the six-wheel hierarchy are built and
 documented as designed, but the layer they compose does not do what it was intended to do.
-The campaign thereforee ffectively ran on a random controller.
+The campaign therefore effectively ran on a random controller.
 
 Two things take its place as contributions made by this thesis. The first is an account of why the \gls{haos} controller fails, with three causes separated and measured rather than conjectured. Each cause points at a
 specific change, and Section~\ref{sec:con-controller} sets them out. The
@@ -145,7 +145,7 @@ comparing them. The EPYC~9654 rates 2,898\footnote{\url{https://www.cpubenchmark
 factor of 1.25. That factor functions as a lower bound, since the 8280L rating rests on few
 samples and is measured at the 4.0\,GHz single-core turbo, which the chip cannot
 hold with 24 of its 28 cores busy. Scaled this way, \gls{drispi}'s 7,200 seconds per
-run correspond to at most 5,800 seconds on the published solvers' processor, per
+run correspond to about 5,750 seconds on the published solvers' processor, per
 core in wall-clock time. This study, however, reports unscaled gaps, and \gls{drispi} was not
 rerun with a longer limit to offset the slower hardware.
 
@@ -157,8 +157,8 @@ on older hardware. Effectively, \gls{drispi} used the same wall-clock time, but 
 But the eight cores do not deliver eight times the search. Subcluster routing runs in waves that leave \gls{dri} cores idle whenever the last wave holds fewer than six subclusters or when the main loop blocks while it waits for
 \gls{bg-ails} (Figure~\ref{fig:pipeline-swimlane}). Furthermore, three containers have to share the memory
 bandwidth and last-level cache of each socket. And per instance, the core-hour relation 
-reverses. The published best-of-60 baslines are based on 120 CPU-hours and 120 hours of
-wall-clock time, while \gls{drispi}'s best-of-3 is based on 48 core-hours and six hours of wall-clock time (at most 38.4 and 4.8 respectively, after PassMarkscaling). The minimum of 60 runs from a distribution lies
+reverses. The published best-of-60 baselines are based on 120 CPU-hours and 120 hours of
+wall-clock time, while \gls{drispi}'s best-of-3 is based on 48 core-hours and six hours of wall-clock time (at most 38.4 and 4.8 respectively, after PassMark scaling). The minimum of 60 runs from a distribution lies
 systematically below the minimum of three, so the best-of-$N$ column favors the
 published solvers by construction. Neither column is an equal-resource ranking.
 
@@ -167,7 +167,7 @@ $S = 3$ was sized for the grand mean $\bar{G}$
 The forecast 95\% half-width of $\bar{G}$ is $0.013$\,pp. For a single instance,
 the mean of three seeds at the pilot standard deviation of $0.118$\,pp has a
 standard error of $0.068$\,pp and, with two degrees of freedom
-($t_{0.975,2} = 4.30$), a 95\% half-width of about $0.29$\,pp. That is more than
+($t_{0.975,2} = 4.30$), a 95\% half-width of about $0.13$\,pp. That is more than
 twenty times wider, and wider still on the high-variance instances. The
 per-instance results in Section~\ref{sec:stu-results} (the largest gaps in
 Table~\ref{tab:gap-tail}, the instances where \gls{drispi}'s best-of-3 matches or
@@ -176,7 +176,7 @@ demand classes of 14 or 15 instances each in
 Figure~\ref{fig:characteristics-panels}) are therefore descriptive. Across 100 instances,
 some differences of that size will arise from the seed alone.
 
-The seed term is also not the largest source of error. Two pilot campaigns that
+The seed term is also not the main source of error. Two pilot campaigns that
 differed only in execution environment showed a batch effect of about $0.039$\,pp,
 three times the $S = 3$ half-width, and more seeds would not have reduced
 it. Shared-server load and Docker pinning are part of the measurement rather
@@ -222,8 +222,8 @@ removes online learning from what it demonstrates. For future runs, this campaig
 
 Two further boundaries apply to the mechanism results. The \gls{bg-ails} comparison
 of Section~\ref{sec:fra-bg-ails} runs on one \gls{dri} iteration from a checkpoint under
-one pinned decomposition configuration, so it establishes that boundary guidance
-pays for that stage without establishing what the routes are worth once the pool
+one pinned decomposition configuration, so it establishes that the boundary placement and the mask
+pay for that stage without establishing what the routes are worth once the pool
 recombines them. The attribution of Section~\ref{sec:stu-sources} covers the full campaign and partly closes
 that gap, but it cannot separate the \gls{sc}/\gls{sp} solve from the post-\gls{sc}/\gls{sp} improvement pass
 that adopts its result, because the incumbent update is logged only after the
@@ -260,7 +260,7 @@ finishes on it in 146 of 300 runs.  A learning controller could realize advantag
 A last observation is independent of the framework.  Instance size is the axis
 along which large-scale \gls{cvrp} benchmarks are usually organized, and on this set
 it is the weakest of the three continuous quantities tested: route length moves
-the gap by $0.147$ pp per standard deviation against $0.069$ pp for the customer
+the gap by $0.147$ pp per standard deviation against $0.070$ pp for the customer
 count, it alone moves the run-to-run spread, and it moves AILS-II's gap nearly
 as strongly (Section~\ref{sec:stu-characteristics}).  Difficulty at this
 scale sits in how long the routes are rather than in how many customers there
@@ -365,7 +365,7 @@ operates on routes rather than on anything \gls{cvrp}-specific. Extending the
 framework to a different vehicle routing problem variant therefore needs a subsolver that handles the variant and
 a feasibility check on the recombination model, rather than a redesign of the
 pipeline. The predecessor of this framework was built for a \gls{vrptw} \citep{kerscherDecomposerouteimproveFrameworkSolving2025} and adapted to the \gls{cvrp}, which is
-evidence in the same direction. A monolithic solver offers no comparable adaptibility since
+evidence in the same direction. A monolithic solver offers no comparable adaptability since
 its scaling comes from engineering inside one search process, and that
 engineering is specific to the constraints it was written for. Whether the
 performance reported here survives that transfer was not tested, and the

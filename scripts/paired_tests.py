@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Paired one-sided Wilcoxon tests of DRISPI's mean-of-3 gap against five baselines.
+"""Paired one-sided Wilcoxon tests of DRISPI's mean-of-3 gap against eight baselines.
 
 The earlier comparison ranked raw cost differences (wilcoxon of the two cost
 samples, two-sided, approximate, no continuity correction). This script tests
 the percentage-gap differences the section reports, with method='approx' and
-correction=False, and Holm-corrects each one-sided family of five separately.
+correction=False, and Holm-corrects each one-sided family of eight separately.
+LKH-3 has no feasible solution on 10 instances, so that comparison uses n = 90.
 
 Writes data/results/baseline_gaps.csv, data/results/paired_tests_lagrange.json,
 and thesis/tables/paired_tests_body.tex.
@@ -26,7 +27,16 @@ BASELINE_CSV = ROOT / "data/results/baseline_gaps.csv"
 OUT_JSON = ROOT / "data/results/paired_tests_lagrange.json"
 OUT_TEX = ROOT / "thesis/tables/paired_tests_body.tex"
 
-BASELINES = ["AILS-II", "FILO2", "FILO", "SISRs", "HGS-CVRP"]
+BASELINES = [
+    "AILS-II",
+    "FILO2",
+    "FILO",
+    "SISRs",
+    "KGLSXXL",
+    "HGS-CVRP",
+    "LKH-3",
+    "OR-Tools",
+]
 
 
 def holm(pvalues: dict[str, float]) -> dict[str, float]:
@@ -81,12 +91,16 @@ def main() -> None:
         writer.writerow(["instance", "bks_current", "drispi_mean", *BASELINES])
         for name in instances:
             entry = comparison[name]
+            means = []
+            for solver in BASELINES:
+                block = entry["solvers"].get(solver)
+                means.append("" if block is None else block["mean"])
             writer.writerow(
                 [
                     name,
                     entry["bks"],
                     entry["solvers"]["DRISPI"]["mean"],
-                    *[entry["solvers"][solver]["mean"] for solver in BASELINES],
+                    *means,
                 ]
             )
 
@@ -98,9 +112,12 @@ def main() -> None:
         wins = 0
         for name in instances:
             entry = comparison[name]
+            block = entry["solvers"].get(solver)
+            if block is None or block.get("mean") is None:
+                continue
             bks = entry["bks"]
             drispi = float(campaign[name]["cost_mean3"])
-            base = entry["solvers"][solver]["mean"]
+            base = block["mean"]
             diffs.append((drispi - base) / bks * 100.0)
             if drispi < base:
                 wins += 1
@@ -115,6 +132,7 @@ def main() -> None:
         rows.append(
             {
                 "solver": solver,
+                "n": int(len(diffs_arr)),
                 "mean_diff_pp": float(diffs_arr.mean()),
                 "ahead": wins,
                 "hodges_lehmann_pp": hodges_lehmann(diffs_arr),
@@ -127,7 +145,7 @@ def main() -> None:
     holm_better = holm(better)
     holm_worse = holm(worse)
     lines = []
-    for row in rows:
+    for row in sorted(rows, key=lambda item: -item["mean_diff_pp"]):
         solver = row["solver"]
         pb = holm_better[solver]
         pw = holm_worse[solver]
@@ -141,8 +159,11 @@ def main() -> None:
         row["holm_p_worse"] = pw
         row["verdict"] = verdict
         sign = "+" if row["mean_diff_pp"] >= 0 else "-"
+        ahead = str(row["ahead"])
+        if row["n"] != len(instances):
+            ahead = f"{row['ahead']} (of {row['n']})"
         lines.append(
-            f"{solver} & ${sign}{abs(row['mean_diff_pp']):.3f}$ & {row['ahead']} & "
+            f"{solver} & ${sign}{abs(row['mean_diff_pp']):.3f}$ & {ahead} & "
             f"{format_p(pb)} & {format_p(pw)} & {verdict} \\\\"
         )
 

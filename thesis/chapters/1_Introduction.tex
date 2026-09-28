@@ -36,7 +36,7 @@ Selecting which decomposition to apply and which subsolver to run on the subprob
 State-of-the-art methods settle it by a fixed rule or calibrated default \citep{queirogaPOPMUSICMatheuristic2021,santiniDecompositionStrategiesVehicle2023}, by a clustering-quality criterion evaluated once per instance \citep{kerscherDecomposerouteimproveFrameworkSolving2025}, or by a policy trained before the instance is seen \citep{liLearningDelegate2021,yeGLOP2024}. \gls{drsci} comes closest to adapting within a run.
 It narrows the range of cluster counts to the interval spanned by the counts that contributed routes to the current best solution. But it draws uniformly inside that range and credits neither the clustering paradigm nor the routing strategy with the quality of what they produced. No published decomposition framework weights its decomposition and subsolver choices by the solution costs observed on the instance it is solving (Section~\ref{sec:lit-gap}).
 
-This thesis builds on an unpublished project study that adapted \gls{drsci} to the \gls{cvrp} \citep{altendeiteringDRSCICVRP2026} for the above-mentioned CVRPLib \gls{bks} Challenge. That study drew its decomposition and routing configuration uniformly at random in every iteration and reached a mean gap of 0.53\% to the initial XL \gls{bks}\@.
+This thesis builds on an unpublished project study that adapted \gls{drsci} to the \gls{cvrp} \citep{altendeiteringDRSCICVRP2026} for the CVRPLib \gls{bks} Challenge mentioned above. That study drew its decomposition and routing configuration uniformly at random in every iteration and reached a mean gap of 0.53\% to the initial XL \gls{bks}\@.
 It left open whether a framework that learns this choice during the run can close the remaining distance to the monolithic solvers.
 
 This thesis develops \gls{drispi}, a decomposition framework for very large \gls{cvrp} instances. Its controller, \gls{haos}, is designed to learn that choice within a single run. The central goal of this thesis is to assess the framework's performance, and therefore the primary research question is formulated as follows.
@@ -45,7 +45,7 @@ This thesis develops \gls{drispi}, a decomposition framework for very large \gls
 
 To answer the question, this thesis presents a benchmark campaign across all 100 XL instances. \gls{drispi} ran three times per instance under one shared configuration, with a two-hour wall-clock limit per run.
 Its mean gap to the current \gls{bks} is then compared against the published mean-of-60 results of the eight solvers benchmarked by \citet{queirogaXLInstancesCapacitated2026}.
-The paired differences with Wilcoxon signed-rank tests \citep{wilcoxonIndividualComparisonsRanking1945} under a Holm correction \citep{holmSimpleSequentiallyRejective1979}, are then tested once for an advantage and once for a disadvantage against each solver within the performance range of \gls{drispi}.
+The paired differences with Wilcoxon signed-rank tests \citep{wilcoxonIndividualComparisonsRanking1945} under a Holm correction \citep{holmSimpleSequentiallyRejective1979} are then tested once for an advantage and once for a disadvantage against each of the eight published solvers.
 
 The secondary research question is concerned with what \gls{haos} learns.
 

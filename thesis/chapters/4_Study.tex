@@ -267,10 +267,8 @@ takes up with the gap itself.
 The means presented in Table~\ref{tab:solver-summary} do also not establish whether an
 observed difference is real rather than an artifact of the 100 
 instances. \gls{drispi}'s mean-of-3 column is tested against the corresponding
-mean-of-60 column of five of the eight published solvers, AILS-II, FILO2, FILO,
-SISRs, and HGS-CVRP, using the paired Wilcoxon signed-rank test
-\citep{wilcoxonIndividualComparisonsRanking1945,demsVarStatisticalComparisonsClassifiers}, treating the 100 instances as matched pairs. KGLS-XXL,
-LKH-3, and OR-Tools are omitted, because their gaps in Table~\ref{tab:solver-summary} are large enough that the paired comparison would not be informative.
+mean-of-60 column of all eight published solvers using the paired Wilcoxon signed-rank test
+\citep{wilcoxonIndividualComparisonsRanking1945,demsVarStatisticalComparisonsClassifiers}, treating the 100 instances as matched pairs.
 
 Each baseline is tested twice, in opposite directions, because the two claims
 the framework has to support are not the same claim. The first family asks
@@ -280,7 +278,7 @@ worse, with $H_0$ stating that it is not shifted above zero. Rejecting the
 first is evidence of an advantage, failing to reject the second is the weaker
 statement that no disadvantage is detectable. The second of the two is what being competitive with a
 state-of-the-art monolithic solver means on a fixed instance set. Each
-family is corrected separately for its five tests with the Holm step-down
+family is corrected separately for its eight tests with the Holm step-down
 procedure \citep{holmSimpleSequentiallyRejective1979,demsVarStatisticalComparisonsClassifiers}, and Table~\ref{tab:paired-tests} reports both
 adjusted $p$-values side by side. The paired differences are the per-instance mean
 percentage gaps to the current \gls{bks}, and each test uses the normal
@@ -292,6 +290,7 @@ approximation to the signed-rank statistic without a continuity correction.
     Solver's Mean-of-60 Gap, Over the 100 XL Instances.}
   \label{tab:paired-tests}
   \small
+  \renewcommand{\arraystretch}{0.92}
   \makeatletter
   \def\pairedtestsbody{\@@input tables/paired_tests_body }
   \makeatother
@@ -306,21 +305,21 @@ approximation to the signed-rank statistic without a continuity correction.
     \midrule
     \pairedtestsbody
   \end{tabularx}
-  \medskip
+  \smallskip
   \begin{minipage}{\linewidth}
     \footnotesize
-    $\Delta$ is the mean paired difference in percentage points; a negative value favors \gls{drispi}. $p$-values are one-sided Wilcoxon signed-rank, Holm-corrected within each of the two families of five tests.
+    $\Delta$ is the mean paired difference in percentage points; a negative value favors \gls{drispi}. $p$-values are one-sided Wilcoxon signed-rank, Holm-corrected within each of the two families of eight tests. LKH-3 is compared on the 90 instances where it found a feasible solution.
   \end{minipage}
 \end{table}
 \vspace{-\intextsep}
 
-Table~\ref{tab:paired-tests} splits the five tested solvers into three
-groups. \gls{drispi} is significantly better than SISRs and HGS-CVRP. The margin
-is $0.286$\,pp against SISRs and $1.152$\,pp against HGS-CVRP, and \gls{drispi} is
-ahead on 98 and 99 of the 100 instances. Against FILO the mean paired difference
+Table~\ref{tab:paired-tests} splits the eight solvers into three
+groups. \gls{drispi} is significantly better than SISRs, KGLS-XXL, HGS-CVRP, LKH-3, and OR-Tools. The margin
+is $0.286$\,pp against SISRs, $0.794$\,pp against KGLS-XXL, and $1.152$\,pp against HGS-CVRP, with \gls{drispi}
+ahead on 98, 100, and 99 of the 100 instances. Against LKH-3 and OR-Tools it is ahead on every compared instance, by $6.4$ and $6.6$\,pp. Against FILO the mean paired difference
 is marginal at $-0.037$\,pp and the \mbox{Hodges--Lehmann} shift \citep{hodgesEstimatesLocationRank1963} $-0.026$\,pp, with an uncorrected
 95\% confidence interval of $[-0.060,\ -0.001]$, and the uncorrected signed-rank
-test rejects at $p = 0.021$. The Holm correction over five baselines leaves it
+test rejects at $p = 0.021$. The Holm correction over eight baselines leaves it
 at $0.064$. On 100 instances with a paired-difference standard deviation of
 $0.203$ pp, the corrected test resolves a shift of about $0.066$ pp at 80\%
 power, so a difference of the size observed here sits below what this instance
@@ -777,7 +776,7 @@ wheel except the ten-arm $k$ domain, where the threshold is $0.5263\,\times10 = 
 Because of that a missing ranking is turned into a confident-looking, but random weight vector.
 Furthermore, the smallest reward for any feasible solution in Table~\ref{tab:haos-rewards} is 1.0 rather than zero, so
 an arm accumulates weight just for having been drawn, independently of what followed.
-But weight sets selection probability through Equation~\ref{eq:haos-probability},
+But weight sets selection probability by Equation~\ref{eq:haos-probability},
 selection probability sets the draw rate, and the draw rate sets the rate of
 accumulation. An arm that is drawn a few extra times early therefore compounds that lead without any regard of its own performance. The result is reinforcement of sampling noise rather than of the outcomes, explaining every observation in this section at once: the entropy curves dip, the leading arm ends above uniform, the three seeds of one instance disagree at a total-variation distance of 0.2 to 0.3
 (Figure~\ref{fig:haos-seeds}), and that disagreement does not fall as runs get

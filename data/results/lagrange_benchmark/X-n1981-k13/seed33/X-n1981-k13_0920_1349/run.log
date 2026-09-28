@@ -1,0 +1,916 @@
+13:49:19 | i — | [  INIT   ] ════════════════════════════════════════
+13:49:19 | i — | [  INIT   ] DRISPI  instance=X-n1981-k13  n=1980  capacity=832
+13:49:19 | i — | [  INIT   ] k domain (computed at init): [2, 3, 4, 6, 8, 10, 12]  k_ext=1  k_min=13  k_ext_bound=route_bound  spacing_rejected=0
+13:49:19 | i — | [  INIT   ] ══════════════════════════════════════════════════════
+13:49:19 | i — | [  INIT   ] CONFIGURATION
+13:49:19 | i — | [  INIT   ] ── stopping ────────────────────────────────
+13:49:19 | i — | [  INIT   ]   time_limit                  = 7200.0
+13:49:19 | i — | [  INIT   ]   max_no_improve              = 1000000000
+13:49:19 | i — | [  INIT   ] ── parallelism ─────────────────────────────
+13:49:19 | i — | [  INIT   ]   n_workers                   = 8
+13:49:19 | i — | [  INIT   ] ── cores ───────────────────────────────────
+13:49:19 | i — | [  INIT   ]   cores_total                 = 8
+13:49:19 | i — | [  INIT   ]   cores_dri                   = 6
+13:49:19 | i — | [  INIT   ]   cores_bg                    = 1
+13:49:19 | i — | [  INIT   ]   cores_sp                    = 1
+13:49:19 | i — | [  INIT   ]   cores_cpu_list              = None
+13:49:19 | i — | [  INIT   ] ── sp/sc ───────────────────────────────────
+13:49:19 | i — | [  INIT   ]   sp_sc_mode                  = async
+13:49:19 | i — | [  INIT   ]   sp_sc_trigger               = wallclock
+13:49:19 | i — | [  INIT   ]   interval_minutes            = 20.0
+13:49:19 | i — | [  INIT   ]   overlap_policy              = skip
+13:49:19 | i — | [  INIT   ]   warmup_iterations           = 5
+13:49:19 | i — | [  INIT   ]   sp_interval                 = 3
+13:49:19 | i — | [  INIT   ]   min_coverage                = 5
+13:49:19 | i — | [  INIT   ]   sp_time_limit               = 720.0
+13:49:19 | i — | [  INIT   ]   mip_gap                     = 0.00025
+13:49:19 | i — | [  INIT   ] ── decomposition ───────────────────────────
+13:49:19 | i — | [  INIT   ]   decomp_k_base_arms          = [2, 3, 4, 6, 8, 10, 12]
+13:49:19 | i — | [  INIT   ]   decomp_k_max_arms           = 10
+13:49:19 | i — | [  INIT   ]   decomp_k_ext_per_1000       = 4
+13:49:19 | i — | [  INIT   ]   decomp_k_min_routes_per_cluster= 8
+13:49:19 | i — | [  INIT   ]   decomp_k_min_arm_spacing    = 2
+13:49:19 | i — | [  INIT   ]   subcluster_rate_s_per_customer= 0.06
+13:49:19 | i — | [  INIT   ]   subcluster_floor_s          = 5.0
+13:49:19 | i — | [  INIT   ] ── bg_ails ─────────────────────────────────
+13:49:19 | i — | [  INIT   ]   bg_ails_mode                = async
+13:49:19 | i — | [  INIT   ]   bg_ails_crash_threshold     = 1
+13:49:19 | i — | [  INIT   ]   bg_ails_budget_mode         = predicted_dr_wall
+13:49:19 | i — | [  INIT   ]   bg_ails_budget_floor_s      = 60.0
+13:49:19 | i — | [  INIT   ]   bg_ails_budget_margin       = 1.0
+13:49:19 | i — | [  INIT   ]   bg_ails_wall_model_scale    = 0.976
+13:49:19 | i — | [  INIT   ]   bg_ails_wall_model_wave_exponent= -0.18
+13:49:19 | i — | [  INIT   ]   bg_ails_initial_omega       = 10
+13:49:19 | i — | [  INIT   ]   bg_ails_boundary_threshold  = 0.5
+13:49:19 | i — | [  INIT   ]   bg_ails_small_cluster_cap   = 20
+13:49:19 | i — | [  INIT   ]   bg_ails_small_cluster_alpha = 0.5
+13:49:19 | i — | [  INIT   ]   bg_ails_pair_selection      = greedy
+13:49:19 | i — | [  INIT   ]   bg_ails_n_chains_mode       = k
+13:49:19 | i — | [  INIT   ]   bg_ails_unique_first_routes = True
+13:49:19 | i — | [  INIT   ]   bg_ails_boundary_mask_first_ls= True
+13:49:19 | i — | [  INIT   ] ── standard_improvement ────────────────────
+13:49:19 | i — | [  INIT   ]   standard_improvement_time_limit= 360.0
+13:49:19 | i — | [  INIT   ] ── pool ────────────────────────────────────
+13:49:19 | i — | [  INIT   ]   max_pool_size               = 10000
+13:49:19 | i — | [  INIT   ]   pool_diversity_weight       = 0.5
+13:49:19 | i — | [  INIT   ] ── haos ────────────────────────────────────
+13:49:19 | i — | [  INIT   ]   haos_decay                  = 0.95
+13:49:19 | i — | [  INIT   ]   haos_warmup                 = 10
+13:49:19 | i — | [  INIT   ]   haos_starting_weight        = 10.0
+13:49:19 | i — | [  INIT   ]   haos_min_weight_k           = 0.025
+13:49:19 | i — | [  INIT   ]   haos_min_weight_lambda      = 0.05
+13:49:19 | i — | [  INIT   ]   haos_min_weight_paradigm    = 0.1
+13:49:19 | i — | [  INIT   ]   haos_min_weight_vertex_method= 0.05
+13:49:19 | i — | [  INIT   ]   haos_min_weight_route_method= 0.05
+13:49:19 | i — | [  INIT   ]   haos_min_weight_solver      = 0.05
+13:49:19 | i — | [  INIT   ]   haos_lambda_demand_values   = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+13:49:19 | i — | [  INIT   ]   haos_paradigm_values        = ['vertex', 'route']
+13:49:19 | i — | [  INIT   ]   haos_vertex_method_values   = ['kmeans', 'agglomerative_avg', 'agglomerative_complete', 'kmedoids', 'fcm']
+13:49:19 | i — | [  INIT   ]   haos_route_method_values    = ['kmeans', 'agglomerative_avg', 'agglomerative_complete']
+13:49:19 | i — | [  INIT   ]   haos_solver_values          = ['pyvrp', 'filo', 'filo2', 'ails2']
+13:49:19 | i — | [  INIT   ] ── haos_rewards ────────────────────────────
+13:49:19 | i — | [  INIT   ]   haos_reward_new_best        = 10.0
+13:49:19 | i — | [  INIT   ]   haos_reward_improvement     = 4.0
+13:49:19 | i — | [  INIT   ]   haos_reward_no_improvement  = 1.0
+13:49:19 | i — | [  INIT   ]   haos_reward_no_solution     = 0.0
+13:49:19 | i — | [  INIT   ]   haos_deferred_new_best      = 7.0
+13:49:19 | i — | [  INIT   ]   haos_deferred_improvement   = 3.0
+13:49:19 | i — | [  INIT   ]   haos_deferred_no_improvement= 0.0
+13:49:19 | i — | [  INIT   ] ── seed ────────────────────────────────────
+13:49:19 | i — | [  INIT   ]   seed                        = 33
+13:49:19 | i — | [  INIT   ] ── output ──────────────────────────────────
+13:49:19 | i — | [  INIT   ]   output_dir                  = /app/artifacts/benchmark/X-n1981-k13/seed33
+13:49:19 | i — | [  INIT   ]   run_analysis                = False
+13:49:19 | i — | [  INIT   ] ══════════════════════════════════════════════════════
+13:49:19 | i — | [  INIT   ] BKS=32546.00
+13:49:19 | i — | [  INIT   ] ════════════════════════════════════════
+13:49:19 | i 1 | [HAOS ROLL] k=10  λ=0.6  vb  kmeans  ails2  P≈0.000595
+13:49:22 | i 1 | [Phase 1/3] decompose  3.12s / — / —  λ=0.6  vb kmeans
+13:49:51 | i 1 | [Phase 2/3] route  28.70s / 27.24s / 105.3%  ails2  k=10
+13:49:51 | i 1 | [ IMPROVE ] 38042.00  via decompose_route  ·  Δ_BKS=+16.89%
+13:49:51 | i 1 | [HAOS ROLL] k=10  λ=0.6  vb  kmeans  ails2  P≈0.000595
+13:49:51 | i 1 | [ Summary ] cost=38042.00  Δ_S*=+0.00%  Δ_BKS=+16.89%  Δ_S*_BKS=+16.89%  no_improve=0
+13:49:51 | i 2 | [HAOS ROLL] k=6  λ=0.6  vb  kmeans  filo  P≈0.000595
+13:49:51 | i 2 | [Phase 1/3] decompose  0.19s / — / —  λ=0.6  vb kmeans
+13:50:26 | i 2 | [Phase 2/3] route  35.11s / 35.46s / 99.0%  filo  k=6
+13:50:54 | i 1 | [ IMPROVE ] 33143.00  via bg_ails  ·  Δ_BKS=+1.83%
+13:50:54 | i 1 | [ ASYNC BG] bg_ails  62.95s / 60.00s / 104.9%
+13:50:54 | i 2 | [HAOS ROLL] k=6  λ=0.6  vb  kmeans  filo  P≈0.000595
+13:50:54 | i 2 | [ Summary ] cost=36364.00  Δ_S*=+9.72%  Δ_BKS=+11.73%  Δ_S*_BKS=+1.83%  no_improve=1
+13:50:54 | i 3 | [HAOS ROLL] k=2  λ=0.4  rb  ac_avg  pyvrp  P≈0.000992
+13:50:54 | i 3 | [Phase 1/3] decompose  0.23s / — / —  λ=0.4  rb ac_avg
+13:51:57 | i 3 | [Phase 2/3] route  62.68s / 60.18s / 104.2%  pyvrp  k=2
+13:51:57 | i 2 | [ IMPROVE ] 33084.00  via bg_ails  ·  Δ_BKS=+1.65%
+13:51:57 | i 2 | [ ASYNC BG] bg_ails  62.75s / 60.00s / 104.6%
+13:51:57 | i 3 | [HAOS ROLL] k=2  λ=0.4  rb  ac_avg  pyvrp  P≈0.000992
+13:51:57 | i 3 | [ Summary ] cost=33330.00  Δ_S*=+0.74%  Δ_BKS=+2.41%  Δ_S*_BKS=+1.65%  no_improve=1
+13:51:57 | i 4 | [HAOS ROLL] k=10  λ=0.6  vb  ac_avg  filo2  P≈0.000595
+13:51:57 | i 4 | [Phase 1/3] decompose  0.27s / — / —  λ=0.6  vb ac_avg
+13:52:39 | i 4 | [Phase 2/3] route  42.10s / 37.38s / 112.6%  filo2  k=10
+13:53:00 | i 3 | [ ASYNC BG] bg_ails  62.82s / 60.00s / 104.7%
+13:53:00 | i 4 | [HAOS ROLL] k=10  λ=0.6  vb  ac_avg  filo2  P≈0.000595
+13:53:00 | i 4 | [ Summary ] cost=38928.00  Δ_S*=+17.66%  Δ_BKS=+19.61%  Δ_S*_BKS=+1.65%  no_improve=3
+13:53:00 | i 5 | [HAOS ROLL] k=3  λ=0.6  vb  ac_avg  filo  P≈0.000595
+13:53:00 | i 5 | [Phase 1/3] decompose  0.26s / — / —  λ=0.6  vb ac_avg
+13:53:54 | i 5 | [Phase 2/3] route  54.11s / 53.64s / 100.9%  filo  k=3
+13:54:06 | i 4 | [ ASYNC BG] bg_ails  65.82s / 63.79s / 103.2%
+13:54:06 | i 5 | [HAOS ROLL] k=3  λ=0.6  vb  ac_avg  filo  P≈0.000595
+13:54:06 | i 5 | [ Summary ] cost=34217.00  Δ_S*=+3.42%  Δ_BKS=+5.13%  Δ_S*_BKS=+1.65%  no_improve=5
+13:54:06 | i 6 | [HAOS ROLL] k=10  λ=0.6  rb  kmeans  filo  P≈0.000992
+13:54:06 | i 6 | [Phase 1/3] decompose  0.20s / — / —  λ=0.6  rb kmeans
+13:54:31 | i 6 | [Phase 2/3] route  25.09s / 25.38s / 98.9%  filo  k=10
+13:55:08 | i 5 | [ ASYNC BG] bg_ails  62.77s / 60.00s / 104.6%
+13:55:08 | i 6 | [ IMPROVE ] 33065.00  via decompose_route  ·  Δ_BKS=+1.59%
+13:55:08 | i 6 | [HAOS ROLL] k=10  λ=0.6  rb  kmeans  filo  P≈0.000992
+13:55:08 | i 6 | [ Summary ] cost=33065.00  Δ_S*=+0.00%  Δ_BKS=+1.59%  Δ_S*_BKS=+1.59%  no_improve=0
+13:55:08 | i 7 | [HAOS ROLL] k=12  λ=0.8  vb  fcm  filo2  P≈0.000595
+13:55:09 | i 7 | [Phase 1/3] decompose  0.46s / — / —  λ=0.8  vb fcm
+13:55:38 | i 7 | [Phase 2/3] route  29.09s / 15.30s / 190.1%  filo2  k=12
+13:56:11 | i 6 | [ ASYNC BG] bg_ails  62.73s / 60.00s / 104.6%
+13:56:11 | i 7 | [HAOS ROLL] k=12  λ=0.8  vb  fcm  filo2  P≈0.000595
+13:56:11 | i 7 | [ Summary ] cost=39206.00  Δ_S*=+18.57%  Δ_BKS=+20.46%  Δ_S*_BKS=+1.59%  no_improve=2
+13:56:11 | i 8 | [HAOS ROLL] k=10  λ=0.2  rb  kmeans  filo  P≈0.000992
+13:56:11 | i 8 | [Phase 1/3] decompose  0.20s / — / —  λ=0.2  rb kmeans
+13:56:46 | i 8 | [Phase 2/3] route  35.10s / 25.98s / 135.1%  filo  k=10
+13:57:14 | i 7 | [ IMPROVE ] 32954.00  via bg_ails  ·  Δ_BKS=+1.25%
+13:57:14 | i 7 | [ ASYNC BG] bg_ails  62.75s / 60.00s / 104.6%
+13:57:14 | i 8 | [HAOS ROLL] k=10  λ=0.2  rb  kmeans  filo  P≈0.000992
+13:57:14 | i 8 | [ Summary ] cost=33063.00  Δ_S*=+0.33%  Δ_BKS=+1.59%  Δ_S*_BKS=+1.25%  no_improve=1
+13:57:14 | i 9 | [HAOS ROLL] k=6  λ=0.2  vb  ac_avg  filo  P≈0.000595
+13:57:14 | i 9 | [Phase 1/3] decompose  0.27s / — / —  λ=0.2  vb ac_avg
+13:58:00 | i 9 | [Phase 2/3] route  46.12s / 45.54s / 101.3%  filo  k=6
+13:58:17 | i 8 | [ ASYNC BG] bg_ails  62.76s / 60.00s / 104.6%
+13:58:17 | i 9 | [HAOS ROLL] k=6  λ=0.2  vb  ac_avg  filo  P≈0.000595
+13:58:17 | i 9 | [ Summary ] cost=36184.00  Δ_S*=+9.80%  Δ_BKS=+11.18%  Δ_S*_BKS=+1.25%  no_improve=3
+13:58:17 | i 10 | [HAOS ROLL] k=4  λ=0.8  rb  ac_complete  filo2  P≈0.000992
+13:58:17 | i 10 | [Phase 1/3] decompose  0.20s / — / —  λ=0.8  rb ac_complete
+13:59:04 | i 10 | [Phase 2/3] route  47.10s / 46.80s / 100.6%  filo2  k=4
+13:59:19 | i 9 | [ ASYNC BG] bg_ails  62.77s / 60.00s / 104.6%
+13:59:19 | i 10 | [HAOS ROLL] k=4  λ=0.8  rb  ac_complete  filo2  P≈0.000992
+13:59:19 | i 10 | [ Summary ] cost=32986.00  Δ_S*=+0.10%  Δ_BKS=+1.35%  Δ_S*_BKS=+1.25%  no_improve=5
+13:59:19 | i 11 | [HAOS ROLL] k=8  λ=0.0  rb  ac_avg  pyvrp  P≈0.000992
+13:59:20 | i 11 | [Phase 1/3] decompose  0.14s / — / —  λ=0.0  rb ac_avg
+13:59:58 | i 11 | [Phase 2/3] route  38.70s / 37.56s / 103.0%  pyvrp  k=8
+14:00:22 | i 10 | [ IMPROVE ] 32849.00  via bg_ails  ·  Δ_BKS=+0.93%
+14:00:22 | i 10 | [ ASYNC BG] bg_ails  62.71s / 60.00s / 104.5%
+14:00:22 | i 11 | [HAOS ROLL] k=8  λ=0.0  rb  ac_avg  pyvrp  P≈0.000992
+14:00:22 | i 11 | [ Summary ] cost=33132.00  Δ_S*=+0.86%  Δ_BKS=+1.80%  Δ_S*_BKS=+0.93%  no_improve=1
+14:00:22 | i 12 | [HAOS ROLL] k=3  λ=0.6  rb  ac_avg  pyvrp  P≈0.001064
+14:00:22 | i 12 | [Phase 1/3] decompose  0.19s / — / —  λ=0.6  rb ac_avg
+14:01:18 | i 12 | [Phase 2/3] route  56.13s / 54.00s / 103.9%  pyvrp  k=3
+14:01:25 | i 11 | [ ASYNC BG] bg_ails  62.72s / 60.00s / 104.5%
+14:01:25 | i 12 | [HAOS ROLL] k=3  λ=0.6  rb  ac_avg  pyvrp  P≈0.001064
+14:01:25 | i 12 | [ Summary ] cost=33538.00  Δ_S*=+2.10%  Δ_BKS=+3.05%  Δ_S*_BKS=+0.93%  no_improve=3
+14:01:25 | i 6 | [ASYNC 1/2] sp_sc  0.02s / 720.00s / 0.0%  SP  avg_coverage=10.52/5  pool=157
+14:01:25 | i 6 | [ASYNC 2/2] standard_ails  362.56s / 360.00s / 100.7%
+14:01:25 | i 13 | [HAOS ROLL] k=6  λ=0.6  vb  kmeans  filo  P≈0.000398
+14:01:25 | i 13 | [Phase 1/3] decompose  0.19s / — / —  λ=0.6  vb kmeans
+14:02:01 | i 13 | [Phase 2/3] route  36.10s / 35.70s / 101.1%  filo  k=6
+14:02:28 | i 12 | [ ASYNC BG] bg_ails  62.82s / 60.00s / 104.7%
+14:02:28 | i 13 | [HAOS ROLL] k=6  λ=0.6  vb  kmeans  filo  P≈0.000398
+14:02:28 | i 13 | [ Summary ] cost=36200.00  Δ_S*=+10.20%  Δ_BKS=+11.23%  Δ_S*_BKS=+0.93%  no_improve=6
+14:02:28 | i 14 | [HAOS ROLL] k=8  λ=0.6  vb  kmedoids  filo  P≈0.000969
+14:02:28 | i 14 | [Phase 1/3] decompose  0.47s / — / —  λ=0.6  vb kmedoids
+14:02:58 | i 14 | [Phase 2/3] route  30.10s / 21.90s / 137.4%  filo  k=8
+14:03:30 | i 13 | [ ASYNC BG] bg_ails  62.68s / 60.00s / 104.5%
+14:03:30 | i 14 | [HAOS ROLL] k=8  λ=0.6  vb  kmedoids  filo  P≈0.000969
+14:03:30 | i 14 | [ Summary ] cost=37474.00  Δ_S*=+14.08%  Δ_BKS=+15.14%  Δ_S*_BKS=+0.93%  no_improve=8
+14:03:30 | i 15 | [HAOS ROLL] k=6  λ=1.0  vb  kmeans  ails2  P≈0.000607
+14:03:31 | i 15 | [Phase 1/3] decompose  0.19s / — / —  λ=1.0  vb kmeans
+14:04:09 | i 15 | [Phase 2/3] route  38.70s / 37.14s / 104.2%  ails2  k=6
+14:04:33 | i 14 | [ ASYNC BG] bg_ails  62.64s / 60.00s / 104.4%
+14:04:33 | i 15 | [HAOS ROLL] k=6  λ=1.0  vb  kmeans  ails2  P≈0.000607
+14:04:33 | i 15 | [ Summary ] cost=36880.00  Δ_S*=+12.27%  Δ_BKS=+13.32%  Δ_S*_BKS=+0.93%  no_improve=10
+14:04:33 | i 16 | [HAOS ROLL] k=12  λ=0.2  vb  ac_avg  filo  P≈0.000500
+14:04:33 | i 16 | [Phase 1/3] decompose  0.26s / — / —  λ=0.2  vb ac_avg
+14:05:10 | i 16 | [Phase 2/3] route  37.11s / 37.38s / 99.3%  filo  k=12
+14:05:36 | i 15 | [ ASYNC BG] bg_ails  62.75s / 60.00s / 104.6%
+14:05:36 | i 16 | [HAOS ROLL] k=12  λ=0.2  vb  ac_avg  filo  P≈0.000500
+14:05:36 | i 16 | [ Summary ] cost=39349.00  Δ_S*=+19.79%  Δ_BKS=+20.90%  Δ_S*_BKS=+0.93%  no_improve=12
+14:05:36 | i 17 | [HAOS ROLL] k=3  λ=0.8  vb  ac_avg  filo2  P≈0.000261
+14:05:36 | i 17 | [Phase 1/3] decompose  0.26s / — / —  λ=0.8  vb ac_avg
+14:06:30 | i 17 | [Phase 2/3] route  54.12s / 53.64s / 100.9%  filo2  k=3
+14:06:38 | i 16 | [ ASYNC BG] bg_ails  62.70s / 60.00s / 104.5%
+14:06:38 | i 17 | [HAOS ROLL] k=3  λ=0.8  vb  ac_avg  filo2  P≈0.000261
+14:06:38 | i 17 | [ Summary ] cost=33970.00  Δ_S*=+3.41%  Δ_BKS=+4.38%  Δ_S*_BKS=+0.93%  no_improve=14
+14:06:38 | i 18 | [HAOS ROLL] k=8  λ=0.6  vb  kmeans  filo2  P≈0.001437
+14:06:39 | i 18 | [Phase 1/3] decompose  0.19s / — / —  λ=0.6  vb kmeans
+14:07:19 | i 18 | [Phase 2/3] route  40.10s / 29.70s / 135.0%  filo2  k=8
+14:07:41 | i 17 | [ ASYNC BG] bg_ails  62.75s / 60.00s / 104.6%
+14:07:41 | i 18 | [HAOS ROLL] k=8  λ=0.6  vb  kmeans  filo2  P≈0.001437
+14:07:41 | i 18 | [ Summary ] cost=38137.00  Δ_S*=+16.10%  Δ_BKS=+17.18%  Δ_S*_BKS=+0.93%  no_improve=16
+14:07:41 | i 19 | [HAOS ROLL] k=12  λ=0.0  vb  ac_avg  filo2  P≈0.000683
+14:07:41 | i 19 | [Phase 1/3] decompose  0.22s / — / —  λ=0.0  vb ac_avg
+14:08:19 | i 19 | [Phase 2/3] route  37.11s / 37.38s / 99.3%  filo2  k=12
+14:08:44 | i 18 | [ ASYNC BG] bg_ails  62.72s / 60.00s / 104.5%
+14:08:44 | i 19 | [HAOS ROLL] k=12  λ=0.0  vb  ac_avg  filo2  P≈0.000683
+14:08:44 | i 19 | [ Summary ] cost=39484.00  Δ_S*=+20.20%  Δ_BKS=+21.32%  Δ_S*_BKS=+0.93%  no_improve=18
+14:08:44 | i 20 | [HAOS ROLL] k=8  λ=0.6  vb  kmeans  filo  P≈0.004495
+14:08:44 | i 20 | [Phase 1/3] decompose  0.19s / — / —  λ=0.6  vb kmeans
+14:09:14 | i 20 | [Phase 2/3] route  30.09s / 29.94s / 100.5%  filo  k=8
+14:09:47 | i 19 | [ ASYNC BG] bg_ails  62.73s / 60.00s / 104.5%
+14:09:47 | i 20 | [HAOS ROLL] k=8  λ=0.6  vb  kmeans  filo  P≈0.004495
+14:09:47 | i 20 | [ Summary ] cost=37449.00  Δ_S*=+14.00%  Δ_BKS=+15.06%  Δ_S*_BKS=+0.93%  no_improve=20
+14:09:47 | i 21 | [HAOS ROLL] k=8  λ=0.6  vb  kmeans  filo  P≈0.004194
+14:09:47 | i 21 | [Phase 1/3] decompose  0.19s / — / —  λ=0.6  vb kmeans
+14:10:22 | i 21 | [Phase 2/3] route  35.11s / 34.74s / 101.1%  filo  k=8
+14:10:49 | i 20 | [ ASYNC BG] bg_ails  62.76s / 60.00s / 104.6%
+14:10:49 | i 21 | [HAOS ROLL] k=8  λ=0.6  vb  kmeans  filo  P≈0.004194
+14:10:49 | i 21 | [ Summary ] cost=37216.00  Δ_S*=+13.29%  Δ_BKS=+14.35%  Δ_S*_BKS=+0.93%  no_improve=22
+14:10:49 | i 22 | [HAOS ROLL] k=6  λ=0.0  rb  kmeans  pyvrp  P≈0.000322
+14:10:50 | i 22 | [Phase 1/3] decompose  0.15s / — / —  λ=0.0  rb kmeans
+14:11:28 | i 22 | [Phase 2/3] route  38.74s / 37.56s / 103.1%  pyvrp  k=6
+14:11:52 | i 21 | [ ASYNC BG] bg_ails  62.76s / 60.00s / 104.6%
+14:11:52 | i 22 | [HAOS ROLL] k=6  λ=0.0  rb  kmeans  pyvrp  P≈0.000322
+14:11:52 | i 22 | [ Summary ] cost=32986.00  Δ_S*=+0.42%  Δ_BKS=+1.35%  Δ_S*_BKS=+0.93%  no_improve=24
+14:11:52 | i 23 | [HAOS ROLL] k=6  λ=0.6  vb  kmeans  filo  P≈0.006527
+14:11:52 | i 23 | [Phase 1/3] decompose  0.19s / — / —  λ=0.6  vb kmeans
+14:12:33 | i 23 | [Phase 2/3] route  40.11s / 39.84s / 100.7%  filo  k=6
+14:12:55 | i 22 | [ IMPROVE ] 32818.00  via bg_ails  ·  Δ_BKS=+0.84%
+14:12:55 | i 22 | [ ASYNC BG] bg_ails  62.74s / 60.00s / 104.6%
+14:12:55 | i 23 | [HAOS ROLL] k=6  λ=0.6  vb  kmeans  filo  P≈0.006527
+14:12:55 | i 23 | [ Summary ] cost=37081.00  Δ_S*=+12.99%  Δ_BKS=+13.93%  Δ_S*_BKS=+0.84%  no_improve=1
+14:12:55 | i 24 | [HAOS ROLL] k=8  λ=0.0  vb  kmedoids  pyvrp  P≈0.001375
+14:12:55 | i 24 | [Phase 1/3] decompose  0.28s / — / —  λ=0.0  vb kmedoids
+14:13:26 | i 24 | [Phase 2/3] route  30.68s / 21.90s / 140.1%  pyvrp  k=8
+14:13:58 | i 23 | [ ASYNC BG] bg_ails  62.76s / 60.00s / 104.6%
+14:13:58 | i 24 | [HAOS ROLL] k=8  λ=0.0  vb  kmedoids  pyvrp  P≈0.001375
+14:13:58 | i 24 | [ Summary ] cost=37702.00  Δ_S*=+14.88%  Δ_BKS=+15.84%  Δ_S*_BKS=+0.84%  no_improve=3
+14:13:58 | i 25 | [HAOS ROLL] k=12  λ=0.8  vb  kmeans  filo  P≈0.001190
+14:13:58 | i 25 | [Phase 1/3] decompose  0.19s / — / —  λ=0.8  vb kmeans
+14:14:26 | i 25 | [Phase 2/3] route  28.08s / 22.38s / 125.5%  filo  k=12
+14:15:00 | i 24 | [ ASYNC BG] bg_ails  62.66s / 60.00s / 104.4%
+14:15:00 | i 25 | [HAOS ROLL] k=12  λ=0.8  vb  kmeans  filo  P≈0.001190
+14:15:00 | i 25 | [ Summary ] cost=38652.00  Δ_S*=+17.78%  Δ_BKS=+18.76%  Δ_S*_BKS=+0.84%  no_improve=5
+14:15:00 | i 26 | [HAOS ROLL] k=8  λ=0.4  rb  kmeans  filo2  P≈0.000793
+14:15:01 | i 26 | [Phase 1/3] decompose  0.19s / — / —  λ=0.4  rb kmeans
+14:15:38 | i 26 | [Phase 2/3] route  37.10s / 27.66s / 134.1%  filo2  k=8
+14:16:03 | i 25 | [ ASYNC BG] bg_ails  62.66s / 60.00s / 104.4%
+14:16:03 | i 26 | [ IMPROVE ] 32812.00  via decompose_route  ·  Δ_BKS=+0.82%
+14:16:03 | i 26 | [HAOS ROLL] k=8  λ=0.4  rb  kmeans  filo2  P≈0.000793
+14:16:03 | i 26 | [ Summary ] cost=32812.00  Δ_S*=+0.00%  Δ_BKS=+0.82%  Δ_S*_BKS=+0.82%  no_improve=0
+14:16:03 | i 27 | [HAOS ROLL] k=8  λ=0.6  vb  fcm  pyvrp  P≈0.001629
+14:16:04 | i 27 | [Phase 1/3] decompose  0.36s / — / —  λ=0.6  vb fcm
+14:16:29 | i 27 | [Phase 2/3] route  25.27s / 24.66s / 102.5%  pyvrp  k=8
+14:17:06 | i 26 | [ ASYNC BG] bg_ails  62.77s / 60.00s / 104.6%
+14:17:06 | i 27 | [HAOS ROLL] k=8  λ=0.6  vb  fcm  pyvrp  P≈0.001629
+14:17:06 | i 27 | [ Summary ] cost=37333.00  Δ_S*=+13.78%  Δ_BKS=+14.71%  Δ_S*_BKS=+0.82%  no_improve=2
+14:17:06 | i 28 | [HAOS ROLL] k=12  λ=0.0  rb  kmeans  filo  P≈0.002509
+14:17:06 | i 28 | [Phase 1/3] decompose  0.14s / — / —  λ=0.0  rb kmeans
+14:17:34 | i 28 | [Phase 2/3] route  28.10s / 18.78s / 149.6%  filo  k=12
+14:18:09 | i 27 | [ ASYNC BG] bg_ails  62.89s / 60.00s / 104.8%
+14:18:09 | i 28 | [HAOS ROLL] k=12  λ=0.0  rb  kmeans  filo  P≈0.002509
+14:18:09 | i 28 | [ Summary ] cost=32817.00  Δ_S*=+0.02%  Δ_BKS=+0.83%  Δ_S*_BKS=+0.82%  no_improve=4
+14:18:09 | i 29 | [HAOS ROLL] k=4  λ=0.0  vb  ac_avg  filo  P≈0.000764
+14:18:09 | i 29 | [Phase 1/3] decompose  0.22s / — / —  λ=0.0  vb ac_avg
+14:19:03 | i 29 | [Phase 2/3] route  54.13s / 53.64s / 100.9%  filo  k=4
+14:19:12 | i 28 | [ IMPROVE ] 32807.00  via bg_ails  ·  Δ_BKS=+0.80%
+14:19:12 | i 28 | [ ASYNC BG] bg_ails  62.79s / 60.00s / 104.6%
+14:19:12 | i 29 | [HAOS ROLL] k=4  λ=0.0  vb  ac_avg  filo  P≈0.000764
+14:19:12 | i 29 | [ Summary ] cost=34598.00  Δ_S*=+5.46%  Δ_BKS=+6.30%  Δ_S*_BKS=+0.80%  no_improve=1
+14:19:12 | i 30 | [HAOS ROLL] k=12  λ=0.0  rb  kmeans  pyvrp  P≈0.005407
+14:19:12 | i 30 | [Phase 1/3] decompose  0.14s / — / —  λ=0.0  rb kmeans
+14:19:39 | i 30 | [Phase 2/3] route  27.70s / 18.30s / 151.4%  pyvrp  k=12
+14:20:14 | i 29 | [ ASYNC BG] bg_ails  62.73s / 60.00s / 104.5%
+14:20:14 | i 30 | [HAOS ROLL] k=12  λ=0.0  rb  kmeans  pyvrp  P≈0.005407
+14:20:14 | i 30 | [ Summary ] cost=32813.00  Δ_S*=+0.02%  Δ_BKS=+0.82%  Δ_S*_BKS=+0.80%  no_improve=3
+14:20:14 | i 31 | [HAOS ROLL] k=2  λ=0.0  vb  ac_avg  filo  P≈0.001395
+14:20:15 | i 31 | [Phase 1/3] decompose  0.21s / — / —  λ=0.0  vb ac_avg
+14:21:46 | i 31 | [Phase 2/3] route  91.18s / 91.02s / 100.2%  filo  k=2
+14:21:46 | i 30 | [ IMPROVE ] 32769.00  via bg_ails  ·  Δ_BKS=+0.69%
+14:21:46 | i 30 | [ ASYNC BG] bg_ails  62.70s / 60.00s / 104.5%
+14:21:46 | i 31 | [HAOS ROLL] k=2  λ=0.0  vb  ac_avg  filo  P≈0.001395
+14:21:46 | i 31 | [ Summary ] cost=33359.00  Δ_S*=+1.80%  Δ_BKS=+2.50%  Δ_S*_BKS=+0.69%  no_improve=1
+14:21:46 | i 32 | [HAOS ROLL] k=6  λ=0.4  vb  fcm  filo  P≈0.000591
+14:21:46 | i 32 | [Phase 1/3] decompose  0.31s / — / —  λ=0.4  vb fcm
+14:22:17 | i 32 | [Phase 2/3] route  31.11s / 31.02s / 100.3%  filo  k=6
+14:23:17 | i 31 | [ ASYNC BG] bg_ails  90.81s / 88.84s / 102.2%
+14:23:17 | i 32 | [HAOS ROLL] k=6  λ=0.4  vb  fcm  filo  P≈0.000591
+14:23:17 | i 32 | [ Summary ] cost=36768.00  Δ_S*=+12.20%  Δ_BKS=+12.97%  Δ_S*_BKS=+0.69%  no_improve=3
+14:23:17 | i 26 | [ASYNC 1/2] sp_sc  0.40s / 720.00s / 0.1%  SP  avg_coverage=48.03/5  pool=706
+14:23:17 | i 26 | [ASYNC 2/2] standard_ails  362.63s / 360.00s / 100.7%
+14:23:17 | i 26 | [ IMPROVE ] 32664.00  via standard_ails  ·  Δ_BKS=+0.36%
+14:23:17 | i 33 | [HAOS ROLL] k=4  λ=0.4  vb  kmeans  filo2  P≈0.000328
+14:23:17 | i 33 | [Phase 1/3] decompose  0.17s / — / —  λ=0.4  vb kmeans
+14:24:02 | i 33 | [Phase 2/3] route  45.09s / 44.94s / 100.3%  filo2  k=4
+14:24:19 | i 32 | [ ASYNC BG] bg_ails  62.74s / 60.00s / 104.6%
+14:24:19 | i 33 | [HAOS ROLL] k=4  λ=0.4  vb  kmeans  filo2  P≈0.000328
+14:24:19 | i 33 | [ Summary ] cost=33732.00  Δ_S*=+3.27%  Δ_BKS=+3.64%  Δ_S*_BKS=+0.36%  no_improve=2
+14:24:19 | i 34 | [HAOS ROLL] k=6  λ=0.0  rb  ac_avg  filo2  P≈0.001701
+14:24:19 | i 34 | [Phase 1/3] decompose  0.14s / — / —  λ=0.0  rb ac_avg
+14:24:58 | i 34 | [Phase 2/3] route  38.10s / 37.62s / 101.3%  filo2  k=6
+14:25:22 | i 33 | [ ASYNC BG] bg_ails  62.77s / 60.00s / 104.6%
+14:25:22 | i 34 | [HAOS ROLL] k=6  λ=0.0  rb  ac_avg  filo2  P≈0.001701
+14:25:22 | i 34 | [ Summary ] cost=32701.00  Δ_S*=+0.11%  Δ_BKS=+0.48%  Δ_S*_BKS=+0.36%  no_improve=4
+14:25:22 | i 35 | [HAOS ROLL] k=10  λ=0.2  rb  ac_avg  pyvrp  P≈0.000212
+14:25:22 | i 35 | [Phase 1/3] decompose  0.18s / — / —  λ=0.2  rb ac_avg
+14:25:50 | i 35 | [Phase 2/3] route  28.09s / 27.30s / 102.9%  pyvrp  k=10
+14:26:25 | i 34 | [ ASYNC BG] bg_ails  62.77s / 60.00s / 104.6%
+14:26:25 | i 35 | [HAOS ROLL] k=10  λ=0.2  rb  ac_avg  pyvrp  P≈0.000212
+14:26:25 | i 35 | [ Summary ] cost=32757.00  Δ_S*=+0.28%  Δ_BKS=+0.65%  Δ_S*_BKS=+0.36%  no_improve=6
+14:26:25 | i 36 | [HAOS ROLL] k=6  λ=1.0  rb  kmeans  filo  P≈0.001574
+14:26:25 | i 36 | [Phase 1/3] decompose  0.18s / — / —  λ=1.0  rb kmeans
+14:27:02 | i 36 | [Phase 2/3] route  37.11s / 36.66s / 101.2%  filo  k=6
+14:27:28 | i 35 | [ ASYNC BG] bg_ails  62.71s / 60.00s / 104.5%
+14:27:28 | i 36 | [HAOS ROLL] k=6  λ=1.0  rb  kmeans  filo  P≈0.001574
+14:27:28 | i 36 | [ Summary ] cost=32745.00  Δ_S*=+0.25%  Δ_BKS=+0.61%  Δ_S*_BKS=+0.36%  no_improve=8
+14:27:28 | i 37 | [HAOS ROLL] k=8  λ=1.0  vb  ac_avg  pyvrp  P≈0.000646
+14:27:28 | i 37 | [Phase 1/3] decompose  0.26s / — / —  λ=1.0  vb ac_avg
+14:28:08 | i 37 | [Phase 2/3] route  40.00s / 38.70s / 103.4%  pyvrp  k=8
+14:28:30 | i 36 | [ ASYNC BG] bg_ails  62.82s / 60.00s / 104.7%
+14:28:30 | i 37 | [HAOS ROLL] k=8  λ=1.0  vb  ac_avg  pyvrp  P≈0.000646
+14:28:30 | i 37 | [ Summary ] cost=38205.00  Δ_S*=+16.96%  Δ_BKS=+17.39%  Δ_S*_BKS=+0.36%  no_improve=10
+14:28:30 | i 38 | [HAOS ROLL] k=6  λ=0.4  vb  ac_avg  pyvrp  P≈0.001258
+14:28:31 | i 38 | [Phase 1/3] decompose  0.26s / — / —  λ=0.4  vb ac_avg
+14:29:18 | i 38 | [Phase 2/3] route  47.21s / 45.54s / 103.7%  pyvrp  k=6
+14:29:33 | i 37 | [ ASYNC BG] bg_ails  62.81s / 60.00s / 104.7%
+14:29:33 | i 38 | [HAOS ROLL] k=6  λ=0.4  vb  ac_avg  pyvrp  P≈0.001258
+14:29:33 | i 38 | [ Summary ] cost=36640.00  Δ_S*=+12.17%  Δ_BKS=+12.58%  Δ_S*_BKS=+0.36%  no_improve=12
+14:29:33 | i 39 | [HAOS ROLL] k=10  λ=0.4  rb  kmeans  ails2  P≈0.000435
+14:29:33 | i 39 | [Phase 1/3] decompose  0.18s / — / —  λ=0.4  rb kmeans
+14:30:02 | i 39 | [Phase 2/3] route  28.53s / 27.30s / 104.5%  ails2  k=10
+14:30:36 | i 38 | [ ASYNC BG] bg_ails  62.75s / 60.00s / 104.6%
+14:30:36 | i 39 | [HAOS ROLL] k=10  λ=0.4  rb  kmeans  ails2  P≈0.000435
+14:30:36 | i 39 | [ Summary ] cost=32676.00  Δ_S*=+0.04%  Δ_BKS=+0.40%  Δ_S*_BKS=+0.36%  no_improve=14
+14:30:36 | i 40 | [HAOS ROLL] k=6  λ=0.6  rb  ac_complete  ails2  P≈0.000320
+14:30:36 | i 40 | [Phase 1/3] decompose  0.18s / — / —  λ=0.6  rb ac_complete
+14:31:15 | i 40 | [Phase 2/3] route  38.70s / 37.62s / 102.9%  ails2  k=6
+14:31:39 | i 39 | [ ASYNC BG] bg_ails  62.71s / 60.00s / 104.5%
+14:31:39 | i 40 | [HAOS ROLL] k=6  λ=0.6  rb  ac_complete  ails2  P≈0.000320
+14:31:39 | i 40 | [ Summary ] cost=32696.00  Δ_S*=+0.10%  Δ_BKS=+0.46%  Δ_S*_BKS=+0.36%  no_improve=16
+14:31:39 | i 41 | [HAOS ROLL] k=8  λ=0.8  rb  ac_complete  pyvrp  P≈0.000571
+14:31:39 | i 41 | [Phase 1/3] decompose  0.18s / — / —  λ=0.8  rb ac_complete
+14:32:17 | i 41 | [Phase 2/3] route  37.72s / 36.66s / 102.9%  pyvrp  k=8
+14:32:41 | i 40 | [ ASYNC BG] bg_ails  62.72s / 60.00s / 104.5%
+14:32:41 | i 41 | [HAOS ROLL] k=8  λ=0.8  rb  ac_complete  pyvrp  P≈0.000571
+14:32:41 | i 41 | [ Summary ] cost=32795.00  Δ_S*=+0.40%  Δ_BKS=+0.77%  Δ_S*_BKS=+0.36%  no_improve=18
+14:32:41 | i 42 | [HAOS ROLL] k=4  λ=0.0  rb  ac_complete  ails2  P≈0.000485
+14:32:42 | i 42 | [Phase 1/3] decompose  0.14s / — / —  λ=0.0  rb ac_complete
+14:33:29 | i 42 | [Phase 2/3] route  47.65s / 46.74s / 101.9%  ails2  k=4
+14:33:44 | i 41 | [ ASYNC BG] bg_ails  62.69s / 60.00s / 104.5%
+14:33:44 | i 42 | [HAOS ROLL] k=4  λ=0.0  rb  ac_complete  ails2  P≈0.000485
+14:33:44 | i 42 | [ Summary ] cost=32743.00  Δ_S*=+0.24%  Δ_BKS=+0.61%  Δ_S*_BKS=+0.36%  no_improve=20
+14:33:44 | i 43 | [HAOS ROLL] k=6  λ=0.0  rb  ac_avg  pyvrp  P≈0.003852
+14:33:44 | i 43 | [Phase 1/3] decompose  0.14s / — / —  λ=0.0  rb ac_avg
+14:34:23 | i 43 | [Phase 2/3] route  38.80s / 37.62s / 103.1%  pyvrp  k=6
+14:34:47 | i 42 | [ ASYNC BG] bg_ails  62.73s / 60.00s / 104.6%
+14:34:47 | i 43 | [HAOS ROLL] k=6  λ=0.0  rb  ac_avg  pyvrp  P≈0.003852
+14:34:47 | i 43 | [ Summary ] cost=33024.00  Δ_S*=+1.10%  Δ_BKS=+1.47%  Δ_S*_BKS=+0.36%  no_improve=22
+14:34:47 | i 44 | [HAOS ROLL] k=10  λ=0.0  vb  ac_complete  pyvrp  P≈0.000751
+14:34:47 | i 44 | [Phase 1/3] decompose  0.20s / — / —  λ=0.0  vb ac_complete
+14:35:17 | i 44 | [Phase 2/3] route  29.82s / 29.10s / 102.5%  pyvrp  k=10
+14:35:50 | i 43 | [ ASYNC BG] bg_ails  62.72s / 60.00s / 104.5%
+14:35:50 | i 44 | [HAOS ROLL] k=10  λ=0.0  vb  ac_complete  pyvrp  P≈0.000751
+14:35:50 | i 44 | [ Summary ] cost=39294.00  Δ_S*=+20.30%  Δ_BKS=+20.73%  Δ_S*_BKS=+0.36%  no_improve=24
+14:35:50 | i 45 | [HAOS ROLL] k=6  λ=0.4  vb  kmeans  ails2  P≈0.000721
+14:35:50 | i 45 | [Phase 1/3] decompose  0.18s / — / —  λ=0.4  vb kmeans
+14:36:29 | i 45 | [Phase 2/3] route  38.69s / 37.32s / 103.7%  ails2  k=6
+14:36:52 | i 44 | [ ASYNC BG] bg_ails  62.64s / 60.00s / 104.4%
+14:36:52 | i 45 | [HAOS ROLL] k=6  λ=0.4  vb  kmeans  ails2  P≈0.000721
+14:36:52 | i 45 | [ Summary ] cost=36223.00  Δ_S*=+10.90%  Δ_BKS=+11.30%  Δ_S*_BKS=+0.36%  no_improve=26
+14:36:52 | i 46 | [HAOS ROLL] k=10  λ=1.0  vb  ac_avg  filo2  P≈0.000222
+14:36:53 | i 46 | [Phase 1/3] decompose  0.27s / — / —  λ=1.0  vb ac_avg
+14:37:32 | i 46 | [Phase 2/3] route  39.12s / 38.70s / 101.1%  filo2  k=10
+14:37:55 | i 45 | [ ASYNC BG] bg_ails  62.72s / 60.00s / 104.5%
+14:37:55 | i 46 | [HAOS ROLL] k=10  λ=1.0  vb  ac_avg  filo2  P≈0.000222
+14:37:55 | i 46 | [ Summary ] cost=38268.00  Δ_S*=+17.16%  Δ_BKS=+17.58%  Δ_S*_BKS=+0.36%  no_improve=28
+14:37:55 | i 47 | [HAOS ROLL] k=8  λ=1.0  rb  ac_avg  ails2  P≈0.000579
+14:37:55 | i 47 | [Phase 1/3] decompose  0.19s / — / —  λ=1.0  rb ac_avg
+14:38:33 | i 47 | [Phase 2/3] route  37.72s / 36.66s / 102.9%  ails2  k=8
+14:38:58 | i 46 | [ ASYNC BG] bg_ails  62.83s / 60.00s / 104.7%
+14:38:58 | i 47 | [HAOS ROLL] k=8  λ=1.0  rb  ac_avg  ails2  P≈0.000579
+14:38:58 | i 47 | [ Summary ] cost=32679.00  Δ_S*=+0.05%  Δ_BKS=+0.41%  Δ_S*_BKS=+0.36%  no_improve=30
+14:38:58 | i 48 | [HAOS ROLL] k=6  λ=0.0  vb  ac_avg  filo2  P≈0.002030
+14:38:58 | i 48 | [Phase 1/3] decompose  0.21s / — / —  λ=0.0  vb ac_avg
+14:39:44 | i 48 | [Phase 2/3] route  46.12s / 45.54s / 101.3%  filo2  k=6
+14:40:01 | i 47 | [ ASYNC BG] bg_ails  62.80s / 60.00s / 104.7%
+14:40:01 | i 48 | [HAOS ROLL] k=6  λ=0.0  vb  ac_avg  filo2  P≈0.002030
+14:40:01 | i 48 | [ Summary ] cost=36316.00  Δ_S*=+11.18%  Δ_BKS=+11.58%  Δ_S*_BKS=+0.36%  no_improve=32
+14:40:01 | i 49 | [HAOS ROLL] k=8  λ=1.0  rb  kmeans  filo2  P≈0.001809
+14:40:01 | i 49 | [Phase 1/3] decompose  0.18s / — / —  λ=1.0  rb kmeans
+14:40:39 | i 49 | [Phase 2/3] route  38.11s / 37.62s / 101.3%  filo2  k=8
+14:41:03 | i 48 | [ ASYNC BG] bg_ails  62.71s / 60.00s / 104.5%
+14:41:03 | i 49 | [HAOS ROLL] k=8  λ=1.0  rb  kmeans  filo2  P≈0.001809
+14:41:03 | i 49 | [ Summary ] cost=32708.00  Δ_S*=+0.13%  Δ_BKS=+0.50%  Δ_S*_BKS=+0.36%  no_improve=34
+14:41:03 | i 50 | [HAOS ROLL] k=6  λ=0.0  vb  kmeans  pyvrp  P≈0.003179
+14:41:04 | i 50 | [Phase 1/3] decompose  0.14s / — / —  λ=0.0  vb kmeans
+14:41:42 | i 50 | [Phase 2/3] route  38.34s / 37.14s / 103.2%  pyvrp  k=6
+14:42:06 | i 49 | [ ASYNC BG] bg_ails  62.75s / 60.00s / 104.6%
+14:42:06 | i 50 | [HAOS ROLL] k=6  λ=0.0  vb  kmeans  pyvrp  P≈0.003179
+14:42:06 | i 50 | [ Summary ] cost=37037.00  Δ_S*=+13.39%  Δ_BKS=+13.80%  Δ_S*_BKS=+0.36%  no_improve=36
+14:42:06 | i 51 | [HAOS ROLL] k=6  λ=1.0  vb  kmeans  pyvrp  P≈0.001800
+14:42:06 | i 51 | [Phase 1/3] decompose  0.18s / — / —  λ=1.0  vb kmeans
+14:42:43 | i 51 | [Phase 2/3] route  36.81s / 35.70s / 103.1%  pyvrp  k=6
+14:43:09 | i 50 | [ ASYNC BG] bg_ails  62.69s / 60.00s / 104.5%
+14:43:09 | i 51 | [HAOS ROLL] k=6  λ=1.0  vb  kmeans  pyvrp  P≈0.001800
+14:43:09 | i 51 | [ Summary ] cost=36317.00  Δ_S*=+11.18%  Δ_BKS=+11.59%  Δ_S*_BKS=+0.36%  no_improve=38
+14:43:09 | i 45 | [ASYNC 1/2] sp_sc  1.18s / 720.00s / 0.2%  SP  avg_coverage=81.57/5  pool=1169
+14:43:09 | i 45 | [ASYNC 2/2] standard_ails  362.54s / 360.00s / 100.7%
+14:43:09 | i 52 | [HAOS ROLL] k=6  λ=0.0  rb  kmeans  pyvrp  P≈0.010909
+14:43:10 | i 52 | [Phase 1/3] decompose  0.13s / — / —  λ=0.0  rb kmeans
+14:43:58 | i 52 | [Phase 2/3] route  48.53s / 46.74s / 103.8%  pyvrp  k=6
+14:44:12 | i 51 | [ ASYNC BG] bg_ails  62.81s / 60.00s / 104.7%
+14:44:12 | i 52 | [HAOS ROLL] k=6  λ=0.0  rb  kmeans  pyvrp  P≈0.010909
+14:44:12 | i 52 | [ Summary ] cost=33178.00  Δ_S*=+1.57%  Δ_BKS=+1.94%  Δ_S*_BKS=+0.36%  no_improve=41
+14:44:12 | i 53 | [HAOS ROLL] k=8  λ=0.2  rb  kmeans  pyvrp  P≈0.002373
+14:44:12 | i 53 | [Phase 1/3] decompose  0.18s / — / —  λ=0.2  rb kmeans
+14:44:50 | i 53 | [Phase 2/3] route  37.81s / 36.66s / 103.1%  pyvrp  k=8
+14:45:14 | i 52 | [ ASYNC BG] bg_ails  62.69s / 60.00s / 104.5%
+14:45:14 | i 53 | [HAOS ROLL] k=8  λ=0.2  rb  kmeans  pyvrp  P≈0.002373
+14:45:14 | i 53 | [ Summary ] cost=32903.00  Δ_S*=+0.73%  Δ_BKS=+1.10%  Δ_S*_BKS=+0.36%  no_improve=43
+14:45:14 | i 54 | [HAOS ROLL] k=6  λ=0.0  rb  ac_complete  pyvrp  P≈0.005060
+14:45:15 | i 54 | [Phase 1/3] decompose  0.14s / — / —  λ=0.0  rb ac_complete
+14:45:53 | i 54 | [Phase 2/3] route  38.84s / 37.62s / 103.2%  pyvrp  k=6
+14:46:17 | i 53 | [ ASYNC BG] bg_ails  62.74s / 60.00s / 104.6%
+14:46:17 | i 54 | [HAOS ROLL] k=6  λ=0.0  rb  ac_complete  pyvrp  P≈0.005060
+14:46:17 | i 54 | [ Summary ] cost=32878.00  Δ_S*=+0.66%  Δ_BKS=+1.02%  Δ_S*_BKS=+0.36%  no_improve=45
+14:46:17 | i 55 | [HAOS ROLL] k=6  λ=0.0  vb  fcm  filo  P≈0.000984
+14:46:17 | i 55 | [Phase 1/3] decompose  0.23s / — / —  λ=0.0  vb fcm
+14:46:49 | i 55 | [Phase 2/3] route  31.10s / 31.02s / 100.2%  filo  k=6
+14:47:20 | i 54 | [ ASYNC BG] bg_ails  62.67s / 60.00s / 104.4%
+14:47:20 | i 55 | [HAOS ROLL] k=6  λ=0.0  vb  fcm  filo  P≈0.000984
+14:47:20 | i 55 | [ Summary ] cost=36753.00  Δ_S*=+12.52%  Δ_BKS=+12.93%  Δ_S*_BKS=+0.36%  no_improve=47
+14:47:20 | i 56 | [HAOS ROLL] k=6  λ=0.8  rb  ac_avg  ails2  P≈0.000835
+14:47:20 | i 56 | [Phase 1/3] decompose  0.18s / — / —  λ=0.8  rb ac_avg
+14:47:59 | i 56 | [Phase 2/3] route  38.73s / 37.62s / 103.0%  ails2  k=6
+14:48:23 | i 55 | [ ASYNC BG] bg_ails  62.74s / 60.00s / 104.6%
+14:48:23 | i 56 | [HAOS ROLL] k=6  λ=0.8  rb  ac_avg  ails2  P≈0.000835
+14:48:23 | i 56 | [ Summary ] cost=32745.00  Δ_S*=+0.25%  Δ_BKS=+0.61%  Δ_S*_BKS=+0.36%  no_improve=49
+14:48:23 | i 57 | [HAOS ROLL] k=4  λ=0.8  rb  ac_avg  filo  P≈0.000292
+14:48:23 | i 57 | [Phase 1/3] decompose  0.18s / — / —  λ=0.8  rb ac_avg
+14:49:10 | i 57 | [Phase 2/3] route  47.11s / 46.74s / 100.8%  filo  k=4
+14:49:25 | i 56 | [ ASYNC BG] bg_ails  62.70s / 60.00s / 104.5%
+14:49:25 | i 57 | [HAOS ROLL] k=4  λ=0.8  rb  ac_avg  filo  P≈0.000292
+14:49:25 | i 57 | [ Summary ] cost=32718.00  Δ_S*=+0.17%  Δ_BKS=+0.53%  Δ_S*_BKS=+0.36%  no_improve=51
+14:49:25 | i 58 | [HAOS ROLL] k=6  λ=1.0  vb  kmedoids  pyvrp  P≈0.001368
+14:49:26 | i 58 | [Phase 1/3] decompose  0.35s / — / —  λ=1.0  vb kmedoids
+14:50:06 | i 58 | [Phase 2/3] route  40.00s / 38.70s / 103.4%  pyvrp  k=6
+14:50:28 | i 57 | [ ASYNC BG] bg_ails  62.87s / 60.00s / 104.8%
+14:50:28 | i 58 | [HAOS ROLL] k=6  λ=1.0  vb  kmedoids  pyvrp  P≈0.001368
+14:50:28 | i 58 | [ Summary ] cost=36420.00  Δ_S*=+11.50%  Δ_BKS=+11.90%  Δ_S*_BKS=+0.36%  no_improve=53
+14:50:28 | i 59 | [HAOS ROLL] k=4  λ=0.8  rb  ac_avg  filo  P≈0.000796
+14:50:28 | i 59 | [Phase 1/3] decompose  0.19s / — / —  λ=0.8  rb ac_avg
+14:51:15 | i 59 | [Phase 2/3] route  47.12s / 46.74s / 100.8%  filo  k=4
+14:51:31 | i 58 | [ ASYNC BG] bg_ails  62.80s / 60.00s / 104.7%
+14:51:31 | i 59 | [HAOS ROLL] k=4  λ=0.8  rb  ac_avg  filo  P≈0.000796
+14:51:31 | i 59 | [ Summary ] cost=32793.00  Δ_S*=+0.39%  Δ_BKS=+0.76%  Δ_S*_BKS=+0.36%  no_improve=55
+14:51:31 | i 60 | [HAOS ROLL] k=4  λ=0.0  vb  kmeans  ails2  P≈0.000698
+14:51:31 | i 60 | [Phase 1/3] decompose  0.14s / — / —  λ=0.0  vb kmeans
+14:52:14 | i 60 | [Phase 2/3] route  42.53s / 41.22s / 103.2%  ails2  k=4
+14:52:34 | i 59 | [ ASYNC BG] bg_ails  62.80s / 60.00s / 104.7%
+14:52:34 | i 60 | [HAOS ROLL] k=4  λ=0.0  vb  kmeans  ails2  P≈0.000698
+14:52:34 | i 60 | [ Summary ] cost=35476.00  Δ_S*=+8.61%  Δ_BKS=+9.00%  Δ_S*_BKS=+0.36%  no_improve=57
+14:52:34 | i 61 | [HAOS ROLL] k=8  λ=0.8  rb  ac_avg  pyvrp  P≈0.003790
+14:52:34 | i 61 | [Phase 1/3] decompose  0.18s / — / —  λ=0.8  rb ac_avg
+14:53:12 | i 61 | [Phase 2/3] route  37.81s / 36.66s / 103.1%  pyvrp  k=8
+14:53:37 | i 60 | [ ASYNC BG] bg_ails  62.84s / 60.00s / 104.7%
+14:53:37 | i 61 | [HAOS ROLL] k=8  λ=0.8  rb  ac_avg  pyvrp  P≈0.003790
+14:53:37 | i 61 | [ Summary ] cost=32914.00  Δ_S*=+0.77%  Δ_BKS=+1.13%  Δ_S*_BKS=+0.36%  no_improve=59
+14:53:37 | i 62 | [HAOS ROLL] k=6  λ=0.0  vb  kmeans  pyvrp  P≈0.004650
+14:53:37 | i 62 | [Phase 1/3] decompose  0.14s / — / —  λ=0.0  vb kmeans
+14:54:14 | i 62 | [Phase 2/3] route  36.84s / 35.70s / 103.2%  pyvrp  k=6
+14:54:40 | i 61 | [ ASYNC BG] bg_ails  62.89s / 60.00s / 104.8%
+14:54:40 | i 62 | [HAOS ROLL] k=6  λ=0.0  vb  kmeans  pyvrp  P≈0.004650
+14:54:40 | i 62 | [ Summary ] cost=36475.00  Δ_S*=+11.67%  Δ_BKS=+12.07%  Δ_S*_BKS=+0.36%  no_improve=61
+14:54:40 | i 63 | [HAOS ROLL] k=6  λ=1.0  rb  ac_avg  ails2  P≈0.003021
+14:54:40 | i 63 | [Phase 1/3] decompose  0.18s / — / —  λ=1.0  rb ac_avg
+14:55:18 | i 63 | [Phase 2/3] route  38.69s / 37.62s / 102.8%  ails2  k=6
+14:55:42 | i 62 | [ ASYNC BG] bg_ails  62.75s / 60.00s / 104.6%
+14:55:42 | i 63 | [HAOS ROLL] k=6  λ=1.0  rb  ac_avg  ails2  P≈0.003021
+14:55:42 | i 63 | [ Summary ] cost=32732.00  Δ_S*=+0.21%  Δ_BKS=+0.57%  Δ_S*_BKS=+0.36%  no_improve=63
+14:55:42 | i 64 | [HAOS ROLL] k=3  λ=0.0  rb  kmeans  pyvrp  P≈0.002307
+14:55:42 | i 64 | [Phase 1/3] decompose  0.13s / — / —  λ=0.0  rb kmeans
+14:56:40 | i 64 | [Phase 2/3] route  57.45s / 55.26s / 104.0%  pyvrp  k=3
+14:56:45 | i 63 | [ ASYNC BG] bg_ails  62.80s / 60.00s / 104.7%
+14:56:45 | i 64 | [HAOS ROLL] k=3  λ=0.0  rb  kmeans  pyvrp  P≈0.002307
+14:56:45 | i 64 | [ Summary ] cost=33042.00  Δ_S*=+1.16%  Δ_BKS=+1.52%  Δ_S*_BKS=+0.36%  no_improve=65
+14:56:45 | i 65 | [HAOS ROLL] k=6  λ=0.8  rb  ac_complete  ails2  P≈0.001498
+14:56:45 | i 65 | [Phase 1/3] decompose  0.18s / — / —  λ=0.8  rb ac_complete
+14:57:24 | i 65 | [Phase 2/3] route  38.57s / 37.62s / 102.5%  ails2  k=6
+14:57:48 | i 64 | [ ASYNC BG] bg_ails  62.69s / 60.00s / 104.5%
+14:57:48 | i 65 | [HAOS ROLL] k=6  λ=0.8  rb  ac_complete  ails2  P≈0.001498
+14:57:48 | i 65 | [ Summary ] cost=32757.00  Δ_S*=+0.28%  Δ_BKS=+0.65%  Δ_S*_BKS=+0.36%  no_improve=67
+14:57:48 | i 66 | [HAOS ROLL] k=6  λ=0.4  rb  ac_avg  pyvrp  P≈0.003691
+14:57:48 | i 66 | [Phase 1/3] decompose  0.19s / — / —  λ=0.4  rb ac_avg
+14:58:27 | i 66 | [Phase 2/3] route  38.85s / 37.62s / 103.3%  pyvrp  k=6
+14:58:51 | i 65 | [ ASYNC BG] bg_ails  62.85s / 60.00s / 104.7%
+14:58:51 | i 66 | [HAOS ROLL] k=6  λ=0.4  rb  ac_avg  pyvrp  P≈0.003691
+14:58:51 | i 66 | [ Summary ] cost=32845.00  Δ_S*=+0.55%  Δ_BKS=+0.92%  Δ_S*_BKS=+0.36%  no_improve=69
+14:58:51 | i 67 | [HAOS ROLL] k=6  λ=0.2  rb  ac_avg  pyvrp  P≈0.003911
+14:58:51 | i 67 | [Phase 1/3] decompose  0.19s / — / —  λ=0.2  rb ac_avg
+14:59:30 | i 67 | [Phase 2/3] route  38.84s / 37.62s / 103.2%  pyvrp  k=6
+14:59:53 | i 66 | [ ASYNC BG] bg_ails  62.85s / 60.00s / 104.8%
+14:59:54 | i 67 | [HAOS ROLL] k=6  λ=0.2  rb  ac_avg  pyvrp  P≈0.003911
+14:59:54 | i 67 | [ Summary ] cost=32969.00  Δ_S*=+0.93%  Δ_BKS=+1.30%  Δ_S*_BKS=+0.36%  no_improve=71
+14:59:54 | i 68 | [HAOS ROLL] k=8  λ=0.0  rb  kmeans  ails2  P≈0.002624
+14:59:54 | i 68 | [Phase 1/3] decompose  0.14s / — / —  λ=0.0  rb kmeans
+15:00:32 | i 68 | [Phase 2/3] route  38.74s / 37.62s / 103.0%  ails2  k=8
+15:00:56 | i 67 | [ ASYNC BG] bg_ails  62.80s / 60.00s / 104.7%
+15:00:56 | i 68 | [HAOS ROLL] k=8  λ=0.0  rb  kmeans  ails2  P≈0.002624
+15:00:56 | i 68 | [ Summary ] cost=32762.00  Δ_S*=+0.30%  Δ_BKS=+0.66%  Δ_S*_BKS=+0.36%  no_improve=73
+15:00:56 | i 69 | [HAOS ROLL] k=8  λ=0.0  rb  ac_avg  pyvrp  P≈0.008060
+15:00:56 | i 69 | [Phase 1/3] decompose  0.13s / — / —  λ=0.0  rb ac_avg
+15:01:34 | i 69 | [Phase 2/3] route  37.85s / 36.66s / 103.2%  pyvrp  k=8
+15:01:59 | i 68 | [ ASYNC BG] bg_ails  62.71s / 60.00s / 104.5%
+15:01:59 | i 69 | [HAOS ROLL] k=8  λ=0.0  rb  ac_avg  pyvrp  P≈0.008060
+15:01:59 | i 69 | [ Summary ] cost=32908.00  Δ_S*=+0.75%  Δ_BKS=+1.11%  Δ_S*_BKS=+0.36%  no_improve=75
+15:01:59 | i 70 | [HAOS ROLL] k=10  λ=0.8  rb  ac_avg  pyvrp  P≈0.002613
+15:01:59 | i 70 | [Phase 1/3] decompose  0.18s / — / —  λ=0.8  rb ac_avg
+15:02:27 | i 70 | [Phase 2/3] route  28.00s / 27.30s / 102.6%  pyvrp  k=10
+15:03:02 | i 69 | [ ASYNC BG] bg_ails  62.79s / 60.00s / 104.6%
+15:03:02 | i 70 | [HAOS ROLL] k=10  λ=0.8  rb  ac_avg  pyvrp  P≈0.002613
+15:03:02 | i 70 | [ Summary ] cost=32811.00  Δ_S*=+0.45%  Δ_BKS=+0.81%  Δ_S*_BKS=+0.36%  no_improve=77
+15:03:02 | i 71 | [HAOS ROLL] k=6  λ=1.0  rb  ac_avg  ails2  P≈0.004581
+15:03:02 | i 71 | [Phase 1/3] decompose  0.18s / — / —  λ=1.0  rb ac_avg
+15:03:41 | i 71 | [Phase 2/3] route  38.66s / 37.62s / 102.8%  ails2  k=6
+15:04:05 | i 70 | [ ASYNC BG] bg_ails  62.82s / 60.00s / 104.7%
+15:04:05 | i 71 | [HAOS ROLL] k=6  λ=1.0  rb  ac_avg  ails2  P≈0.004581
+15:04:05 | i 71 | [ Summary ] cost=32742.00  Δ_S*=+0.24%  Δ_BKS=+0.60%  Δ_S*_BKS=+0.36%  no_improve=79
+15:04:05 | i 65 | [ASYNC 1/2] sp_sc  2.82s / 720.00s / 0.4%  SP  avg_coverage=116.40/5  pool=1647
+15:04:05 | i 65 | [ASYNC 2/2] standard_ails  362.54s / 360.00s / 100.7%
+15:04:06 | i 65 | [ IMPROVE ] 32660.00  via standard_ails  ·  Δ_BKS=+0.35%
+15:04:06 | i 72 | [HAOS ROLL] k=8  λ=1.0  vb  fcm  filo  P≈0.000232
+15:04:06 | i 72 | [Phase 1/3] decompose  0.29s / — / —  λ=1.0  vb fcm
+15:04:39 | i 72 | [Phase 2/3] route  33.10s / 24.66s / 134.2%  filo  k=8
+15:05:07 | i 71 | [ ASYNC BG] bg_ails  62.72s / 60.00s / 104.5%
+15:05:07 | i 72 | [HAOS ROLL] k=8  λ=1.0  vb  fcm  filo  P≈0.000232
+15:05:07 | i 72 | [ Summary ] cost=37178.00  Δ_S*=+13.83%  Δ_BKS=+14.23%  Δ_S*_BKS=+0.35%  no_improve=2
+15:05:07 | i 73 | [HAOS ROLL] k=6  λ=0.8  rb  ac_complete  filo2  P≈0.000390
+15:05:08 | i 73 | [Phase 1/3] decompose  0.19s / — / —  λ=0.8  rb ac_complete
+15:05:46 | i 73 | [Phase 2/3] route  38.11s / 37.62s / 101.3%  filo2  k=6
+15:06:10 | i 72 | [ ASYNC BG] bg_ails  62.77s / 60.00s / 104.6%
+15:06:10 | i 73 | [HAOS ROLL] k=6  λ=0.8  rb  ac_complete  filo2  P≈0.000390
+15:06:10 | i 73 | [ Summary ] cost=32747.00  Δ_S*=+0.27%  Δ_BKS=+0.62%  Δ_S*_BKS=+0.35%  no_improve=4
+15:06:10 | i 74 | [HAOS ROLL] k=2  λ=0.0  rb  ac_complete  filo  P≈0.000357
+15:06:10 | i 74 | [Phase 1/3] decompose  0.14s / — / —  λ=0.0  rb ac_complete
+15:07:15 | i 74 | [Phase 2/3] route  65.12s / 64.92s / 100.3%  filo  k=2
+15:07:16 | i 73 | [ ASYNC BG] bg_ails  62.75s / 60.00s / 104.6%
+15:07:16 | i 74 | [HAOS ROLL] k=2  λ=0.0  rb  ac_complete  filo  P≈0.000357
+15:07:16 | i 74 | [ Summary ] cost=32787.00  Δ_S*=+0.39%  Δ_BKS=+0.74%  Δ_S*_BKS=+0.35%  no_improve=6
+15:07:16 | i 75 | [HAOS ROLL] k=2  λ=0.0  rb  kmeans  ails2  P≈0.001338
+15:07:16 | i 75 | [Phase 1/3] decompose  0.14s / — / —  λ=0.0  rb kmeans
+15:08:20 | i 75 | [Phase 2/3] route  64.69s / 63.54s / 101.8%  ails2  k=2
+15:08:21 | i 74 | [ ASYNC BG] bg_ails  65.70s / 63.36s / 103.7%
+15:08:21 | i 75 | [HAOS ROLL] k=2  λ=0.0  rb  kmeans  ails2  P≈0.001338
+15:08:21 | i 75 | [ Summary ] cost=32758.00  Δ_S*=+0.30%  Δ_BKS=+0.65%  Δ_S*_BKS=+0.35%  no_improve=8
+15:08:21 | i 76 | [HAOS ROLL] k=12  λ=0.4  rb  ac_avg  filo  P≈0.000381
+15:08:21 | i 76 | [Phase 1/3] decompose  0.18s / — / —  λ=0.4  rb ac_avg
+15:08:48 | i 76 | [Phase 2/3] route  26.09s / 18.12s / 144.0%  filo  k=12
+15:09:26 | i 75 | [ ASYNC BG] bg_ails  64.69s / 62.02s / 104.3%
+15:09:26 | i 76 | [HAOS ROLL] k=12  λ=0.4  rb  ac_avg  filo  P≈0.000381
+15:09:26 | i 76 | [ Summary ] cost=32662.00  Δ_S*=+0.01%  Δ_BKS=+0.36%  Δ_S*_BKS=+0.35%  no_improve=10
+15:09:26 | i 77 | [HAOS ROLL] k=2  λ=0.8  vb  kmeans  ails2  P≈0.000280
+15:09:26 | i 77 | [Phase 1/3] decompose  0.19s / — / —  λ=0.8  vb kmeans
+15:10:29 | i 77 | [Phase 2/3] route  62.67s / 61.08s / 102.6%  ails2  k=2
+15:10:29 | i 76 | [ ASYNC BG] bg_ails  62.74s / 60.00s / 104.6%
+15:10:29 | i 77 | [HAOS ROLL] k=2  λ=0.8  vb  kmeans  ails2  P≈0.000280
+15:10:29 | i 77 | [ Summary ] cost=33230.00  Δ_S*=+1.75%  Δ_BKS=+2.10%  Δ_S*_BKS=+0.35%  no_improve=12
+15:10:29 | i 78 | [HAOS ROLL] k=6  λ=1.0  rb  ac_avg  pyvrp  P≈0.009232
+15:10:29 | i 78 | [Phase 1/3] decompose  0.19s / — / —  λ=1.0  rb ac_avg
+15:11:08 | i 78 | [Phase 2/3] route  38.96s / 37.62s / 103.6%  pyvrp  k=6
+15:11:32 | i 77 | [ ASYNC BG] bg_ails  62.88s / 60.00s / 104.8%
+15:11:32 | i 78 | [HAOS ROLL] k=6  λ=1.0  rb  ac_avg  pyvrp  P≈0.009232
+15:11:32 | i 78 | [ Summary ] cost=32980.00  Δ_S*=+0.98%  Δ_BKS=+1.33%  Δ_S*_BKS=+0.35%  no_improve=14
+15:11:32 | i 79 | [HAOS ROLL] k=8  λ=0.8  vb  kmedoids  ails2  P≈0.000656
+15:11:32 | i 79 | [Phase 1/3] decompose  0.31s / — / —  λ=0.8  vb kmedoids
+15:12:05 | i 79 | [Phase 2/3] route  32.65s / 21.90s / 149.1%  ails2  k=8
+15:12:35 | i 78 | [ ASYNC BG] bg_ails  62.82s / 60.00s / 104.7%
+15:12:35 | i 79 | [HAOS ROLL] k=8  λ=0.8  vb  kmedoids  ails2  P≈0.000656
+15:12:35 | i 79 | [ Summary ] cost=37687.00  Δ_S*=+15.39%  Δ_BKS=+15.80%  Δ_S*_BKS=+0.35%  no_improve=16
+15:12:35 | i 80 | [HAOS ROLL] k=2  λ=0.8  rb  ac_avg  ails2  P≈0.003834
+15:12:35 | i 80 | [Phase 1/3] decompose  0.18s / — / —  λ=0.8  rb ac_avg
+15:13:41 | i 80 | [Phase 2/3] route  65.69s / 64.92s / 101.2%  ails2  k=2
+15:13:41 | i 79 | [ ASYNC BG] bg_ails  62.79s / 60.00s / 104.7%
+15:13:41 | i 80 | [HAOS ROLL] k=2  λ=0.8  rb  ac_avg  ails2  P≈0.003834
+15:13:41 | i 80 | [ Summary ] cost=32829.00  Δ_S*=+0.52%  Δ_BKS=+0.87%  Δ_S*_BKS=+0.35%  no_improve=18
+15:13:41 | i 81 | [HAOS ROLL] k=10  λ=0.0  rb  ac_avg  pyvrp  P≈0.004378
+15:13:41 | i 81 | [Phase 1/3] decompose  0.14s / — / —  λ=0.0  rb ac_avg
+15:14:09 | i 81 | [Phase 2/3] route  28.08s / 27.30s / 102.9%  pyvrp  k=10
+15:14:46 | i 80 | [ ASYNC BG] bg_ails  65.82s / 63.36s / 103.9%
+15:14:46 | i 81 | [HAOS ROLL] k=10  λ=0.0  rb  ac_avg  pyvrp  P≈0.004378
+15:14:46 | i 81 | [ Summary ] cost=32747.00  Δ_S*=+0.27%  Δ_BKS=+0.62%  Δ_S*_BKS=+0.35%  no_improve=20
+15:14:46 | i 82 | [HAOS ROLL] k=8  λ=0.4  rb  kmeans  pyvrp  P≈0.001216
+15:14:47 | i 82 | [Phase 1/3] decompose  0.18s / — / —  λ=0.4  rb kmeans
+15:15:24 | i 82 | [Phase 2/3] route  37.81s / 36.66s / 103.1%  pyvrp  k=8
+15:15:49 | i 81 | [ ASYNC BG] bg_ails  62.71s / 60.00s / 104.5%
+15:15:49 | i 82 | [HAOS ROLL] k=8  λ=0.4  rb  kmeans  pyvrp  P≈0.001216
+15:15:49 | i 82 | [ Summary ] cost=32859.00  Δ_S*=+0.61%  Δ_BKS=+0.96%  Δ_S*_BKS=+0.35%  no_improve=22
+15:15:49 | i 83 | [HAOS ROLL] k=8  λ=0.6  rb  kmeans  filo2  P≈0.000246
+15:15:49 | i 83 | [Phase 1/3] decompose  0.18s / — / —  λ=0.6  rb kmeans
+15:16:27 | i 83 | [Phase 2/3] route  38.11s / 37.62s / 101.3%  filo2  k=8
+15:16:52 | i 82 | [ ASYNC BG] bg_ails  62.69s / 60.00s / 104.5%
+15:16:52 | i 83 | [HAOS ROLL] k=8  λ=0.6  rb  kmeans  filo2  P≈0.000246
+15:16:52 | i 83 | [ Summary ] cost=32700.00  Δ_S*=+0.12%  Δ_BKS=+0.47%  Δ_S*_BKS=+0.35%  no_improve=24
+15:16:52 | i 84 | [HAOS ROLL] k=6  λ=0.6  vb  kmeans  filo2  P≈0.000134
+15:16:52 | i 84 | [Phase 1/3] decompose  0.19s / — / —  λ=0.6  vb kmeans
+15:17:28 | i 84 | [Phase 2/3] route  36.11s / 35.52s / 101.7%  filo2  k=6
+15:17:55 | i 83 | [ ASYNC BG] bg_ails  62.78s / 60.00s / 104.6%
+15:17:55 | i 84 | [HAOS ROLL] k=6  λ=0.6  vb  kmeans  filo2  P≈0.000134
+15:17:55 | i 84 | [ Summary ] cost=36305.00  Δ_S*=+11.16%  Δ_BKS=+11.55%  Δ_S*_BKS=+0.35%  no_improve=26
+15:17:55 | i 85 | [HAOS ROLL] k=10  λ=0.2  vb  fcm  filo2  P≈0.000057
+15:17:55 | i 85 | [Phase 1/3] decompose  0.31s / — / —  λ=0.2  vb fcm
+15:18:20 | i 85 | [Phase 2/3] route  25.09s / 20.76s / 120.9%  filo2  k=10
+15:18:57 | i 84 | [ ASYNC BG] bg_ails  62.68s / 60.00s / 104.5%
+15:18:57 | i 85 | [HAOS ROLL] k=10  λ=0.2  vb  fcm  filo2  P≈0.000057
+15:18:57 | i 85 | [ Summary ] cost=37708.00  Δ_S*=+15.46%  Δ_BKS=+15.86%  Δ_S*_BKS=+0.35%  no_improve=28
+15:18:57 | i 86 | [HAOS ROLL] k=3  λ=0.4  vb  kmedoids  pyvrp  P≈0.000158
+15:18:58 | i 86 | [Phase 1/3] decompose  0.29s / — / —  λ=0.4  vb kmedoids
+15:19:48 | i 86 | [Phase 2/3] route  50.55s / 48.72s / 103.8%  pyvrp  k=3
+15:20:00 | i 85 | [ ASYNC BG] bg_ails  62.86s / 60.00s / 104.8%
+15:20:00 | i 86 | [HAOS ROLL] k=3  λ=0.4  vb  kmedoids  pyvrp  P≈0.000158
+15:20:00 | i 86 | [ Summary ] cost=33529.00  Δ_S*=+2.66%  Δ_BKS=+3.02%  Δ_S*_BKS=+0.35%  no_improve=30
+15:20:00 | i 87 | [HAOS ROLL] k=10  λ=0.6  rb  ac_complete  pyvrp  P≈0.000716
+15:20:00 | i 87 | [Phase 1/3] decompose  0.19s / — / —  λ=0.6  rb ac_complete
+15:20:28 | i 87 | [Phase 2/3] route  28.05s / 27.30s / 102.7%  pyvrp  k=10
+15:21:03 | i 86 | [ ASYNC BG] bg_ails  62.88s / 60.00s / 104.8%
+15:21:03 | i 87 | [HAOS ROLL] k=10  λ=0.6  rb  ac_complete  pyvrp  P≈0.000716
+15:21:03 | i 87 | [ Summary ] cost=32838.00  Δ_S*=+0.55%  Δ_BKS=+0.90%  Δ_S*_BKS=+0.35%  no_improve=32
+15:21:03 | i 88 | [HAOS ROLL] k=10  λ=0.0  vb  fcm  pyvrp  P≈0.001129
+15:21:03 | i 88 | [Phase 1/3] decompose  0.25s / — / —  λ=0.0  vb fcm
+15:21:29 | i 88 | [Phase 2/3] route  25.59s / 21.36s / 119.8%  pyvrp  k=10
+15:22:06 | i 87 | [ ASYNC BG] bg_ails  62.79s / 60.00s / 104.6%
+15:22:06 | i 88 | [HAOS ROLL] k=10  λ=0.0  vb  fcm  pyvrp  P≈0.001129
+15:22:06 | i 88 | [ Summary ] cost=38247.00  Δ_S*=+17.11%  Δ_BKS=+17.52%  Δ_S*_BKS=+0.35%  no_improve=34
+15:22:06 | i 89 | [HAOS ROLL] k=6  λ=0.8  rb  ac_avg  filo2  P≈0.002825
+15:22:06 | i 89 | [Phase 1/3] decompose  0.19s / — / —  λ=0.8  rb ac_avg
+15:22:44 | i 89 | [Phase 2/3] route  38.12s / 37.62s / 101.3%  filo2  k=6
+15:23:09 | i 88 | [ ASYNC BG] bg_ails  62.69s / 60.00s / 104.5%
+15:23:09 | i 89 | [HAOS ROLL] k=6  λ=0.8  rb  ac_avg  filo2  P≈0.002825
+15:23:09 | i 89 | [ Summary ] cost=32709.00  Δ_S*=+0.15%  Δ_BKS=+0.50%  Δ_S*_BKS=+0.35%  no_improve=36
+15:23:09 | i 90 | [HAOS ROLL] k=10  λ=0.4  vb  fcm  filo2  P≈0.000431
+15:23:09 | i 90 | [Phase 1/3] decompose  0.32s / — / —  λ=0.4  vb fcm
+15:23:41 | i 90 | [Phase 2/3] route  32.12s / 20.76s / 154.7%  filo2  k=10
+15:24:11 | i 89 | [ ASYNC BG] bg_ails  62.71s / 60.00s / 104.5%
+15:24:11 | i 90 | [HAOS ROLL] k=10  λ=0.4  vb  fcm  filo2  P≈0.000431
+15:24:11 | i 90 | [ Summary ] cost=37717.00  Δ_S*=+15.48%  Δ_BKS=+15.89%  Δ_S*_BKS=+0.35%  no_improve=38
+15:24:11 | i 84 | [ASYNC 1/2] sp_sc  3.98s / 720.00s / 0.6%  SP  avg_coverage=146.30/5  pool=2048
+15:24:11 | i 84 | [ASYNC 2/2] standard_ails  362.54s / 360.00s / 100.7%
+15:24:13 | i 91 | [HAOS ROLL] k=6  λ=0.2  rb  ac_complete  pyvrp  P≈0.001352
+15:24:13 | i 91 | [Phase 1/3] decompose  0.18s / — / —  λ=0.2  rb ac_complete
+15:24:52 | i 91 | [Phase 2/3] route  38.92s / 37.62s / 103.5%  pyvrp  k=6
+15:25:14 | i 90 | [ ASYNC BG] bg_ails  62.80s / 60.00s / 104.7%
+15:25:14 | i 91 | [HAOS ROLL] k=6  λ=0.2  rb  ac_complete  pyvrp  P≈0.001352
+15:25:14 | i 91 | [ Summary ] cost=32816.00  Δ_S*=+0.48%  Δ_BKS=+0.83%  Δ_S*_BKS=+0.35%  no_improve=41
+15:25:14 | i 92 | [HAOS ROLL] k=10  λ=0.2  rb  kmeans  filo2  P≈0.001025
+15:25:14 | i 92 | [Phase 1/3] decompose  0.19s / — / —  λ=0.2  rb kmeans
+15:25:42 | i 92 | [Phase 2/3] route  28.11s / 28.08s / 100.1%  filo2  k=10
+15:26:17 | i 91 | [ ASYNC BG] bg_ails  62.81s / 60.00s / 104.7%
+15:26:17 | i 92 | [HAOS ROLL] k=10  λ=0.2  rb  kmeans  filo2  P≈0.001025
+15:26:17 | i 92 | [ Summary ] cost=32756.00  Δ_S*=+0.29%  Δ_BKS=+0.65%  Δ_S*_BKS=+0.35%  no_improve=43
+15:26:17 | i 93 | [HAOS ROLL] k=12  λ=0.0  rb  kmeans  ails2  P≈0.000766
+15:26:17 | i 93 | [Phase 1/3] decompose  0.15s / — / —  λ=0.0  rb kmeans
+15:26:47 | i 93 | [Phase 2/3] route  29.64s / 18.12s / 163.6%  ails2  k=12
+15:27:20 | i 92 | [ ASYNC BG] bg_ails  62.74s / 60.00s / 104.6%
+15:27:20 | i 93 | [ IMPROVE ] 32659.00  via decompose_route  ·  Δ_BKS=+0.35%
+15:27:20 | i 93 | [HAOS ROLL] k=12  λ=0.0  rb  kmeans  ails2  P≈0.000766
+15:27:20 | i 93 | [ Summary ] cost=32659.00  Δ_S*=+0.00%  Δ_BKS=+0.35%  Δ_S*_BKS=+0.35%  no_improve=0
+15:27:20 | i 94 | [HAOS ROLL] k=12  λ=0.0  vb  ac_avg  ails2  P≈0.000549
+15:27:20 | i 94 | [Phase 1/3] decompose  0.21s / — / —  λ=0.0  vb ac_avg
+15:27:59 | i 94 | [Phase 2/3] route  38.68s / 37.38s / 103.5%  ails2  k=12
+15:28:22 | i 93 | [ ASYNC BG] bg_ails  62.83s / 60.00s / 104.7%
+15:28:22 | i 94 | [HAOS ROLL] k=12  λ=0.0  vb  ac_avg  ails2  P≈0.000549
+15:28:23 | i 94 | [ Summary ] cost=39345.00  Δ_S*=+20.47%  Δ_BKS=+20.89%  Δ_S*_BKS=+0.35%  no_improve=2
+15:28:23 | i 95 | [HAOS ROLL] k=8  λ=0.2  rb  kmeans  pyvrp  P≈0.003062
+15:28:23 | i 95 | [Phase 1/3] decompose  0.19s / — / —  λ=0.2  rb kmeans
+15:29:01 | i 95 | [Phase 2/3] route  37.88s / 36.66s / 103.3%  pyvrp  k=8
+15:29:25 | i 94 | [ ASYNC BG] bg_ails  62.77s / 60.00s / 104.6%
+15:29:25 | i 95 | [HAOS ROLL] k=8  λ=0.2  rb  kmeans  pyvrp  P≈0.003062
+15:29:25 | i 95 | [ Summary ] cost=32911.00  Δ_S*=+0.77%  Δ_BKS=+1.12%  Δ_S*_BKS=+0.35%  no_improve=4
+15:29:25 | i 96 | [HAOS ROLL] k=3  λ=1.0  rb  ac_avg  filo2  P≈0.000448
+15:29:25 | i 96 | [Phase 1/3] decompose  0.19s / — / —  λ=1.0  rb ac_avg
+15:30:20 | i 96 | [Phase 2/3] route  54.12s / 53.88s / 100.4%  filo2  k=3
+15:30:28 | i 95 | [ ASYNC BG] bg_ails  62.82s / 60.00s / 104.7%
+15:30:28 | i 96 | [HAOS ROLL] k=3  λ=1.0  rb  ac_avg  filo2  P≈0.000448
+15:30:28 | i 96 | [ Summary ] cost=32840.00  Δ_S*=+0.55%  Δ_BKS=+0.90%  Δ_S*_BKS=+0.35%  no_improve=6
+15:30:28 | i 97 | [HAOS ROLL] k=8  λ=0.0  rb  kmeans  pyvrp  P≈0.008115
+15:30:28 | i 97 | [Phase 1/3] decompose  0.14s / — / —  λ=0.0  rb kmeans
+15:31:07 | i 97 | [Phase 2/3] route  38.85s / 37.62s / 103.3%  pyvrp  k=8
+15:31:31 | i 96 | [ ASYNC BG] bg_ails  62.77s / 60.00s / 104.6%
+15:31:31 | i 97 | [HAOS ROLL] k=8  λ=0.0  rb  kmeans  pyvrp  P≈0.008115
+15:31:31 | i 97 | [ Summary ] cost=32961.00  Δ_S*=+0.92%  Δ_BKS=+1.28%  Δ_S*_BKS=+0.35%  no_improve=8
+15:31:31 | i 98 | [HAOS ROLL] k=6  λ=0.0  rb  kmeans  ails2  P≈0.005777
+15:31:31 | i 98 | [Phase 1/3] decompose  0.14s / — / —  λ=0.0  rb kmeans
+15:32:09 | i 98 | [Phase 2/3] route  37.63s / 36.66s / 102.7%  ails2  k=6
+15:32:34 | i 97 | [ ASYNC BG] bg_ails  62.68s / 60.00s / 104.5%
+15:32:34 | i 98 | [HAOS ROLL] k=6  λ=0.0  rb  kmeans  ails2  P≈0.005777
+15:32:34 | i 98 | [ Summary ] cost=32730.00  Δ_S*=+0.22%  Δ_BKS=+0.57%  Δ_S*_BKS=+0.35%  no_improve=10
+15:32:34 | i 99 | [HAOS ROLL] k=10  λ=1.0  rb  kmeans  ails2  P≈0.002227
+15:32:34 | i 99 | [Phase 1/3] decompose  0.18s / — / —  λ=1.0  rb kmeans
+15:33:02 | i 99 | [Phase 2/3] route  28.38s / 27.30s / 103.9%  ails2  k=10
+15:33:36 | i 98 | [ ASYNC BG] bg_ails  62.63s / 60.00s / 104.4%
+15:33:36 | i 99 | [HAOS ROLL] k=10  λ=1.0  rb  kmeans  ails2  P≈0.002227
+15:33:36 | i 99 | [ Summary ] cost=32688.00  Δ_S*=+0.09%  Δ_BKS=+0.44%  Δ_S*_BKS=+0.35%  no_improve=12
+15:33:36 | i 100 | [HAOS ROLL] k=4  λ=0.0  vb  kmeans  pyvrp  P≈0.000464
+15:33:36 | i 100 | [Phase 1/3] decompose  0.14s / — / —  λ=0.0  vb kmeans
+15:34:23 | i 100 | [Phase 2/3] route  46.37s / 44.76s / 103.6%  pyvrp  k=4
+15:34:39 | i 99 | [ ASYNC BG] bg_ails  62.76s / 60.00s / 104.6%
+15:34:39 | i 100 | [HAOS ROLL] k=4  λ=0.0  vb  kmeans  pyvrp  P≈0.000464
+15:34:39 | i 100 | [ Summary ] cost=33865.00  Δ_S*=+3.69%  Δ_BKS=+4.05%  Δ_S*_BKS=+0.35%  no_improve=14
+15:34:39 | i 101 | [HAOS ROLL] k=3  λ=0.2  rb  kmeans  pyvrp  P≈0.002076
+15:34:39 | i 101 | [Phase 1/3] decompose  0.18s / — / —  λ=0.2  rb kmeans
+15:35:37 | i 101 | [Phase 2/3] route  57.58s / 55.26s / 104.2%  pyvrp  k=3
+15:35:42 | i 100 | [ ASYNC BG] bg_ails  62.80s / 60.00s / 104.7%
+15:35:42 | i 101 | [HAOS ROLL] k=3  λ=0.2  rb  kmeans  pyvrp  P≈0.002076
+15:35:42 | i 101 | [ Summary ] cost=33231.00  Δ_S*=+1.75%  Δ_BKS=+2.10%  Δ_S*_BKS=+0.35%  no_improve=16
+15:35:42 | i 102 | [HAOS ROLL] k=6  λ=0.0  rb  kmeans  filo2  P≈0.003872
+15:35:42 | i 102 | [Phase 1/3] decompose  0.14s / — / —  λ=0.0  rb kmeans
+15:36:20 | i 102 | [Phase 2/3] route  38.10s / 37.62s / 101.3%  filo2  k=6
+15:36:45 | i 101 | [ ASYNC BG] bg_ails  62.76s / 60.00s / 104.6%
+15:36:45 | i 102 | [HAOS ROLL] k=6  λ=0.0  rb  kmeans  filo2  P≈0.003872
+15:36:45 | i 102 | [ Summary ] cost=32715.00  Δ_S*=+0.17%  Δ_BKS=+0.52%  Δ_S*_BKS=+0.35%  no_improve=18
+15:36:45 | i 103 | [HAOS ROLL] k=8  λ=0.0  rb  ac_avg  pyvrp  P≈0.007886
+15:36:45 | i 103 | [Phase 1/3] decompose  0.14s / — / —  λ=0.0  rb ac_avg
+15:37:23 | i 103 | [Phase 2/3] route  37.85s / 36.66s / 103.3%  pyvrp  k=8
+15:37:47 | i 102 | [ ASYNC BG] bg_ails  62.66s / 60.00s / 104.4%
+15:37:47 | i 103 | [HAOS ROLL] k=8  λ=0.0  rb  ac_avg  pyvrp  P≈0.007886
+15:37:47 | i 103 | [ Summary ] cost=32844.00  Δ_S*=+0.57%  Δ_BKS=+0.92%  Δ_S*_BKS=+0.35%  no_improve=20
+15:37:47 | i 104 | [HAOS ROLL] k=3  λ=0.0  rb  kmeans  pyvrp  P≈0.006841
+15:37:47 | i 104 | [Phase 1/3] decompose  0.14s / — / —  λ=0.0  rb kmeans
+15:38:36 | i 104 | [Phase 2/3] route  48.54s / 46.74s / 103.8%  pyvrp  k=3
+15:38:50 | i 103 | [ ASYNC BG] bg_ails  62.67s / 60.00s / 104.5%
+15:38:50 | i 104 | [HAOS ROLL] k=3  λ=0.0  rb  kmeans  pyvrp  P≈0.006841
+15:38:50 | i 104 | [ Summary ] cost=32932.00  Δ_S*=+0.84%  Δ_BKS=+1.19%  Δ_S*_BKS=+0.35%  no_improve=22
+15:38:50 | i 105 | [HAOS ROLL] k=8  λ=0.2  rb  ac_avg  ails2  P≈0.002967
+15:38:50 | i 105 | [Phase 1/3] decompose  0.18s / — / —  λ=0.2  rb ac_avg
+15:39:28 | i 105 | [Phase 2/3] route  37.80s / 36.66s / 103.1%  ails2  k=8
+15:39:53 | i 104 | [ ASYNC BG] bg_ails  62.67s / 60.00s / 104.5%
+15:39:53 | i 105 | [HAOS ROLL] k=8  λ=0.2  rb  ac_avg  ails2  P≈0.002967
+15:39:53 | i 105 | [ Summary ] cost=32675.00  Δ_S*=+0.05%  Δ_BKS=+0.40%  Δ_S*_BKS=+0.35%  no_improve=24
+15:39:53 | i 106 | [HAOS ROLL] k=6  λ=0.0  rb  ac_avg  filo2  P≈0.003447
+15:39:53 | i 106 | [Phase 1/3] decompose  0.14s / — / —  λ=0.0  rb ac_avg
+15:40:31 | i 106 | [Phase 2/3] route  38.12s / 37.62s / 101.3%  filo2  k=6
+15:40:55 | i 105 | [ ASYNC BG] bg_ails  62.79s / 60.00s / 104.7%
+15:40:55 | i 106 | [HAOS ROLL] k=6  λ=0.0  rb  ac_avg  filo2  P≈0.003447
+15:40:55 | i 106 | [ Summary ] cost=32743.00  Δ_S*=+0.26%  Δ_BKS=+0.61%  Δ_S*_BKS=+0.35%  no_improve=26
+15:40:55 | i 107 | [HAOS ROLL] k=3  λ=0.4  rb  ac_avg  filo  P≈0.000301
+15:40:56 | i 107 | [Phase 1/3] decompose  0.19s / — / —  λ=0.4  rb ac_avg
+15:41:50 | i 107 | [Phase 2/3] route  54.11s / 53.88s / 100.4%  filo  k=3
+15:41:58 | i 106 | [ ASYNC BG] bg_ails  62.70s / 60.00s / 104.5%
+15:41:58 | i 107 | [HAOS ROLL] k=3  λ=0.4  rb  ac_avg  filo  P≈0.000301
+15:41:58 | i 107 | [ Summary ] cost=32734.00  Δ_S*=+0.23%  Δ_BKS=+0.58%  Δ_S*_BKS=+0.35%  no_improve=28
+15:41:58 | i 108 | [HAOS ROLL] k=2  λ=0.0  rb  kmeans  ails2  P≈0.003472
+15:41:58 | i 108 | [Phase 1/3] decompose  0.15s / — / —  λ=0.0  rb kmeans
+15:43:04 | i 108 | [Phase 2/3] route  65.68s / 64.92s / 101.2%  ails2  k=2
+15:43:04 | i 107 | [ ASYNC BG] bg_ails  62.83s / 60.00s / 104.7%
+15:43:04 | i 108 | [HAOS ROLL] k=2  λ=0.0  rb  kmeans  ails2  P≈0.003472
+15:43:04 | i 108 | [ Summary ] cost=32793.00  Δ_S*=+0.41%  Δ_BKS=+0.76%  Δ_S*_BKS=+0.35%  no_improve=30
+15:43:04 | i 109 | [HAOS ROLL] k=6  λ=0.8  rb  kmeans  ails2  P≈0.002295
+15:43:04 | i 109 | [Phase 1/3] decompose  0.19s / — / —  λ=0.8  rb kmeans
+15:43:52 | i 109 | [Phase 2/3] route  47.85s / 46.74s / 102.4%  ails2  k=6
+15:44:10 | i 108 | [ ASYNC BG] bg_ails  65.73s / 63.36s / 103.7%
+15:44:10 | i 109 | [HAOS ROLL] k=6  λ=0.8  rb  kmeans  ails2  P≈0.002295
+15:44:10 | i 109 | [ Summary ] cost=32711.00  Δ_S*=+0.16%  Δ_BKS=+0.51%  Δ_S*_BKS=+0.35%  no_improve=32
+15:44:10 | i 110 | [HAOS ROLL] k=6  λ=0.4  rb  kmeans  pyvrp  P≈0.004454
+15:44:10 | i 110 | [Phase 1/3] decompose  0.19s / — / —  λ=0.4  rb kmeans
+15:44:49 | i 110 | [Phase 2/3] route  38.92s / 37.62s / 103.5%  pyvrp  k=6
+15:45:13 | i 109 | [ ASYNC BG] bg_ails  62.84s / 60.00s / 104.7%
+15:45:13 | i 110 | [HAOS ROLL] k=6  λ=0.4  rb  kmeans  pyvrp  P≈0.004454
+15:45:13 | i 110 | [ Summary ] cost=32943.00  Δ_S*=+0.87%  Δ_BKS=+1.22%  Δ_S*_BKS=+0.35%  no_improve=34
+15:45:13 | i 104 | [ASYNC 1/2] sp_sc  5.41s / 720.00s / 0.8%  SP  avg_coverage=177.75/5  pool=2475
+15:45:13 | i 104 | [ASYNC 2/2] standard_ails  362.58s / 360.00s / 100.7%
+15:45:15 | i 111 | [HAOS ROLL] k=8  λ=0.0  rb  ac_avg  ails2  P≈0.007402
+15:45:15 | i 111 | [Phase 1/3] decompose  0.14s / — / —  λ=0.0  rb ac_avg
+15:45:52 | i 111 | [Phase 2/3] route  37.55s / 36.66s / 102.4%  ails2  k=8
+15:46:15 | i 110 | [ ASYNC BG] bg_ails  62.82s / 60.00s / 104.7%
+15:46:15 | i 111 | [HAOS ROLL] k=8  λ=0.0  rb  ac_avg  ails2  P≈0.007402
+15:46:15 | i 111 | [ Summary ] cost=32686.00  Δ_S*=+0.08%  Δ_BKS=+0.43%  Δ_S*_BKS=+0.35%  no_improve=37
+15:46:15 | i 112 | [HAOS ROLL] k=6  λ=0.4  rb  kmeans  filo2  P≈0.002362
+15:46:16 | i 112 | [Phase 1/3] decompose  0.19s / — / —  λ=0.4  rb kmeans
+15:47:03 | i 112 | [Phase 2/3] route  47.13s / 46.74s / 100.8%  filo2  k=6
+15:47:18 | i 111 | [ ASYNC BG] bg_ails  62.80s / 60.00s / 104.7%
+15:47:18 | i 112 | [HAOS ROLL] k=6  λ=0.4  rb  kmeans  filo2  P≈0.002362
+15:47:18 | i 112 | [ Summary ] cost=32723.00  Δ_S*=+0.20%  Δ_BKS=+0.54%  Δ_S*_BKS=+0.35%  no_improve=39
+15:47:18 | i 113 | [HAOS ROLL] k=12  λ=0.0  rb  ac_avg  pyvrp  P≈0.003519
+15:47:18 | i 113 | [Phase 1/3] decompose  0.14s / — / —  λ=0.0  rb ac_avg
+15:47:45 | i 113 | [Phase 2/3] route  26.45s / 18.12s / 146.0%  pyvrp  k=12
+15:48:21 | i 112 | [ ASYNC BG] bg_ails  62.88s / 60.00s / 104.8%
+15:48:21 | i 113 | [HAOS ROLL] k=12  λ=0.0  rb  ac_avg  pyvrp  P≈0.003519
+15:48:21 | i 113 | [ Summary ] cost=32723.00  Δ_S*=+0.20%  Δ_BKS=+0.54%  Δ_S*_BKS=+0.35%  no_improve=41
+15:48:21 | i 114 | [HAOS ROLL] k=8  λ=0.0  rb  ac_avg  ails2  P≈0.009301
+15:48:21 | i 114 | [Phase 1/3] decompose  0.13s / — / —  λ=0.0  rb ac_avg
+15:48:59 | i 114 | [Phase 2/3] route  37.73s / 36.66s / 102.9%  ails2  k=8
+15:48:59 | i 114 | [HAOS ROLL] k=8  λ=0.0  rb  ac_avg  ails2  P≈0.009301
+15:48:59 | i 114 | [ Summary ] cost=32685.00  Δ_S*=+0.08%  Δ_BKS=+0.43%  Δ_S*_BKS=+0.35%  no_improve=42
+15:48:59 | i 115 | [HAOS ROLL] k=8  λ=1.0  rb  ac_avg  filo2  P≈0.001801
+15:48:59 | i 115 | [Phase 1/3] decompose  0.17s / — / —  λ=1.0  rb ac_avg
+15:49:36 | i 115 | [Phase 2/3] route  37.12s / 36.66s / 101.2%  filo2  k=8
+15:49:36 | i 115 | [HAOS ROLL] k=8  λ=1.0  rb  ac_avg  filo2  P≈0.001801
+15:49:36 | i 115 | [ Summary ] cost=32666.00  Δ_S*=+0.02%  Δ_BKS=+0.37%  Δ_S*_BKS=+0.35%  no_improve=43
+15:49:36 | i — | [  FINAL  ] async BG-AILS totals launched=112 applied=112 adopted=7 launch_skipped_cap=3 crashes=0 discarded_in_flight=False block_wait_total_s=2579.5
+15:49:36 | i — | [  FINAL  ] async SP/SC totals invocations=6 adopted=2 skipped=0 discarded_in_flight=False sp_busy_frac=0.3218425491629034
+15:49:37 | i — | [  FINAL  ] ════════════════════════════════════════
+15:49:37 | i — | [  FINAL  ] Run complete  iterations=115  elapsed=02:00:17  best=32659.00
+15:49:37 | i — | [  FINAL  ] Δ_BKS=+0.35%  no_improve_stop=False  time_stop=True  cancelled=False
+15:49:37 | i — | [  FINAL  ] 
+15:49:37 | i — | [  FINAL  ] [BEST SOLUTION — HAOS TAG SUMMARY]
+15:49:37 | i — | [  FINAL  ] ────────────────────────────────────────
+15:49:37 | i — | [  FINAL  ]   1 routes  rb  ac_avg  k=10  λ=0.2  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   1 routes  rb  ac_avg  k=8  λ=1.0  solver=ails2
+15:49:37 | i — | [  FINAL  ]   1 routes  rb  kmeans  k=8  λ=0.0  solver=ails2
+15:49:37 | i — | [  FINAL  ]   10 routes  post-SP/SC improvement
+15:49:37 | i — | [  FINAL  ] 
+15:49:37 | i — | [  FINAL  ] [ROUTE POOL — HAOS TAG SUMMARY]
+15:49:37 | i — | [  FINAL  ] ────────────────────────────────────────
+15:49:37 | i — | [  FINAL  ]   86 routes  vb  kmeans  k=6  λ=0.6  solver=filo
+15:49:37 | i — | [  FINAL  ]   62 routes  vb  kmeans  k=8  λ=0.6  solver=filo
+15:49:37 | i — | [  FINAL  ]   58 routes  vb  kmeans  k=6  λ=0.0  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   55 routes  rb  ac_avg  k=8  λ=0.0  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   50 routes  rb  kmeans  k=3  λ=0.0  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   47 routes  rb  kmeans  k=2  λ=0.0  solver=ails2
+15:49:37 | i — | [  FINAL  ]   46 routes  rb  ac_avg  k=4  λ=0.8  solver=filo
+15:49:37 | i — | [  FINAL  ]   42 routes  rb  ac_avg  k=6  λ=1.0  solver=ails2
+15:49:37 | i — | [  FINAL  ]   41 routes  rb  kmeans  k=6  λ=0.0  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   41 routes  rb  kmeans  k=8  λ=0.2  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   39 routes  rb  ac_avg  k=6  λ=0.0  solver=filo2
+15:49:37 | i — | [  FINAL  ]   33 routes  vb  kmeans  k=8  λ=0.6  solver=filo2
+15:49:37 | i — | [  FINAL  ]   32 routes  vb  ac_avg  k=10  λ=0.6  solver=filo2
+15:49:37 | i — | [  FINAL  ]   32 routes  vb  kmedoids  k=8  λ=0.6  solver=filo
+15:49:37 | i — | [  FINAL  ]   32 routes  vb  fcm  k=10  λ=0.0  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   31 routes  vb  kmeans  k=10  λ=0.6  solver=ails2
+15:49:37 | i — | [  FINAL  ]   31 routes  vb  kmeans  k=6  λ=1.0  solver=ails2
+15:49:37 | i — | [  FINAL  ]   31 routes  vb  ac_complete  k=10  λ=0.0  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   30 routes  vb  kmeans  k=12  λ=0.8  solver=filo
+15:49:37 | i — | [  FINAL  ]   30 routes  vb  kmedoids  k=6  λ=1.0  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   30 routes  vb  fcm  k=10  λ=0.2  solver=filo2
+15:49:37 | i — | [  FINAL  ]   29 routes  vb  fcm  k=8  λ=0.6  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   29 routes  vb  fcm  k=8  λ=1.0  solver=filo
+15:49:37 | i — | [  FINAL  ]   29 routes  vb  fcm  k=6  λ=0.4  solver=filo
+15:49:37 | i — | [  FINAL  ]   29 routes  vb  kmeans  k=6  λ=0.4  solver=ails2
+15:49:37 | i — | [  FINAL  ]   29 routes  vb  kmeans  k=6  λ=1.0  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   29 routes  vb  kmeans  k=4  λ=0.0  solver=ails2
+15:49:37 | i — | [  FINAL  ]   28 routes  rb  ac_avg  k=2  λ=0.4  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   28 routes  vb  ac_avg  k=3  λ=0.6  solver=filo
+15:49:37 | i — | [  FINAL  ]   28 routes  vb  fcm  k=12  λ=0.8  solver=filo2
+15:49:37 | i — | [  FINAL  ]   28 routes  vb  ac_avg  k=3  λ=0.8  solver=filo2
+15:49:37 | i — | [  FINAL  ]   28 routes  vb  ac_avg  k=4  λ=0.0  solver=filo
+15:49:37 | i — | [  FINAL  ]   28 routes  vb  ac_avg  k=8  λ=1.0  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   28 routes  vb  kmedoids  k=8  λ=0.8  solver=ails2
+15:49:37 | i — | [  FINAL  ]   28 routes  vb  kmedoids  k=3  λ=0.4  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   27 routes  vb  kmeans  k=4  λ=0.4  solver=filo2
+15:49:37 | i — | [  FINAL  ]   27 routes  vb  ac_avg  k=12  λ=0.2  solver=filo
+15:49:37 | i — | [  FINAL  ]   27 routes  vb  ac_avg  k=2  λ=0.0  solver=filo
+15:49:37 | i — | [  FINAL  ]   27 routes  vb  fcm  k=6  λ=0.0  solver=filo
+15:49:37 | i — | [  FINAL  ]   27 routes  vb  kmeans  k=4  λ=0.0  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   27 routes  rb  ac_avg  k=8  λ=0.0  solver=ails2
+15:49:37 | i — | [  FINAL  ]   26 routes  vb  kmeans  k=2  λ=0.8  solver=ails2
+15:49:37 | i — | [  FINAL  ]   26 routes  rb  kmeans  k=3  λ=0.2  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   25 routes  vb  ac_avg  k=6  λ=0.2  solver=filo
+15:49:37 | i — | [  FINAL  ]   25 routes  rb  ac_avg  k=3  λ=0.6  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   25 routes  vb  kmedoids  k=8  λ=0.0  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   25 routes  vb  ac_avg  k=6  λ=0.4  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   25 routes  vb  ac_avg  k=10  λ=1.0  solver=filo2
+15:49:37 | i — | [  FINAL  ]   25 routes  vb  ac_avg  k=6  λ=0.0  solver=filo2
+15:49:37 | i — | [  FINAL  ]   25 routes  vb  kmeans  k=6  λ=0.6  solver=filo2
+15:49:37 | i — | [  FINAL  ]   24 routes  rb  ac_complete  k=4  λ=0.8  solver=filo2
+15:49:37 | i — | [  FINAL  ]   24 routes  vb  fcm  k=10  λ=0.4  solver=filo2
+15:49:37 | i — | [  FINAL  ]   24 routes  rb  kmeans  k=6  λ=1.0  solver=filo
+15:49:37 | i — | [  FINAL  ]   24 routes  rb  ac_complete  k=4  λ=0.0  solver=ails2
+15:49:37 | i — | [  FINAL  ]   24 routes  rb  ac_complete  k=2  λ=0.0  solver=filo
+15:49:37 | i — | [  FINAL  ]   23 routes  rb  kmeans  k=10  λ=0.6  solver=filo
+15:49:37 | i — | [  FINAL  ]   23 routes  vb  ac_avg  k=12  λ=0.0  solver=ails2
+15:49:37 | i — | [  FINAL  ]   23 routes  vb  ac_avg  k=12  λ=0.0  solver=filo2
+15:49:37 | i — | [  FINAL  ]   23 routes  rb  ac_avg  k=6  λ=0.0  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   23 routes  rb  ac_complete  k=6  λ=0.8  solver=ails2
+15:49:37 | i — | [  FINAL  ]   23 routes  rb  ac_avg  k=6  λ=0.2  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   23 routes  rb  kmeans  k=6  λ=0.0  solver=ails2
+15:49:37 | i — | [  FINAL  ]   23 routes  rb  ac_avg  k=6  λ=1.0  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   23 routes  rb  ac_avg  k=2  λ=0.8  solver=ails2
+15:49:37 | i — | [  FINAL  ]   23 routes  rb  kmeans  k=6  λ=0.4  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   22 routes  rb  ac_avg  k=3  λ=1.0  solver=filo2
+15:49:37 | i — | [  FINAL  ]   21 routes  rb  kmeans  k=8  λ=0.4  solver=filo2
+15:49:37 | i — | [  FINAL  ]   21 routes  rb  ac_complete  k=6  λ=0.6  solver=ails2
+15:49:37 | i — | [  FINAL  ]   21 routes  rb  ac_complete  k=6  λ=0.0  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   21 routes  rb  ac_avg  k=6  λ=0.4  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   21 routes  rb  ac_avg  k=3  λ=0.4  solver=filo
+15:49:37 | i — | [  FINAL  ]   20 routes  rb  ac_avg  k=8  λ=0.8  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   20 routes  rb  kmeans  k=8  λ=0.4  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   20 routes  rb  ac_avg  k=6  λ=0.8  solver=filo2
+15:49:37 | i — | [  FINAL  ]   20 routes  rb  ac_complete  k=6  λ=0.2  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   19 routes  rb  ac_complete  k=8  λ=0.8  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   19 routes  rb  kmeans  k=12  λ=0.0  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   19 routes  rb  ac_avg  k=8  λ=1.0  solver=ails2
+15:49:37 | i — | [  FINAL  ]   19 routes  rb  kmeans  k=8  λ=1.0  solver=filo2
+15:49:37 | i — | [  FINAL  ]   19 routes  rb  ac_avg  k=6  λ=0.8  solver=ails2
+15:49:37 | i — | [  FINAL  ]   19 routes  rb  ac_avg  k=8  λ=0.2  solver=ails2
+15:49:37 | i — | [  FINAL  ]   19 routes  rb  kmeans  k=6  λ=0.4  solver=filo2
+15:49:37 | i — | [  FINAL  ]   18 routes  rb  ac_avg  k=10  λ=0.2  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   18 routes  rb  ac_complete  k=6  λ=0.8  solver=filo2
+15:49:37 | i — | [  FINAL  ]   18 routes  rb  kmeans  k=6  λ=0.8  solver=ails2
+15:49:37 | i — | [  FINAL  ]   18 routes  rb  kmeans  k=8  λ=0.0  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   18 routes  rb  kmeans  k=10  λ=1.0  solver=ails2
+15:49:37 | i — | [  FINAL  ]   17 routes  rb  kmeans  k=10  λ=0.2  solver=filo
+15:49:37 | i — | [  FINAL  ]   17 routes  rb  kmeans  k=8  λ=0.0  solver=ails2
+15:49:37 | i — | [  FINAL  ]   17 routes  rb  kmeans  k=8  λ=0.6  solver=filo2
+15:49:37 | i — | [  FINAL  ]   16 routes  rb  kmeans  k=6  λ=0.0  solver=filo2
+15:49:37 | i — | [  FINAL  ]   15 routes  rb  ac_avg  k=10  λ=0.0  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   15 routes  rb  ac_complete  k=10  λ=0.6  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   15 routes  rb  kmeans  k=10  λ=0.2  solver=filo2
+15:49:37 | i — | [  FINAL  ]   14 routes  rb  ac_avg  k=10  λ=0.8  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   13 routes  rb  kmeans  k=10  λ=0.4  solver=ails2
+15:49:37 | i — | [  FINAL  ]   13 routes  rb  ac_avg  k=12  λ=0.4  solver=filo
+15:49:37 | i — | [  FINAL  ]   13 routes  rb  kmeans  k=12  λ=0.0  solver=ails2
+15:49:37 | i — | [  FINAL  ]   12 routes  rb  kmeans  k=12  λ=0.0  solver=filo
+15:49:37 | i — | [  FINAL  ]   5 routes  rb  ac_avg  k=8  λ=1.0  solver=filo2
+15:49:37 | i — | [  FINAL  ]   2 routes  rb  ac_avg  k=12  λ=0.0  solver=pyvrp
+15:49:37 | i — | [  FINAL  ]   33 routes  post-SP/SC improvement
+15:49:37 | i — | [  FINAL  ] ════════════════════════════════════════

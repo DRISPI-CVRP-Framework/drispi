@@ -5,7 +5,7 @@ Campaign artifacts live under `artifacts/bg_ails_ablation/` (gitignored):
 - `checkpoints/<instance>/seed<seed>.json`
 - `performance/` and `measurement/` per cell
 
-Committed figure inputs: `data/results/bg_ails_ablation/*.json`.
+Committed summaries: `data/results/bg_ails_ablation/*.json`.
 
 ## Binaries
 
@@ -23,10 +23,6 @@ JVMs (`-Xmx4g`).
 python scripts/generate_bgails_checkpoints.py --wave 1
 python scripts/run_bgails_ablation.py --campaign performance --wave 1
 python scripts/run_bgails_ablation.py --campaign measurement --wave 1
-python scripts/analyze_bgails_ablation.py
-python scripts/generate_bgails_mechanism_plot.py
-python scripts/generate_bgails_touchmap_plot.py
-python scripts/generate_bgails_concentration_plot.py
 ```
 
 Smoke (short AILS-II budget; checkpoint generation still uses FILO2):
@@ -37,6 +33,6 @@ python scripts/run_bgails_ablation.py --campaign performance --instance XL-n1281
 python scripts/run_bgails_ablation.py --campaign measurement --instance XL-n1281-k29 --seed 101 --time-limit 8 --jobs 1
 ```
 
-Completed cells are skipped unless `--force` is passed. Section 4.4 result
-paragraphs are filled after `analyze_bgails_ablation.py` produces
-`performance_stats.json`. The placeholder sentence stays until then.
+Completed cells are skipped unless `--force` is passed.
+`run_bgails_ablation_campaign.py` writes
+`artifacts/bg_ails_ablation/performance_stats.json` when the selected waves finish.

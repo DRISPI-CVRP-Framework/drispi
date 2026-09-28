@@ -120,13 +120,13 @@ python scripts/run_benchmark.py "data/instances/x/*.vrp" \
 
 `ext/` holds the COBRA, FILO, FILO2, and AILS-II sources as submodules. Build steps are in [docs/building.md](docs/building.md). Mode details are in [docs/sp_sc_modes.md](docs/sp_sc_modes.md).
 
-`scripts/` has two runners (`run_final_benchmark.py`, `run_benchmark.py`) and the scripts that turn campaign logs into thesis figures and tables. The figure scripts read `data/results/` and write under `figures/`.
+`scripts/` holds the runners. `run_benchmark.py` and `run_final_benchmark.py` launch campaigns. `generate_bgails_checkpoints.py`, `run_bgails_ablation.py`, and `run_bgails_ablation_campaign.py` run the BG-AILS ablation. `build_final_benchmark_results.py` turns a campaign log into the summary CSV under `data/results/`.
 
 `data/` has three parts:
 
 - `data/instances/x/` and `data/instances/xl/` are the `.vrp` files.
 - `data/bks/xl-bks.json` maps an instance name to a best-known cost.
-- `data/results/` is the committed study output, not a place new runs write to. New runs go to `artifacts/`, which is gitignored. The two campaign tables are `finalBenchmarkResults_lagrange.csv` and `finalBenchmarkResults_dantzig.csv` (per instance, three seeds, cost, gap, and 30/60/90/120 minute checkpoints). The final benchmark on Dantzig is not part of the thesis results (it achieved found one BKS exactly and beat one initial BKS). The benchmark published in the thesis is the one run on Lagrange.  Beside them are the comparison tables (`xl_solver_comparison_*.csv`), HAOS traces (`haos_campaign_lagrange.json`, `haos_wheel_state.csv`, credit CSVs), gap and paired-test JSON, and `bg_ails_ablation/*.json` for the ablation figures. `dantzig_benchmark/` and `lagrange_benchmark/` keep the raw per-run logs those tables were built from.
+- `data/results/` is the committed study output, not a place new runs write to. New runs go to `artifacts/`, which is gitignored. The two campaign tables are `finalBenchmarkResults_lagrange.csv` and `finalBenchmarkResults_dantzig.csv` (per instance, three seeds, cost, gap, and 30/60/90/120 minute checkpoints). The published benchmark is the Lagrange campaign. The Dantzig campaign is kept alongside it (it matched one BKS exactly and beat one initial BKS). Beside the tables are the comparison tables (`xl_solver_comparison_*.csv`), HAOS traces (`haos_campaign_lagrange.json`, `haos_wheel_state.csv`, credit CSVs), gap and paired-test JSON, and `bg_ails_ablation/*.json`. `dantzig_benchmark/` and `lagrange_benchmark/` keep the raw per-run logs those tables were built from.
 
 `tests/` mirrors the package: `unit/`, `clustering/`, `haos/`, `route_pool/`, `sp/`, `improvement/`, `pipeline/`, `dashboard/`, and `ablation/`. `tests/integration/` runs a real pipeline on small and XL instances and is marked `integration` (some cases also `slow`). The default pytest invocation skips those markers:
 
@@ -134,5 +134,3 @@ python scripts/run_benchmark.py "data/instances/x/*.vrp" \
 pytest
 pytest -m integration
 ```
-
-`thesis/` is the write-up. It is not required to install or run the solver.

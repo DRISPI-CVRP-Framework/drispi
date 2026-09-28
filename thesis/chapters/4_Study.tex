@@ -243,9 +243,9 @@ by best-of-$N$ without any change in the underlying solution quality, because
 the two columns reward different things. Best-of-$N$ is reported here to match the
 published solvers' own headline metric, not as the primary comparison.
 
-For the mean-of-three runs to carry that weight, the three runs have to be exchangeable replications. The campaign seeds 11, 22, and 33 produce mean gaps of $0.291\%$, $0.298\%$, and $0.300\%$, an ordering a Friedman test \citep{demsVarStatisticalComparisonsClassifiers} over the 100 matched triples does not
+For the mean-of-three runs to carry that weight, the three runs have to be exchangeable replications. The campaign seeds 11, 22, and 33 produce mean gaps of $0.291\%$, $0.298\%$, and $0.300\%$, an ordering a Friedman test \citep{friedmanUseRanksAvoid1937} over the 100 matched triples does not
 separate from chance ($\chi^2 = 3.61$, $\mathrm{df} = 2$, $p = 0.164$). No
-pairwise Wilcoxon signed-rank test between any two seeds reaches significance
+pairwise Wilcoxon signed-rank test \citep{wilcoxonIndividualComparisonsRanking1945} between any two seeds reaches significance
 either, the smallest $p$ being $0.158$ for seeds 11 against 22. The performance order
 also runs against the iteration throughput: seed 33 completed the most \gls{dri} iterations of the three (8,208 against 7,730 for seed 22 and 6,865 for seed 11) and still finished last. The per-instance seed standard deviation has
 a mean of $0.037$ pp and a median of $0.026$ pp. Its root mean square, the
@@ -269,7 +269,7 @@ observed difference is real rather than an artifact of the 100
 instances. \gls{drispi}'s mean-of-3 column is tested against the corresponding
 mean-of-60 column of five of the eight published solvers, AILS-II, FILO2, FILO,
 SISRs, and HGS-CVRP, using the paired Wilcoxon signed-rank test
-\citep{demsVarStatisticalComparisonsClassifiers}, treating the 100 instances as matched pairs. KGLS-XXL,
+\citep{wilcoxonIndividualComparisonsRanking1945,demsVarStatisticalComparisonsClassifiers}, treating the 100 instances as matched pairs. KGLS-XXL,
 LKH-3, and OR-Tools are omitted, because their gaps in Table~\ref{tab:solver-summary} are large enough that the paired comparison would not be informative.
 
 Each baseline is tested twice, in opposite directions, because the two claims
@@ -281,7 +281,7 @@ first is evidence of an advantage, failing to reject the second is the weaker
 statement that no disadvantage is detectable. The second of the two is what being competitive with a
 state-of-the-art monolithic solver means on a fixed instance set. Each
 family is corrected separately for its five tests with the Holm step-down
-procedure \citep{demsVarStatisticalComparisonsClassifiers}, and Table~\ref{tab:paired-tests} reports both
+procedure \citep{holmSimpleSequentiallyRejective1979,demsVarStatisticalComparisonsClassifiers}, and Table~\ref{tab:paired-tests} reports both
 adjusted $p$-values side by side. The paired differences are the per-instance mean
 percentage gaps to the current \gls{bks}, and each test uses the normal
 approximation to the signed-rank statistic without a continuity correction.
@@ -318,9 +318,9 @@ Table~\ref{tab:paired-tests} splits the five tested solvers into three
 groups. \gls{drispi} is significantly better than SISRs and HGS-CVRP. The margin
 is $0.286$\,pp against SISRs and $1.152$\,pp against HGS-CVRP, and \gls{drispi} is
 ahead on 98 and 99 of the 100 instances. Against FILO the mean paired difference
-is marginal at $-0.037$\,pp and the \mbox{Hodges--Lehmann} shift $-0.026$\,pp, with an uncorrected
+is marginal at $-0.037$\,pp and the \mbox{Hodges--Lehmann} shift \citep{hodgesEstimatesLocationRank1963} $-0.026$\,pp, with an uncorrected
 95\% confidence interval of $[-0.060,\ -0.001]$, and the uncorrected signed-rank
-test rejects at $p = 0.043$. The Holm correction over five baselines leaves it
+test rejects at $p = 0.021$. The Holm correction over five baselines leaves it
 at $0.064$. On 100 instances with a paired-difference standard deviation of
 $0.203$ pp, the corrected test resolves a shift of about $0.066$ pp at 80\%
 power, so a difference of the size observed here sits below what this instance
@@ -500,12 +500,6 @@ deviation for $r$ ($p = 4.8 \times 10^{-15}$), $0.090$ pp for $\log \bar{q}$
 Route length remains the largest of the three, and customer count the smallest,
 in every specification that was fitted.
 
-Figure~\ref{fig:gap-scale} fits each predictor on its own. The slopes for
-$r$ and $\log \bar{q}$ are smaller there than in the joint model because the
-two are mildly negatively correlated ($-0.189$) while both raise the gap, so
-each masks part of the other until both are in the model; the customer-count
-slope moves the other way, from $0.077$ to $0.070$.
-
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{figures/gap_scale_comparison.pdf}
@@ -513,6 +507,12 @@ slope moves the other way, from $0.077$ to $0.070$.
 \label{fig:gap-scale}
 \end{figure}
 \vspace{-\intextsep}
+
+Figure~\ref{fig:gap-scale} fits each predictor on its own. The slopes for
+$r$ and $\log \bar{q}$ are smaller there than in the joint model because the
+two are mildly negatively correlated ($-0.189$) while both raise the gap, so
+each masks part of the other until both are in the model; the customer-count
+slope moves the other way, from $0.077$ to $0.070$.
 
 The same asymmetry appears in a quantity the gap regressions do not measure.
 Regressing the per-instance seed standard deviation on each standardized
@@ -525,7 +525,7 @@ gap without moving its stability, whereas route length moves both.
 Figure~\ref{fig:seed-spread} shows the two panels side by side. Mean seed
 standard deviation is $0.093$ pp on the 14 instances with $r \geq 50$ against
 $0.027$ pp on the other 86, a factor of $3.4$, and the same band carries a mean
-gap of $0.574\%$ against $0.251\%$ (Mann-Whitney $p = 0.00066$). The
+gap of $0.574\%$ against $0.251\%$ (Mann-Whitney \citep{mannTestStochasticallyLarger1947} $p = 0.00066$). The
 long-route instances behave as a separate regime rather than as the upper end
 of a single trend, which is the reason the scale claim above is stated
 conditional on $r$.
@@ -564,7 +564,7 @@ per-subcluster budgets of Section~\ref{sec:fra-routing} subcluster
 customer counts, so it scales with the cost of producing the decomposition
 rather than with the amount of boundary or length of boundary-adjacent routes that the decomposition created. Sizing that from the boundary membership the framework already computes is the change Section~\ref{sec:con-future} proposes to improve on this central weakness of \gls{drispi}.
 
-Figure~\ref{fig:characteristics-panels} analyzes the remaining instance characteristics against the gap: depot position, customer distribution, and demand distribution. Of the three, only demand distribution separates the groups. Kruskal-Wallis tests give $p = 0.153$ for depot position (three levels), $p = 0.180$ for customer distribution (three levels), and $p = 0.00085$ for demand distribution (seven levels). Under Holm correction across the three
+Figure~\ref{fig:characteristics-panels} analyzes the remaining instance characteristics against the gap: depot position, customer distribution, and demand distribution. Of the three, only demand distribution separates the groups. Kruskal-Wallis tests \citep{kruskalUseRanksOnecriterion1952} give $p = 0.153$ for depot position (three levels), $p = 0.180$ for customer distribution (three levels), and $p = 0.00085$ for demand distribution (seven levels). Under Holm correction across the three
 tests the first two stay well above any conventional threshold (adjusted
 $p = 0.305$ for both) and the third remains significant (adjusted
 $p = 0.0025$). Depot position and customer distribution are also
@@ -652,16 +652,16 @@ excluded throughout.  Without them, runs complete between 22 and 118 iterations 
 of 78, and 149 of the 300 exceed that median, so the later part of every
 trajectory describes the longer half of the campaign.
 
-Figure~\ref{fig:haos-entropy} shows normalized entropy staying high on five of
-the six wheels. Normalized entropy goes from zero, at absolute singularity, to one, absolute uniformity. Figure~\ref{fig:haos-entropy} alone suggests the weights never leave a uniform distribution.
-
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{figures/haos_entropy.pdf}
-\caption[Normalized Shannon Entropy of the Six HAOS Wheels Against DRI Iteration.]{Normalized Shannon Entropy of the Six \gls{haos} Wheels Against \gls{dri} Iteration.}
+\caption[Normalized Shannon Entropy of the HAOS Wheels vs. DRI Iteration.]{Normalized Shannon Entropy of the \gls{haos} Wheels vs. \gls{dri} Iteration.}
 \label{fig:haos-entropy}
 \end{figure}
 \vspace{-\intextsep}
+
+Figure~\ref{fig:haos-entropy} shows normalized entropy staying high on five of
+the six wheels. Normalized entropy goes from zero, at absolute singularity, to one, absolute uniformity. Figure~\ref{fig:haos-entropy} alone suggests the weights never leave a uniform distribution.
 
 But the weights do move, and the reward recurrence says how far they should. Credit
 adds the reward earned on the iterations an arm is drawn. Decay removes a
@@ -786,7 +786,7 @@ longer, because a reinforced random walk diverges rather than converges.
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{figures/haos_seed_agreement.pdf}
-\caption{Mean Pairwise Total-Variation Distance Between the Three Seeds' Final Wheel Probabilities, Against the Instance's Mean Number of Completed \gls{dri} Iterations. The distance is $\tfrac{1}{2}\sum_a |w_a - w_b|$, averaged over the three seed pairs. The line is a LOWESS smooth.}
+\caption{Mean Pairwise Total-Variation Distance Between the Three Seeds' Final Wheel Probabilities, Against the Instance's Mean Number of Completed \gls{dri} Iterations. The distance is $\tfrac{1}{2}\sum_a |w_a - w_b|$, averaged over the three seed pairs. The line is a LOWESS smooth \citep{clevelandRobustLocallyWeighted1979}.}
 \label{fig:haos-seeds}
 \end{figure}
 \vspace{-\intextsep}
@@ -801,8 +801,7 @@ observed median maximum weight by a factor of 1.70 to 3.01 on every wheel. But t
 The first is that $p$ is not stationary.  Under the reinforcement above, the
 leading arm's probability rises over the run, so a run-average $p$ actually understates the probability at which the largest weight was actually accumulated.  The
 second is the deferred channel, which contributes 44.3\% of all credit mass on
-every wheel across the entire run and does not appear in the immediate reward at all.  Correcting for both, total credit per selection is $4.94 / (1 - 0.443) = 8.87$, and evaluating $19\,pR$ at the median final top-arm probability gives 43.3 for $k$ against an observed 48.9, 54.4 for $\lambda_q$ against 46.5, 72.8 for the subsolver against 68.7, and 117.0 for the paradigm wheel against 93.7.  The divergence between the assumed and observed probability level originates from the weight level once it is given the probability the weight was accumulated at
-and the full credit stream.  The two conditional method wheels need a further
+every wheel across the entire run and does not appear in the immediate reward at all.  Correcting for both, total credit per selection is $4.94 / (1 - 0.443) = 8.87$, and evaluating $19\,pR$ at the median final top-arm probability gives 43.3 for $k$ against an observed 48.9, 54.4 for $\lambda_q$ against 46.5, 72.8 for the subsolver against 68.7, and 117.0 for the paradigm wheel against 93.7.  Given the probability at which the weight was accumulated and the full credit stream, the fixed point lands within 25\% of the observed weight on all four wheels: 11\% below on $k$, and 17\%, 6\% and 25\% above on $\lambda_q$, the subsolver and the paradigm wheel. The shortfall by a factor of 1.70 to 3.01 therefore came from the two simplifications, not from the weight mechanics.  The two conditional method wheels need a further
 correction for how often their paradigm was drawn and are not reconciled here.
 
 That deferred channel as a mechanism actively works against
@@ -904,7 +903,7 @@ on a fixed checkpoint rather than inside a full 7,200-second run. And a stage th
 carries only few of the total improvements under the campaign budget is also the
 first candidate for reallocating core time.
 
-The campaign log records 2,335 incumbent improvements. The 300 decompose-route solutions of the first iteration are each run's opening solution, and both the update counts and the cost reduction below exclude them. Cost reduction is measured from that opening solution to the final incumbent, so the 298 \gls{bg-ails} repairs logged on the same iteration are included. The remaining 2,035 updates are the denominator below. Stage time is the sum of the
+The campaign log records 2,335 incumbent improvements. The 300 decompose-route solutions of the first iteration are each run's opening solution, and both the update counts and the cost reduction below exclude them. Cost reduction is measured from that opening solution to the final incumbent, so the 298 \gls{bg-ails} repairs logged on the same iteration are included. The remaining 2,037 updates are the denominator below. Stage time is the sum of the
 per-stage timers over the whole run, including the first iteration. Those timers run concurrently on the core split of Section~\ref{sec:stu-implementation}, so the time shares below divide the recorded stage time and not the 7,200 second budget.
 
 One attribution is not recoverable as two separate stages. The \gls{sc}/\gls{sp} job
@@ -945,7 +944,8 @@ the updates, and it consumes $35.1\%$ of
 recorded stage time. The \gls{sc}/\gls{sp} plus post-\gls{sc}/\gls{sp} improvement accounts for the
 remaining $8.8\%$ of the reduction, from $35.1\%$ of the updates. Since all stages of \gls{drispi} are highly intertwined and cooperative, a higher cost reduction for one step does not imply that the other steps are less valuable.
 
-\begin{table}[H]
+
+\begin{table}[htbp]
 \centering
 \caption{The Same Shares Split by Route Length and by the $n = 3{,}400$ Cut.}
 \label{tab:improvement-splits}
@@ -967,7 +967,6 @@ $n > 3{,}400$ & 86.3 & 46.5 & 41.6 & 9.6 & 38.3 & 18.7 \\
 \bottomrule
 \end{tabular}
 \end{table}
-\vspace{-6pt}
 
 Table~\ref{tab:improvement-splits} is where the two predictions from
 Section~\ref{sec:stu-characteristics} can be proven. \gls{bg-ails} does carry a

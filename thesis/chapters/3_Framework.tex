@@ -169,7 +169,7 @@ The deferred channel is evaluated after \gls{sc}/\gls{sp} has selected routes fr
 During the first ten iterations, \gls{haos} performs the same five-level draw but suppresses both reward updates and decay. All weights therefore remain equal, making every option uniform within the wheel from which it is eligible to be drawn. This warm-up period lets the first incumbent and an initial route pool form to mitigate the risk that early outcomes influence later probabilities.
 
 \section{Decomposition}\label{sec:fra-decomposition}
-The decomposition layer runs at the beginning of every iteration in the \gls{dri} loop, adapting the decompose-route-improve terminology of \citet{kerscherDecomposerouteimproveFrameworkSolving2025}. They propose the framework for large \gls{vrptw} that this work extends to the \gls{cvrp} at very-large scale in a fully parallelized, setting. \gls{haos} (Section~\ref{sec:fra-haos}) controls this stage through four levels, redrawn at every iteration: first the number of subclusters $k$; second the demand weight $\lambda_q$ of the dissimilarity metric used by a subset of clustering approaches; third the clustering paradigm, either vertex-based, which partitions the customers directly, or route-based, which partitions the routes of the current incumbent solution and propagates the resulting labels to their customers; and fourth the clustering method used within that paradigm.
+The decomposition layer runs at the beginning of every iteration in the \gls{dri} loop, adapting the decompose-route-improve terminology of \citet{kerscherDecomposerouteimproveFrameworkSolving2025}. They propose the framework for large \gls{vrptw} that this work extends to the \gls{cvrp} at very-large scale in a fully parallelized setting. \gls{haos} (Section~\ref{sec:fra-haos}) controls this stage through four levels, redrawn at every iteration: first the number of subclusters $k$; second the demand weight $\lambda_q$ of the dissimilarity metric used by a subset of clustering approaches; third the clustering paradigm, either vertex-based, which partitions the customers directly, or route-based, which partitions the routes of the current incumbent solution and propagates the resulting labels to their customers; and fourth the clustering method used within that paradigm.
 
 The dissimilarity metric is formed by three terms for every pair of customers i and j with coordinates $(x_i, y_i)$ and $(x_j, y_j)$ and demands $q_i$ and $q_j$: their Euclidean distance, an angular term, and a demand term,
 \begin{equation}
@@ -177,8 +177,8 @@ d_{ij} = \sqrt{(x_i - x_j)^2 + (y_i - y_j)^2 + \lambda_\theta \, \Delta\theta_{i
 \label{eq:decomp-dissimilarity}
 \end{equation}
 $\Delta\theta_{ij}$ is the shortest angular distance between the customers' polar angles around the depot,
-$\Delta\theta_{ij} = \min\bigl(|\theta_i - \theta_j|,\ 2\pi - |\theta_i - \theta_j|\bigr)$,
-where $\theta_i = \operatorname{atan2}(y_i - y_0,\ x_i - x_0)$ and $(x_0, y_0)$ is the depot. $\lambda_\theta$ scales the angular term to the average coordinate magnitude of the instance, so that neither term dominates across instances of different spatial extent. The demand factor adapts the multi-feature dissimilarity metric of \citet{kerscherDecomposerouteimproveFrameworkSolving2025}, who multiply the spatial distance by a factor that contains the temporal term and the pair's joint capacity use $(q_i + q_j)/Q$. With no time windows that sum is replaced by $\lambda_q |q_i - q_j|/Q$, because a sum grows with either demand and pushes two customers of equal large demand apart, while a difference is zero when the demands match and separates only customers whose demands differ.
+$\Delta\theta_{ij} = \min\bigl(|\phi_i - \phi_j|,\ 2\pi - |\phi_i - \phi_j|\bigr)$,
+where $\phi_i = \operatorname{atan2}(y_i - y_0,\ x_i - x_0)$ and $(x_0, y_0)$ is the depot. $\lambda_\theta$ scales the angular term to the average coordinate magnitude of the instance, so that neither term dominates across instances of different spatial extent. The demand factor adapts the multi-feature dissimilarity metric of \citet{kerscherDecomposerouteimproveFrameworkSolving2025}, who multiply the spatial distance by a factor that contains the temporal term and the pair's joint capacity use $(q_i + q_j)/Q$. With no time windows that sum is replaced by $\lambda_q |q_i - q_j|/Q$, because a sum grows with either demand and pushes two customers of equal large demand apart, while a difference is zero when the demands match and separates only customers whose demands differ.
 
 \begin{table}[tbp]
 \centering
@@ -237,37 +237,38 @@ where $d_{\min}$ and $d_{\max}$ are the smallest and largest nearest-other-clust
 \end{equation}
 setting ranks at or below $\tau$ to zero and rescaling the remainder linearly back onto $[0, 1]$. This logic makes \gls{bg-ails} more efficient than an unrestricted improvement pass under the same time budget. With $\tau = 0.5$ it never spends perturbation effort on the lower half of customers by boundary rank, in particular never on a customer sitting deep inside a cluster's interior, and instead concentrates mostly on the customers the decomposition itself flags as most likely to be sitting on a structural defect it imposed. Algorithm~\ref{alg:bgails} gives the full procedure, from boundary scoring through the chain of cross-reconnects and the boundary mask, ending at the AILS-II call itself.
 
+
+\begin{algorithm}[tbp]
+  \caption{Boundary-Guided Adaptive Iterated Local Search (\gls{bg-ails})}\label{alg:bgails}
+  \KwIn{solution $S$; labels $\kappa(\cdot)$; $\lambda_q$; subcluster count $k$; budget $T$}
+  \KwPar{$\sigma$, $\alpha$, $\tau$, $\omega_0$ (Table~\ref{tab:hyperparameters})}
+  \BlankLine
+  $M \gets \emptyset$\;
+  \If{$k > 1$}{
+    rebuild $d_{ij}$ from $\lambda_q$\;
+    compute $\tilde b_i$ by (\ref{eq:bg-ails-boundary})--(\ref{eq:bg-ails-weighted}), renormalize to $\hat b_i$, and set $\rho_i$ by (\ref{eq:bg-ails-threshold}) for every customer $i$\;
+    $\rho(r) \gets \max_{i \in r} \rho_i$ for every route $r \in S$\;
+    \For{$t \gets 1$ \KwTo $k$}{
+      $r_a \gets \arg\max \rho(r)$ over routes not yet chosen as $r_a$\;
+      draw a neighboring cluster $c$ from the affinity row $A_{r_a,\cdot}$\;
+      $r_b \gets \arg\max \{ A_{r,\kappa(r_a)} : r \in S \text{ majority-assigned to } c \}$\;
+      cut $r_a$ and $r_b$ at random positions $p_a$, $p_b$ and exchange their tails\;
+    }
+    $M \gets \{ i : \hat b_i > \tau \}$\;
+  }
+  \Return $\solver(S,\ \omega_0,\ T,\ M)$\;
+  \end{algorithm}
+
 Boundary ranks are defined per customer, but the perturbation \gls{bg-ails} applies acts on whole routes at once. The cross-reconnect move cuts two routes at a random position each and exchanges their tails, so routes $r_i$ and $r_j$ cut after position $a$ and $b$ respectively become $r_i[{:}a] \frown r_j[b{:}]$ and $r_j[{:}b] \frown r_i[a{:}]$. This is the 2-opt* move of \citet{potvinExchangeHeuristicRouting1995}. AILS-II's inter-route Cross move performs the same tail swap from two reference points, so one Cross on those cut points restores the two routes. A single cross-reconnect is one Cross away from being undone. A route's own weight for being selected in perturbation is the maximum boundary rank among its customers. The first route of a cross-reconnect pair is drawn from these weights, either by sampling or, under \gls{drispi}'s default \texttt{greedy} pair-selection setting, by taking the arg-max. Its perturbation partner is not drawn from the same weights but by affinity: the inverse mean pairwise dissimilarity between a route's customers and a cluster's customers, with the route's own cluster excluded and the row scaled to sum to one. The first route's row picks the neighboring cluster. The partner is then drawn, by the same rule, from the routes whose customers mostly lie in that cluster, using their affinity back towards the first route's cluster. This two-step draw is what keeps a cross-reconnect pair spatially adjacent across one real cluster boundary, rather than pairing two routes that both happen to contain boundary customers but face away from each other. \gls{bg-ails} repeats this step for a chain of $k$ iterations by default, one per subcluster, with each step in the chain acting on the routes as already modified by the previous one. Affinities and boundary weights are fixed on the input solution. Each step skips a route already used as the first of a pair. The partner may be a route an earlier step has already cut, and the new cut falls at a random position on the sequence that step left behind. One Cross restores a single exchange whose two tails are still intact. Once a later step cuts one of those routes again, that exchange is no longer one pair of tails, and the concatenated solution sits behind the whole sequence of random cuts.
 
 The same ranks restrict the local search that receives this perturbed solution. Every customer with $\hat b_i > \tau$ is written to a mask and passed to AILS-II through \texttt{-boundaryMask}. AILS-II first repairs capacity constraint violations with every route still active. It then clears the activity flags that decide which routes and customers a local-search pass may browse, and marks the listed customers from the mask together with every route that contains one of them instead. The opening pass starts its moves from those customers. A route that contains none of them is left out of that pass. The mask is applied only once, before this opening pass. Each later iteration of AILS-II's own perturbation cycle clears the flags again and marks only the customers that iteration moved, so the remainder of the budget is an ordinary AILS-II run from the solution the opening pass left behind.
-
-\begin{algorithm}[tbp]
-\caption{Boundary-Guided Adaptive Iterated Local Search (\gls{bg-ails})}\label{alg:bgails}
-\KwIn{solution $S$; labels $\kappa(\cdot)$; $\lambda_q$; subcluster count $k$; budget $T$}
-\KwPar{$\sigma$, $\alpha$, $\tau$, $\omega_0$ (Table~\ref{tab:hyperparameters})}
-\BlankLine
-$M \gets \emptyset$\;
-\If{$k > 1$}{
-  rebuild $d_{ij}$ from $\lambda_q$\;
-  compute $\tilde b_i$ by (\ref{eq:bg-ails-boundary})--(\ref{eq:bg-ails-weighted}), renormalize to $\hat b_i$, and set $\rho_i$ by (\ref{eq:bg-ails-threshold}) for every customer $i$\;
-  $\rho(r) \gets \max_{i \in r} \rho_i$ for every route $r \in S$\;
-  \For{$t \gets 1$ \KwTo $k$}{
-    $r_a \gets \arg\max \rho(r)$ over routes not yet chosen as $r_a$\;
-    draw a neighboring cluster $c$ from the affinity row $A_{r_a,\cdot}$\;
-    $r_b \gets \arg\max \{ A_{r,\kappa(r_a)} : r \in S \text{ majority-assigned to } c \}$\;
-    cut $r_a$ and $r_b$ at random positions $p_a$, $p_b$ and exchange their tails\;
-  }
-  $M \gets \{ i : \hat b_i > \tau \}$\;
-}
-\Return $\solver(S,\ \omega_0,\ T,\ M)$\;
-\end{algorithm}
 
 Figure~\ref{fig:bgails-mechanism} walks through one such call on XL-n1281-k29. Panel (a) is the concatenated decompose-route input, customers colored by six subclusters of a K-Medoids partition. Panel (b) maps pre-threshold boundary rank $\hat b_i$ and highlights the six route pairs the chain selects. Panel (c) shows those routes after the cross-reconnect cuts. Panel (d) is the solution after the AILS-II pass, customers colored by evaluated-move count.
 
 \begin{figure}[H]
 \centering
 \includegraphics{figures/bgails_mechanism.pdf}
-\caption[Illustrative BG-AILS Call on Instance XL-n1281-k29. Colorbar Applies to Panel (d) Only.]{Illustrative \gls{bg-ails} Call on Instance XL-n1281-k29.\\ Colorbar Applies to Panel~(d) Only.}
+\caption[Illustrative BG-AILS Call on Instance XL-n1281-k29. Colorbar Applies to Panel (d) Only.]{Illustrative \gls{bg-ails} Call on Instance XL-n1281-k29. Colorbar Applies to Panel~(d) Only.}
 \label{fig:bgails-mechanism}
 \end{figure}
 \vspace{-\intextsep}
@@ -283,7 +284,7 @@ refit on 835 pilot \gls{dri} iterations, where waves pack the current iteration'
 
 Under this comparatively short wall-clock budget, \gls{bg-ails} should outperform an unguided AILS-II pass over the same combined solution, because the unguided pass spends an unknown and likely large share of that budget searching subcluster interiors the decomposition had already solved well. This is tested on all 100 XL instances (Section~\ref{sec:stu-dataset}) at three checkpointed decompose-route solutions each. Three different arms are forked from these checkpoints. The first control arm is a plain AILS-II pass at the solver's own defaults, the second control arm is a blind control that applies one cross-reconnect per subcluster to uniformly drawn route pairs, and the final arm is \gls{bg-ails} in its deployed configuration. Every arm receives the same AILS-II budget. The perturbation of the two perturbing arms is a surplus on top of it, an added median 0.28\% of that budget for \gls{bg-ails} and 0.010\% for the control. The checkpoints are generated under one pinned decomposition configuration, vertex K-Medoids. \gls{haos}, the route pool, and \gls{sc}/\gls{sp} are deactivated, so that the remaining comparison is one improvement stage against another on identical input, not two full runs.
 
-\gls{bg-ails} statistically significantly outperforms both baselines (paired Wilcoxon signed-rank tests, alternative greater, Holm-corrected in a family of two). It improves on the plain AILS-II pass by 0.056~pp of cost improvement over the input solution (Hodges--Lehmann paired difference, 95\% \gls{ci} $[0.049, 0.063]$, Holm-corrected $p = 7.0 \times 10^{-11}$, ahead on 85 of 100 instances) and on the blind control by 0.058~pp (95\% \gls{ci} $[0.052, 0.065]$, Holm-corrected $p = 2.7 \times 10^{-12}$, ahead on 89 of 100). The AILS-II comparison is the practical one and carries the perturbation, the $\omega$ override, and the boundary mask as the package the framework deploys. The control comparison holds $\omega$ and chain length fixed. It measures the placement of the perturbation together with the mask: the blind arm draws its route pairs uniformly and runs AILS-II with no mask. The paired difference between the control and plain AILS-II is consistent with zero (Hodges--Lehmann $-0.004$~pp, 95\% \gls{ci} $[-0.011, 0.002]$), so the gain is not explained by perturbing the concatenated solution at all. Figure~\ref{fig:bgails-comparison} shows the arm means and the paired differences behind those tests.
+\gls{bg-ails} statistically significantly outperforms both baselines (paired Wilcoxon signed-rank tests \citep{wilcoxonIndividualComparisonsRanking1945}, alternative greater, Holm-corrected \citep{holmSimpleSequentiallyRejective1979} in a family of two). It improves on the plain AILS-II pass by 0.056~pp of cost improvement over the input solution (Hodges--Lehmann paired difference \citep{hodgesEstimatesLocationRank1963}, 95\% \gls{ci} $[0.049, 0.063]$, Holm-corrected $p = 7.0 \times 10^{-11}$, ahead on 85 of 100 instances) and on the blind control by 0.058~pp (95\% \gls{ci} $[0.052, 0.065]$, Holm-corrected $p = 2.7 \times 10^{-12}$, ahead on 89 of 100). The AILS-II comparison is the practical one and carries the perturbation, the $\omega$ override, and the boundary mask as the package the framework deploys. The control comparison holds $\omega$ and chain length fixed. It measures the placement of the perturbation together with the mask: the blind arm draws its route pairs uniformly and runs AILS-II with no mask. The paired difference between the control and plain AILS-II is consistent with zero (Hodges--Lehmann $-0.004$~pp, 95\% \gls{ci} $[-0.011, 0.002]$), so the gain is not explained by perturbing the concatenated solution at all. Figure~\ref{fig:bgails-comparison} shows the arm means and the paired differences behind those tests.
 
 \begin{figure}[H]
 \centering
@@ -300,7 +301,7 @@ However, limiting factors apply. The comparison is only one \gls{dri} iteration,
 \section[Route Pool and SC/SP Recombination]{\texorpdfstring{Route Pool and \gls{sc}/\gls{sp} Recombination}{Route Pool and SC/SP Recombination}}\label{sec:fra-sp}
 Periodically, \gls{drispi} steps back from the current incumbent and recombines every route accumulated so far into one new candidate solution, using set covering or set partitioning (\gls{sc}/\gls{sp}) as the recombination model. Alternating a metaheuristic with an exact set-partitioning solve in this way is an established matheuristic pattern \citep{hybridizing_jourdan_2009}. \citet{cavaliereIntegratedLocalsearchSetpartitioning2022} apply essentially this pairing to large-scale \gls{cvrp} instances directly, by alternating LKH-3 local search with a restricted set-partitioning solve. Doing so only pays off if a shared memory of routes exists for it to recombine. So this section first describes that memory, the route pool, before turning to the \gls{sp} and \gls{sc} models themselves and the hyperparameter that decides between them.
 
-The route pool stores one entry per distinct customer set $C_r \subseteq C$, where $C$ is the customer set of the instance (Section~\ref{sec:lit-problem}), keyed by the frozen customer set rather than by the ordered sequence of customers a route visits them in. Two routes serving the same customers in a different order, or at a different cost, are treated as the same column, and the cheaper of the two overwrites the other. This column-oriented memory, populated online during the \gls{dri} loop and periodically recombined through a partitioning model, follows the adaptive-memory principle of \citet{rochatProbabilisticDiversificationIntensification1995}, who introduce the route pool and its set-partitioning recombination for vehicle routing.
+The route pool stores one entry per distinct customer set $C_r \subseteq C$, where $C$ is the customer set of the instance (Section~\ref{sec:lit-problem}), keyed by the frozen customer set rather than by the ordered sequence of customers a route visits them in. Two routes serving the same customers in a different order, or at a different cost, are treated as the same column, and the cheaper of the two overwrites the other. This column-oriented memory, populated online during the \gls{dri} loop and periodically recombined through a partitioning model, follows the adaptive-memory principle of \citet{rochatProbabilisticDiversificationIntensification1995}, who keep a memory of good tours, build new solutions from it and recombine the tours in a post-optimization.
 
 Routes are fed to the pool following a contribute-before-adopt rule, which adds a candidate solution to the pool before the pipeline decides whether to adopt it as the new incumbent, so a losing candidate still leaves its routes behind for later reuse. The \gls{dri} loop contributes to the pool twice per iteration, once from its decompose-route stage (Section~\ref{sec:fra-routing}) and once from the following improvement stage (\gls{bg-ails} (Section~\ref{sec:fra-bg-ails})). The \gls{sc}/\gls{sp} step covered in this section feeds the pool only indirectly. Solving \gls{sc} or \gls{sp} selects among the customer sets already in the pool and creates no new ones, so its own output adds nothing. Every contributed route carries a tag recording the full \gls{haos} selection that produced it, that is, $k$, the demand weight, the paradigm, the method, and the solver, with a separate flag marking routes from the post-\gls{sc}/\gls{sp} improvement pass. Whenever a candidate is adopted as the new incumbent, its routes, already in the pool by the rule above, are marked elite. Elite routes are exempt from ever being evicted from the pool to ensure the incumbent is never lost.
 

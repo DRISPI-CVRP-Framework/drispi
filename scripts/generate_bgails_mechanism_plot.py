@@ -94,7 +94,7 @@ def main() -> None:
     panel_w = (fig_w - left - col_gap - cbar_gap - cbar_w - label_w) / 2
     panel_h = panel_w / data_aspect
     title_band, bottom, top = 0.46, 0.20, 0.34
-    fig_h = top + title_band + panel_h + title_band + panel_h + bottom
+    fig_h = top + panel_h + title_band + panel_h + bottom
     fig = plt.figure(figsize=(fig_w, fig_h))
 
     def _rect(x_in: float, y_in: float, w_in: float, h_in: float) -> list[float]:
@@ -117,7 +117,7 @@ def main() -> None:
     cols = [cluster_colors[labels[c] % len(cluster_colors)] for c in customers]
     ax.scatter(xy[:, 0], xy[:, 1], c=cols, s=8, zorder=3, linewidths=0)
     _polyline(ax, data["input_seqs"], coords, "#888888")
-    ax.plot(*depot, marker="*", color="black", markersize=8, zorder=4)
+    ax.plot(*depot, marker="s", color="black", markersize=6, zorder=4)
 
     ax = axes[0, 1]
     ax.scatter(xy[:, 0], xy[:, 1], c="#dddddd", s=8, zorder=2, linewidths=0)
@@ -146,7 +146,7 @@ def main() -> None:
                 ax.add_collection(
                     LineCollection([pts], colors=color, linewidths=1.4, zorder=4)
                 )
-    ax.plot(*depot, marker="*", color="black", markersize=8, zorder=5)
+    ax.plot(*depot, marker="s", color="black", markersize=6, zorder=5)
 
     ax = axes[1, 0]
     ax.scatter(xy[:, 0], xy[:, 1], c="#dddddd", s=8, zorder=2, linewidths=0)
@@ -161,7 +161,7 @@ def main() -> None:
                 x, y = coords[str(seq[a])]
                 ax.plot(x, y, "x", color=color, markersize=6, zorder=5)
             _polyline(ax, [seq], coords, color, lw=1.2, z=4)
-    ax.plot(*depot, marker="*", color="black", markersize=8, zorder=6)
+    ax.plot(*depot, marker="s", color="black", markersize=6, zorder=6)
 
     ax = axes[1, 1]
     touches = np.array(data["eval_touches"], dtype=np.float64)
@@ -175,7 +175,7 @@ def main() -> None:
         linewidths=0,
     )
     _polyline(ax, data["result_seqs"], coords, "#888888", lw=0.5)
-    ax.plot(*depot, marker="*", color="black", markersize=8, zorder=4)
+    ax.plot(*depot, marker="s", color="black", markersize=6, zorder=4)
 
     for ax, title in zip(axes.ravel(), TITLES):
         ax.set_xlim(lims[0], lims[1])
